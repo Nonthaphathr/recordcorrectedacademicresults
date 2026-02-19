@@ -1,938 +1,692 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการข้อมูลแก้ไขผลการเรียน - โรงเรียนกระดุมทองวิทยา</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            box-sizing: border-box;
-            font-family: 'Kanit', sans-serif;
-        }
-        .edited-row {
-            background-color: #dcfce7 !important;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal.show {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-full">
-    <div class="container mx-auto px-4 py-6">
-        <!-- Header -->
-        <div class="bg-white rounded-xl shadow-lg p-8 mb-8 border border-indigo-100">
-            <div class="flex flex-col items-center">
-                <img src="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png" alt="โลโก้โรงเรียนกระดุมทองวิทยา" class="w-20 h-20 mb-4 object-contain">
-                <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent text-center mb-3">ระบบจัดการข้อมูลแก้ไขผลการเรียน</h1>
-                <p class="text-center text-gray-600 font-medium">โรงเรียนกระดุมทองวิทยา</p>
-                <p class="text-center text-gray-500 text-sm mt-1">พัฒนาโดย ครูนนทพัทธ์ หิรัญเรือง งานทะเบียนและเทียบโอนผลการเรียน</p>
-            </div>
-        </div>
+// Configuration
+const SHEET_ID = '1XNgYvAo_JbS6WaYUUQ4bf_qrrJTEBhDI1GeUQdzYZJg';
+const FOLDER_ID = '1Hca2afVkcJ6PtrjVNwGiXcc8jNLYHeJN';
+const SHEET1_NAME = 'ผลการเรียน';
+const SHEET2_NAME = 'บันทึกการแก้ไข';
 
-        <!-- Search and Filter Section -->
-        <div class="bg-white rounded-xl shadow-lg p-8 mb-8 border border-indigo-100">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">ค้นหาชื่อ-สกุล</label>
-                    <input type="text" id="searchName" placeholder="ชื่อ หรือ สกุล" 
-                           class="w-full px-4 py-3 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">รหัสวิชา</label>
-                    <input type="text" id="searchSubject" placeholder="รหัสวิชา" 
-                           class="w-full px-4 py-3 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">ชั้นปีปัจจุบัน</label>
-                    <select id="filterYear" class="w-full px-4 py-3 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
-                        <option value="">ทุกชั้นปี</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">ภาคเรียน/ปีการศึกษา</label>
-                    <select id="filterSemester" class="w-full px-4 py-3 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
-                        <option value="">ทุกภาคเรียน</option>
-                    </select>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">สถานะผลการเรียน</label>
-                    <select id="filterGradeStatus" class="w-full px-4 py-3 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
-                        <option value="">ทุกสถานะ</option>
-                        <option value="0">0</option>
-                        <option value="ร">ร</option>
-                        <option value="มส">มส</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">สถานะการแก้ไข</label>
-                    <select id="filterStatus" class="w-full px-4 py-3 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
-                        <option value="">ทั้งหมด</option>
-                        <option value="แก้ไขแล้ว">แก้ไขแล้ว</option>
-                        <option value="">ยังไม่แก้ไข</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex justify-between items-center">
-                <button onclick="searchData()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-                    🔍 ค้นหา
-                </button>
-                <button onclick="loadData()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-8 py-3 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-                    🔄 รีเฟรช
-                </button>
-            </div>
-        </div>
+// Handle GET requests (for getData and getLog)
+function doGet(e) {
+  try {
+    const action = e.parameter.action || 'getData';
+    
+    if (action === 'getData') {
+      return ContentService.createTextOutput(JSON.stringify(getData()))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Support both 'getLog' and 'getEditLog'
+    if (action === 'getLog' || action === 'getEditLog') {
+      const studentName = decodeURIComponent(e.parameter.studentName || '');
+      const subjectCode = decodeURIComponent(e.parameter.subjectCode || '');
+      return ContentService.createTextOutput(JSON.stringify(getLog({
+        studentName: studentName,
+        subjectCode: subjectCode
+      }))).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Handle updateRecord via GET (for CORS workaround)
+    if (action === 'updateRecord') {
+      const updateData = {
+        action: 'updateRecord',
+        rowIndex: parseInt(e.parameter.rowIndex),
+        studentName: decodeURIComponent(e.parameter.studentName || ''),
+        subjectCode: decodeURIComponent(e.parameter.subjectCode || ''),
+        subjectName: decodeURIComponent(e.parameter.subjectName || ''),
+        oldResult: decodeURIComponent(e.parameter.oldResult || ''),
+        newResult: decodeURIComponent(e.parameter.newResult || ''),
+        editor: decodeURIComponent(e.parameter.editor || ''),
+        year: decodeURIComponent(e.parameter.year || ''),
+        semester: decodeURIComponent(e.parameter.semester || ''),
+        class: decodeURIComponent(e.parameter.class || '')
+      };
+      
+      return ContentService.createTextOutput(JSON.stringify(updateRecord(updateData)))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: 'Invalid action: ' + action
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    Logger.log('Error in doGet: ' + error.toString());
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: 'Error: ' + error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
 
-        <!-- Data Table -->
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-indigo-100">
-            <div class="p-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
-                <h2 class="text-2xl font-semibold text-gray-800">รายการผลการเรียนที่ไม่ผ่าน</h2>
-                <p class="text-sm text-gray-600 mt-2">แสดงเฉพาะผลการเรียน: 0, ร, มส</p>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-                        <tr>
-                            <th class="px-4 py-3 text-left">สถานะ</th>
-                            <th class="px-4 py-3 text-left">ชั้นปี</th>
-                            <th class="px-4 py-3 text-left">ภาคเรียน/ปีการศึกษา</th>
-                            <th class="px-4 py-3 text-left">ชื่อ-สกุล</th>
-                            <th class="px-4 py-3 text-left">รหัสวิชา</th>
-                            <th class="px-4 py-3 text-left">ชื่อวิชา</th>
-                            <th class="px-4 py-3 text-left">ชั้น</th>
-                            <th class="px-4 py-3 text-left">ผลเดิม</th>
-                            <th class="px-4 py-3 text-left">ผลใหม่</th>
-                            <th class="px-4 py-3 text-center">การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dataTable">
-                        <tr>
-                            <td colspan="10" class="px-4 py-8 text-center text-gray-500">
-                                <div class="loading mx-auto mb-2"></div>
-                                กำลังโหลดข้อมูล...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+// Handle POST requests (for updateRecord with image)
+function doPost(e) {
+  try {
+    let data;
+    
+    // Try to parse JSON from postData
+    if (e.postData && e.postData.contents) {
+      data = JSON.parse(e.postData.contents);
+    } else if (e.parameter && e.parameter.data) {
+      // Handle FormData sent as 'data' parameter
+      data = JSON.parse(e.parameter.data);
+    } else {
+      // Use parameters directly
+      data = e.parameter;
+    }
+    
+    const action = data.action;
+    
+    let result;
+    
+    if (action === 'updateRecord') {
+      result = updateRecord(data);
+    } else if (action === 'getData') {
+      result = getData();
+    } else if (action === 'getLog' || action === 'getEditLog') {
+      result = getLog(data);
+    } else {
+      result = {
+        success: false,
+        message: 'Invalid action: ' + action
+      };
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    Logger.log('Error in doPost: ' + error.toString());
+    Logger.log('postData: ' + (e.postData ? e.postData.contents : 'none'));
+    Logger.log('parameters: ' + JSON.stringify(e.parameter));
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: 'Error in doPost: ' + error.toString(),
+      debug: {
+        hasPostData: !!e.postData,
+        hasParameter: !!e.parameter,
+        parameterKeys: e.parameter ? Object.keys(e.parameter) : []
+      }
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
 
-            <!-- Pagination -->
-            <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-t border-indigo-100 flex items-center justify-between">
-                <div class="text-sm text-gray-700">
-                    แสดง <span id="showingFrom">0</span> - <span id="showingTo">0</span> จาก <span id="totalRecords">0</span> รายการ
-                </div>
-                <div class="flex space-x-2">
-                    <button onclick="previousPage()" id="prevBtn" class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200" disabled>
-                        ← ก่อนหน้า
-                    </button>
-                    <span id="pageInfo" class="px-4 py-2 text-gray-700 font-medium">หน้า 1</span>
-                    <button onclick="nextPage()" id="nextBtn" class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200" disabled>
-                        ถัดไป →
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+// Get all data from the main sheet, joined with latest log entry (Editor, EditDate, EditTime)
+function getData() {
+  try {
+    const spreadsheet = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = spreadsheet.getSheetByName(SHEET1_NAME);
+    
+    if (!sheet) {
+      return {
+        success: false,
+        message: 'ไม่พบชีท "' + SHEET1_NAME + '"'
+      };
+    }
+    
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    
+    if (lastRow <= 1) {
+      return {
+        success: true,
+        data: [],
+        count: 0
+      };
+    }
+    
+    // ── ดึงข้อมูลจาก Sheet "บันทึกการแก้ไข" มาสร้าง lookup map ──
+    // key = "ชื่อ-สกุลนักเรียน|รหัสวิชา" → { Editor, EditDate, EditTime }
+    const logMap = buildLogMap(spreadsheet);
+    Logger.log('Log map built, entries: ' + Object.keys(logMap).length);
+    
+    // ── ดึงข้อมูลจาก Sheet "ผลการเรียน" ──
+    const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    const headers = values[0];
+    const data = [];
+    
+    for (let i = 1; i < values.length; i++) {
+      const row = {};
+      headers.forEach((header, index) => {
+        const value = values[i][index];
+        row[header] = value !== null && value !== undefined ? String(value).trim() : '';
+      });
+      row.rowIndex = i + 1;
+      
+      // ── Join ข้อมูลจาก log sheet ──
+      // สร้าง fullName จากคอลัมน์ที่มีในชีท (ลอง key ต่าง ๆ)
+      const prefix  = row['คำนำหน้า'] || '';
+      const fname   = row['ชื่อ']     || '';
+      const lname   = row['สกุล']     || '';
+      const fullName = (prefix + ' ' + fname + ' ' + lname).trim();
+      const subCode  = row['รหัสวิชา'] || '';
+      const mapKey   = fullName + '|' + subCode;
+      
+      if (logMap[mapKey]) {
+        row.Editor   = logMap[mapKey].Editor;
+        row.EditDate = logMap[mapKey].EditDate;
+        row.EditTime = logMap[mapKey].EditTime;
+      } else {
+        row.Editor   = row.Editor   || '';
+        row.EditDate = row.EditDate || '';
+        row.EditTime = row.EditTime || '';
+      }
+      
+      data.push(row);
+    }
+    
+    Logger.log('Successfully retrieved ' + data.length + ' records');
+    
+    return {
+      success: true,
+      data: data,
+      count: data.length
+    };
+    
+  } catch (error) {
+    Logger.log('Error in getData: ' + error.toString());
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
 
-    <!-- Edit Modal -->
-    <div id="editModal" class="modal">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-full overflow-y-auto">
-            <div class="p-6 border-b">
-                <h3 class="text-xl font-semibold text-gray-800">แก้ไขผลการเรียน</h3>
-                <div class="mt-3 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-                    <p class="text-sm text-blue-800">
-                        📋 <strong>คำอธิบาย:</strong> เมื่อได้รับใบคำร้องแก้ไขผลการเรียนจากนักเรียน ครูทะเบียน/วัดผลบันทึกข้อมูลพร้อมถ่ายภาพใบคำร้องฯประกอบ
-                    </p>
-                </div>
-            </div>
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-สกุลนักเรียน</label>
-                        <p id="editStudentName" class="text-gray-900 font-medium"></p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">ชั้น</label>
-                        <p id="editClass" class="text-gray-900"></p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">รหัสวิชา</label>
-                        <p id="editSubjectCode" class="text-gray-900"></p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อวิชา</label>
-                        <p id="editSubjectName" class="text-gray-900"></p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">ผลการเรียนเดิม</label>
-                        <p id="editOldResult" class="text-red-600 font-bold text-lg"></p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">ผลการเรียนใหม่ *</label>
-                        <select id="editNewResult" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                            <option value="">เลือกผลการเรียน</option>
-                            <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="1.5">1.5</option>
-                            <option value="2">2</option>
-                            <option value="2.5">2.5</option>
-                            <option value="3">3</option>
-                            <option value="3.5">3.5</option>
-                            <option value="4">4</option>
-                            <option value="ร">ร</option>
-                            <option value="มส">มส</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">ผู้แก้ไข *</label>
-                    <input type="text" id="editEditor" placeholder="เช่น นางสาวสมหญิง ดีใจ" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                </div>
-
-                <!-- เพิ่มส่วนนี้ -->
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">รหัสผ่านฝ่ายวิชาการ *</label>
-                    <input type="password" id="editPassword" placeholder="กรอกรหัส 4 หลัก" 
-                           maxlength="4" pattern="[0-9]{4}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                    <p class="text-xs text-red-500 mt-1">🔒 เฉพาะครูฝ่ายวิชาการเท่านั้นที่สามารถแก้ไขผลการเรียนได้</p>
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">อัปโหลดภาพใบคำร้อง</label>
-                    <input type="file" id="editImageFile" accept=".jpg,.jpeg,.png,.pdf" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <p class="text-xs text-gray-500 mt-1">รองรับไฟล์: JPG, PNG, PDF (ขนาดไม่เกิน 5MB)</p>
-                </div>
-            </div>
-            <div class="px-6 py-4 bg-gray-50 border-t flex justify-end space-x-3">
-                <button onclick="closeEditModal()" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-md">
-                    ยกเลิก
-                </button>
-                <button onclick="saveEdit()" id="saveBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">
-                    บันทึกการแก้ไข
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Log Modal -->
-    <div id="logModal" class="modal">
-        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-full overflow-y-auto">
-            <div class="p-6 border-b">
-                <h3 class="text-xl font-semibold text-gray-800">ประวัติการแก้ไข</h3>
-            </div>
-            <div class="p-6">
-                <div id="logContent" class="space-y-4">
-                    <div class="text-center text-gray-500">กำลังโหลดข้อมูล...</div>
-                </div>
-            </div>
-            <div class="px-6 py-4 bg-gray-50 border-t flex justify-end">
-                <button onclick="closeLogModal()" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-md">
-                    ปิด
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Configuration
-        const CONFIG = {
-            APP_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbynM3jhKBptP9JoDMH0c8CWHqADwj-yV7g3tScby6beJpSgJKsAnyIrkQZNo0gKN_yTEg/exec',
-            RECORDS_PER_PAGE: 20
+// สร้าง lookup map จาก Sheet "บันทึกการแก้ไข"
+// คอลัมน์ A=วันที่แก้ไข(0), E=ชื่อ-สกุลนักเรียน(4), F=รหัสวิชา(5), K=ผู้แก้ไข(10)
+// ถ้ามีหลาย row ของนักเรียนคนเดียวกัน ใช้ row ล่าสุด (สแกนจากล่างขึ้นบน)
+function buildLogMap(spreadsheet) {
+  const logMap = {};
+  try {
+    const logSheet = spreadsheet.getSheetByName(SHEET2_NAME);
+    if (!logSheet) return logMap;
+    
+    const lastRow = logSheet.getLastRow();
+    if (lastRow <= 1) return logMap;
+    
+    const lastCol = logSheet.getLastColumn();
+    const values = logSheet.getRange(1, 1, lastRow, lastCol).getValues();
+    const headers = values[0];
+    
+    // หา index ของคอลัมน์ที่ต้องการ
+    const colEditDate    = headers.indexOf('วันที่แก้ไข');    // A = index 0
+    const colEditTime    = headers.indexOf('เวลา');            // B = index 1
+    const colStudentName = headers.indexOf('ชื่อ-สกุลนักเรียน'); // E = index 4
+    const colSubjectCode = headers.indexOf('รหัสวิชา');        // F = index 5
+    const colEditor      = headers.indexOf('ผู้แก้ไข');        // K = index 10
+    
+    Logger.log('Log sheet col indices - EditDate:' + colEditDate + ' StudentName:' + colStudentName + ' SubjectCode:' + colSubjectCode + ' Editor:' + colEditor);
+    
+    // สแกนจากล่างขึ้นบน → row ล่าสุดของแต่ละ key จะถูกเก็บไว้
+    for (let i = values.length - 1; i >= 1; i--) {
+      const row = values[i];
+      const studentName = colStudentName >= 0 ? String(row[colStudentName] || '').trim() : '';
+      const subjectCode = colSubjectCode >= 0 ? String(row[colSubjectCode] || '').trim() : '';
+      
+      if (!studentName || !subjectCode) continue;
+      
+      const key = studentName + '|' + subjectCode;
+      if (!logMap[key]) {
+        // เก็บครั้งแรกที่เจอ (= row ล่าสุดเพราะสแกนจากล่าง)
+        logMap[key] = {
+          Editor:   colEditor   >= 0 ? String(row[colEditor]   || '').trim() : '',
+          EditDate: colEditDate >= 0 ? String(row[colEditDate] || '').trim() : '',
+          EditTime: colEditTime >= 0 ? String(row[colEditTime] || '').trim() : ''
         };
+      }
+    }
+  } catch (err) {
+    Logger.log('buildLogMap error: ' + err.toString());
+  }
+  return logMap;
+}
 
-        // Global variables
-        let allData = [];
-        let filteredData = [];
-        let currentPage = 1;
-        let currentEditRow = null;
+// Update a record in the main sheet and log the change
+function updateRecord(data) {
+  try {
+    Logger.log('updateRecord called with data: ' + JSON.stringify(data));
+    
+    const spreadsheet = SpreadsheetApp.openById(SHEET_ID);
+    const sheet1 = spreadsheet.getSheetByName(SHEET1_NAME);
+    
+    if (!sheet1) {
+      return {
+        success: false,
+        message: 'ไม่พบชีท "' + SHEET1_NAME + '"'
+      };
+    }
+    
+    const sheet2 = getOrCreateLogSheet(spreadsheet);
+    
+    // Update main sheet
+    const rowIndex = parseInt(data.rowIndex);
+    
+    if (!rowIndex || rowIndex < 2) {
+      return {
+        success: false,
+        message: 'Invalid row index: ' + data.rowIndex
+      };
+    }
+    
+    // Find column indices
+    const headers = sheet1.getRange(1, 1, 1, sheet1.getLastColumn()).getValues()[0];
+    const newResultCol = headers.indexOf('New_Result') + 1;
+    const correctionStatusCol = headers.indexOf('Correction_Status') + 1;
+    const logLinkCol = headers.indexOf('Log_Link') + 1;
+    
+    Logger.log('Column indices - New_Result: ' + newResultCol + ', Correction_Status: ' + correctionStatusCol + ', Log_Link: ' + logLinkCol);
+    
+    if (newResultCol === 0 || correctionStatusCol === 0 || logLinkCol === 0) {
+      return {
+        success: false,
+        message: 'ไม่พบคอลัมน์ที่จำเป็น (New_Result, Correction_Status, Log_Link) กรุณาตรวจสอบ headers ในชีท'
+      };
+    }
+    
+    // Update New_Result
+    sheet1.getRange(rowIndex, newResultCol).setValue(data.newResult || '');
+    Logger.log('Updated New_Result at row ' + rowIndex);
+    
+    // Update Correction_Status
+    sheet1.getRange(rowIndex, correctionStatusCol).setValue('แก้ไขแล้ว');
+    Logger.log('Updated Correction_Status at row ' + rowIndex);
+    
+    // Handle image upload
+    let imageUrl = '';
+    if (data.imageData && data.imageData.base64Data) {
+      try {
+        imageUrl = uploadImage(data.imageData);
+        Logger.log('Image uploaded: ' + imageUrl);
+      } catch (imgError) {
+        Logger.log('Error uploading image: ' + imgError.toString());
+        // Continue without image
+      }
+    }
+    
+    // Add log entry
+    const logRowIndex = addLogEntry(sheet2, {
+      studentName: data.studentName || '',
+      subjectCode: data.subjectCode || '',
+      subjectName: data.subjectName || '',
+      oldResult: data.oldResult || '',
+      newResult: data.newResult || '',
+      editor: data.editor || '',
+      year: data.year || '',
+      semester: data.semester || '',
+      class: data.class || '',
+      imageUrl: imageUrl
+    });
+    
+    Logger.log('Log entry added at row ' + logRowIndex);
+    
+    // Update Log_Link with reference to log row
+    const logLink = 'แก้ไขแถว ' + logRowIndex + ' ในชีทบันทึก';
+    sheet1.getRange(rowIndex, logLinkCol).setValue(logLink);
+    Logger.log('Updated Log_Link at row ' + rowIndex);
+    
+    return {
+      success: true,
+      message: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+      logRowIndex: logRowIndex,
+      imageUrl: imageUrl,
+      updatedRow: rowIndex
+    };
+    
+  } catch (error) {
+    Logger.log('Error in updateRecord: ' + error.toString());
+    Logger.log('Stack trace: ' + error.stack);
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการบันทึก: ' + error.toString(),
+      errorStack: error.stack
+    };
+  }
+}
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            loadData();
+// Get or create the log sheet with proper headers
+function getOrCreateLogSheet(spreadsheet) {
+  let sheet = spreadsheet.getSheetByName(SHEET2_NAME);
+  
+  if (!sheet) {
+    // Create new sheet
+    sheet = spreadsheet.insertSheet(SHEET2_NAME);
+    Logger.log('Created new sheet: ' + SHEET2_NAME);
+  }
+  
+  // Check if headers exist (check first row)
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  
+  // Define expected headers
+  const expectedHeaders = [
+    'วันที่แก้ไข', 'เวลา', 'ชั้นปี', 'ภาคเรียน/ปีการศึกษา', 'ชื่อ-สกุลนักเรียน', 
+    'รหัสวิชา', 'ชื่อวิชา', 'ชั้น', 'ผลการเรียนเดิม', 'ผลการเรียนใหม่', 
+    'ผู้แก้ไข', 'ภาพใบคำร้อง'
+  ];
+  
+  // If sheet is empty OR headers don't match, create/recreate headers
+  if (lastRow === 0 || lastCol === 0) {
+    // Sheet is completely empty
+    Logger.log('Sheet is empty, creating headers');
+    createLogSheetHeaders(sheet, expectedHeaders);
+  } else {
+    // Check if first row has proper headers
+    const firstRow = sheet.getRange(1, 1, 1, Math.min(lastCol, expectedHeaders.length)).getValues()[0];
+    const hasHeaders = expectedHeaders.some(header => firstRow.includes(header));
+    
+    if (!hasHeaders) {
+      // First row doesn't have headers, insert a new row at the top
+      Logger.log('No headers found, inserting header row');
+      sheet.insertRowBefore(1);
+      createLogSheetHeaders(sheet, expectedHeaders);
+    } else if (lastCol < expectedHeaders.length) {
+      // Headers exist but might be incomplete
+      Logger.log('Headers incomplete, updating');
+      createLogSheetHeaders(sheet, expectedHeaders);
+    }
+  }
+  
+  return sheet;
+}
+
+// Create or update headers in log sheet
+function createLogSheetHeaders(sheet, headers) {
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  
+  // Format headers
+  const headerRange = sheet.getRange(1, 1, 1, headers.length);
+  headerRange.setBackground('#4285f4');
+  headerRange.setFontColor('white');
+  headerRange.setFontWeight('bold');
+  headerRange.setHorizontalAlignment('center');
+  headerRange.setVerticalAlignment('middle');
+  
+  // Set column widths
+  sheet.setColumnWidth(1, 100);  // วันที่
+  sheet.setColumnWidth(2, 80);   // เวลา
+  sheet.setColumnWidth(3, 80);   // ชั้นปี
+  sheet.setColumnWidth(4, 120);  // ภาคเรียน
+  sheet.setColumnWidth(5, 200);  // ชื่อ-สกุล
+  sheet.setColumnWidth(6, 100);  // รหัสวิชา
+  sheet.setColumnWidth(7, 200);  // ชื่อวิชา
+  sheet.setColumnWidth(8, 80);   // ชั้น
+  sheet.setColumnWidth(9, 100);  // ผลเดิม
+  sheet.setColumnWidth(10, 100); // ผลใหม่
+  sheet.setColumnWidth(11, 200); // ผู้แก้ไข
+  sheet.setColumnWidth(12, 300); // ภาพ
+  
+  // Freeze header row
+  sheet.setFrozenRows(1);
+  
+  Logger.log('Headers created/updated in log sheet');
+}
+
+// Add a log entry to the log sheet
+function addLogEntry(sheet, logData) {
+  try {
+    const now = new Date();
+    const thaiDate = Utilities.formatDate(now, 'Asia/Bangkok', 'dd/MM/yyyy');
+    const thaiTime = Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm:ss');
+    
+    // Convert year to Buddhist era
+    const buddhistYear = now.getFullYear() + 543;
+    const thaiDateBuddhist = thaiDate.replace(now.getFullYear().toString(), buddhistYear.toString());
+    
+    const newRow = [
+      thaiDateBuddhist,
+      thaiTime,
+      logData.year || '',
+      logData.semester || '',
+      logData.studentName || '',
+      logData.subjectCode || '',
+      logData.subjectName || '',
+      logData.class || '',
+      logData.oldResult || '',
+      logData.newResult || '',
+      logData.editor || '',
+      logData.imageUrl || ''
+    ];
+    
+    const lastRow = sheet.getLastRow();
+    const newRowIndex = lastRow + 1;
+    
+    sheet.getRange(newRowIndex, 1, 1, newRow.length).setValues([newRow]);
+    
+    // Format the new row
+    const dataRange = sheet.getRange(newRowIndex, 1, 1, newRow.length);
+    dataRange.setHorizontalAlignment('left');
+    dataRange.setVerticalAlignment('middle');
+    dataRange.setWrap(false);
+    
+    // Add alternating row color
+    if (newRowIndex % 2 === 0) {
+      dataRange.setBackground('#f8f9fa');
+    }
+    
+    // Add border
+    dataRange.setBorder(true, true, true, true, false, false);
+    
+    Logger.log('Added log entry at row ' + newRowIndex);
+    
+    return newRowIndex;
+    
+  } catch (error) {
+    Logger.log('Error in addLogEntry: ' + error.toString());
+    throw error;
+  }
+}
+
+// Upload image to Google Drive
+function uploadImage(imageData) {
+  try {
+    if (!imageData || !imageData.base64Data) {
+      Logger.log('No image data provided');
+      return '';
+    }
+    
+    const folder = DriveApp.getFolderById(FOLDER_ID);
+    
+    // Create blob from base64
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(imageData.base64Data),
+      imageData.mimeType || 'image/jpeg',
+      imageData.fileName || 'uploaded_file'
+    );
+    
+    // Create file in Drive
+    const file = folder.createFile(blob);
+    
+    // Set sharing to anyone with link
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    // Get viewable URL
+    const fileUrl = file.getUrl();
+    
+    Logger.log('Successfully uploaded file: ' + imageData.fileName + ' to ' + fileUrl);
+    
+    return fileUrl;
+    
+  } catch (error) {
+    Logger.log('Error uploading image: ' + error.toString());
+    Logger.log('Error stack: ' + error.stack);
+    return '';
+  }
+}
+
+// Get log entry for a specific student and subject
+function getLog(data) {
+  try {
+    Logger.log('getLog called with: ' + JSON.stringify(data));
+    
+    const spreadsheet = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = spreadsheet.getSheetByName(SHEET2_NAME);
+    
+    if (!sheet) {
+      Logger.log('Log sheet not found, creating it');
+      sheet = getOrCreateLogSheet(spreadsheet);
+    }
+    
+    const lastRow = sheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      Logger.log('Log sheet has no data (only headers or empty)');
+      return {
+        success: false,
+        message: 'ไม่พบข้อมูลประวัติการแก้ไข'
+      };
+    }
+    
+    const lastCol = sheet.getLastColumn();
+    const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    const headers = values[0];
+    
+    Logger.log('Log sheet headers: ' + JSON.stringify(headers));
+    Logger.log('Total rows in log sheet: ' + lastRow);
+    
+    const studentNameCol = headers.indexOf('ชื่อ-สกุลนักเรียน');
+    const subjectCodeCol = headers.indexOf('รหัสวิชา');
+    
+    if (studentNameCol === -1 || subjectCodeCol === -1) {
+      Logger.log('Required columns not found. Headers: ' + JSON.stringify(headers));
+      return {
+        success: false,
+        message: 'ไม่พบคอลัมน์ที่จำเป็นในชีทบันทึก (ชื่อ-สกุลนักเรียน, รหัสวิชา)'
+      };
+    }
+    
+    // Find matching log entry (search from bottom to top for latest entry)
+    for (let i = values.length - 1; i >= 1; i--) {
+      const row = values[i];
+      const studentName = String(row[studentNameCol] || '').trim();
+      const subjectCode = String(row[subjectCodeCol] || '').trim();
+      
+      Logger.log('Checking row ' + (i + 1) + ': studentName="' + studentName + '" vs "' + data.studentName + '", subjectCode="' + subjectCode + '" vs "' + data.subjectCode + '"');
+      
+      if (studentName === data.studentName && subjectCode === data.subjectCode) {
+        const logEntry = {};
+        headers.forEach((header, index) => {
+          logEntry[header] = row[index] || '';
         });
+        
+        Logger.log('✅ Found log entry for: ' + data.studentName + ', ' + data.subjectCode);
+        Logger.log('Log entry data: ' + JSON.stringify(logEntry));
+        
+        return {
+          success: true,
+          data: logEntry
+        };
+      }
+    }
+    
+    Logger.log('❌ No matching log entry found for: ' + data.studentName + ', ' + data.subjectCode);
+    return {
+      success: false,
+      message: 'ไม่พบข้อมูลประวัติการแก้ไข'
+    };
+    
+  } catch (error) {
+    Logger.log('Error in getLog: ' + error.toString());
+    Logger.log('Error stack: ' + error.stack);
+    return {
+      success: false,
+      message: 'เกิดข้อผิดพลาด: ' + error.toString()
+    };
+  }
+}
 
-        // Load data from Google Sheets
-        async function loadData() {
-            try {
-                showLoading();
-                const url = CONFIG.APP_SCRIPT_URL + '?action=getData&t=' + new Date().getTime();
-                console.log('Attempting to fetch data from:', url);
-                
-                // Try to fetch data with proper error handling
-                const response = await fetch(url, {
-                    method: 'GET',
-                    redirect: 'follow'
-                });
+// Test function - Run this to verify getData works
+function testGetData() {
+  const result = getData();
+  Logger.log('=== Test getData ===');
+  Logger.log(JSON.stringify(result, null, 2));
+  
+  if (result.success) {
+    Logger.log('✅ getData works! Found ' + result.count + ' records');
+  } else {
+    Logger.log('❌ getData failed: ' + result.message);
+  }
+}
 
-                console.log('Response status:', response.status);
-                console.log('Response ok:', response.ok);
+// Test function - Run this to verify updateRecord works
+function testUpdateRecord() {
+  const testData = {
+    action: 'updateRecord',
+    rowIndex: 2,
+    studentName: 'เด็กชาย กรกฎ จันทะเส',
+    subjectCode: 'ท21101',
+    subjectName: 'ภาษาไทย1',
+    oldResult: '0',
+    newResult: '2.5',
+    editor: 'ครูทดสอบระบบ',
+    year: 'ม.1/1',
+    semester: '1/2568',
+    class: 'ม.1'
+  };
+  
+  const result = updateRecord(testData);
+  Logger.log('=== Test updateRecord ===');
+  Logger.log(JSON.stringify(result, null, 2));
+  
+  if (result.success) {
+    Logger.log('✅ updateRecord works! Log created at row ' + result.logRowIndex);
+  } else {
+    Logger.log('❌ updateRecord failed: ' + result.message);
+  }
+}
 
-                // Check if response is ok
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+// Test function - Run this to verify getLog works
+function testGetLog() {
+  const testData = {
+    studentName: 'เด็กชาย กรกฎ จันทะเส',
+    subjectCode: 'ท21101'
+  };
+  
+  const result = getLog(testData);
+  Logger.log('=== Test getLog ===');
+  Logger.log(JSON.stringify(result, null, 2));
+  
+  if (result.success) {
+    Logger.log('✅ getLog works! Found log entry');
+  } else {
+    Logger.log('❌ getLog failed: ' + result.message);
+  }
+}
 
-                const result = await response.json();
-                console.log('Response data:', result);
-                
-                if (result.success && result.data && result.data.length > 0) {
-                    allData = result.data;
-                    console.log('Loaded data count:', allData.length);
-                    
-                    // Filter only failed grades (0, ร, มส)
-                    filteredData = allData.filter(row => 
-                        String(row.ผลการเรียน || '').trim() === '0' || 
-                        String(row.ผลการเรียน || '').trim() === 'ร' || 
-                        String(row.ผลการเรียน || '').trim() === 'มส'
-                    );
-                    
-                    console.log('Filtered data count:', filteredData.length);
-                    
-                    populateFilters();
-                    displayData();
-                    
-                    // Show success message
-                    if (filteredData.length > 0) {
-                        setTimeout(() => {
-                            alert(`✅ โหลดข้อมูลจาก Google Sheets สำเร็จ\n\nพบข้อมูลผลการเรียนที่ไม่ผ่าน: ${filteredData.length} รายการ`);
-                        }, 500);
-                    }
-                } else {
-                    console.log('No data or unsuccessful response, loading sample data');
-                    loadSampleData();
-                }
-            } catch (error) {
-                console.error('Error loading data:', error);
-                console.log('Network error or CORS issue, loading sample data for testing...');
-                
-                // Show error details
-                showError(`ไม่สามารถเชื่อมต่อ Google Sheets ได้: ${error.message}`);
-                
-                // Load sample data after showing error
-                setTimeout(() => {
-                    loadSampleData();
-                }, 2000);
-            }
-        }
-
-        // Load sample data for testing when Google Sheets is not available
-        function loadSampleData() {
-            allData = [
-                {
-                    rowIndex: 2,
-                    ชั้นปี: '2567',
-                    คำนำหน้า: 'เด็กชาย',
-                    ชื่อ: 'สมชาย',
-                    สกุล: 'ใจดี',
-                    รหัสวิชา: 'TH101',
-                    ชื่อวิชา: 'ภาษาไทย',
-                    'ภาคเรียน/ปีการศึกษา': '1/2567',
-                    ชั้น: 'ม.1/1',
-                    คะแนน: '45',
-                    ผลการเรียน: '0',
-                    New_Result: '',
-                    Correction_Status: '',
-                    Editor: '',
-                    EditDate: '',
-                    EditTime: '',
-                    Log_Link: ''
-                },
-                {
-                    rowIndex: 3,
-                    ชั้นปี: '2567',
-                    คำนำหน้า: 'เด็กหญิง',
-                    ชื่อ: 'สมหญิง',
-                    สกุล: 'รักเรียน',
-                    รหัสวิชา: 'EN102',
-                    ชื่อวิชา: 'ภาษาอังกฤษ',
-                    'ภาคเรียน/ปีการศึกษา': '1/2567',
-                    ชั้น: 'ม.1/2',
-                    คะแนน: '0',
-                    ผลการเรียน: 'ร',
-                    New_Result: '',
-                    Correction_Status: '',
-                    Editor: '',
-                    EditDate: '',
-                    EditTime: '',
-                    Log_Link: ''
-                },
-                {
-                    rowIndex: 4,
-                    ชั้นปี: '2567',
-                    คำนำหน้า: 'นาย',
-                    ชื่อ: 'วิชัย',
-                    สกุล: 'เก่งมาก',
-                    รหัสวิชา: 'MA103',
-                    ชื่อวิชา: 'คณิตศาสตร์',
-                    'ภาคเรียน/ปีการศึกษา': '1/2567',
-                    ชั้น: 'ม.2/1',
-                    คะแนน: '0',
-                    ผลการเรียน: 'มส',
-                    New_Result: '2.5',
-                    Correction_Status: 'แก้ไขแล้ว',
-                    Editor: 'นางสาวสมหญิง ดีใจ',
-                    EditDate: '15/12/2567',
-                    EditTime: '14:30:25',
-                    Log_Link: ''
-                },
-                {
-                    rowIndex: 5,
-                    ชั้นปี: '2567',
-                    คำนำหน้า: 'นางสาว',
-                    ชื่อ: 'มาลี',
-                    สกุล: 'สวยงาม',
-                    รหัสวิชา: 'SC104',
-                    ชื่อวิชา: 'วิทยาศาสตร์',
-                    'ภาคเรียน/ปีการศึกษา': '1/2567',
-                    ชั้น: 'ม.3/1',
-                    คะแนน: '35',
-                    ผลการเรียน: '0',
-                    New_Result: '',
-                    Correction_Status: '',
-                    Editor: '',
-                    EditDate: '',
-                    EditTime: '',
-                    Log_Link: ''
-                },
-                {
-                    rowIndex: 6,
-                    ชั้นปี: '2567',
-                    คำนำหน้า: 'เด็กชาย',
-                    ชื่อ: 'สมศักดิ์',
-                    สกุล: 'ขยันเรียน',
-                    รหัสวิชา: 'SO105',
-                    ชื่อวิชา: 'สังคมศึกษา',
-                    'ภาคเรียน/ปีการศึกษา': '2/2567',
-                    ชั้น: 'ม.1/3',
-                    คะแนน: '0',
-                    ผลการเรียน: '0',
-                    New_Result: '1.5',
-                    Correction_Status: 'แก้ไขแล้ว',
-                    Editor: 'นายสมชาย ใจดี',
-                    EditDate: '16/12/2567',
-                    EditTime: '09:15:42',
-                    Log_Link: ''
-                }
-            ];
-
-            // Filter only failed grades (0, ร, มส)
-            filteredData = allData.filter(row => 
-                String(row.ผลการเรียน || '').trim() === '0' || 
-                String(row.ผลการเรียน || '').trim() === 'ร' || 
-                String(row.ผลการเรียน || '').trim() === 'มส'
-            );
-            
-            populateFilters();
-            displayData();
-            
-            // Show info message
-            setTimeout(() => {
-                alert('⚠️ ไม่สามารถเชื่อมต่อ Google Sheets ได้\n\nกำลังแสดงข้อมูลตัวอย่างเพื่อการทดสอบ\n\nกรุณาตรวจสอบ:\n1. URL ของ Google Apps Script\n2. การตั้งค่า CORS\n3. สิทธิ์การเข้าถึง Google Sheets');
-            }, 1000);
-        }
-
-        // Populate filter options
-        function populateFilters() {
-            const yearFilter = document.getElementById('filterYear');
-            const semesterFilter = document.getElementById('filterSemester');
-            
-            // Populate year filter
-            const years = [...new Set(filteredData.map(row => row.ชั้นปี))].sort();
-            yearFilter.innerHTML = '<option value="">ทุกชั้นปี</option>';
-            years.forEach(year => {
-                yearFilter.innerHTML += `<option value="${year}">${year}</option>`;
-            });
-            
-            // Populate semester filter
-            const semesters = [...new Set(filteredData.map(row => row['ภาคเรียน/ปีการศึกษา']))].sort();
-            semesterFilter.innerHTML = '<option value="">ทุกภาคเรียน</option>';
-            semesters.forEach(semester => {
-                semesterFilter.innerHTML += `<option value="${semester}">${semester}</option>`;
-            });
-        }
-
-        // Search and filter data
-        function searchData() {
-            const searchName = document.getElementById('searchName').value.toLowerCase();
-            const searchSubject = document.getElementById('searchSubject').value.toLowerCase();
-            const filterYear = document.getElementById('filterYear').value;
-            const filterSemester = document.getElementById('filterSemester').value;
-            const filterGradeStatus = document.getElementById('filterGradeStatus').value;
-            const filterStatus = document.getElementById('filterStatus').value;
-
-            filteredData = allData.filter(row => {
-                // Only show failed grades
-                const grade = String(row.ผลการเรียน || '').trim();
-                if (!(grade === '0' || grade === 'ร' || grade === 'มส')) {
-                    return false;
-                }
-
-                const fullName = `${row.ชื่อ} ${row.สกุล}`.toLowerCase();
-                const matchName = !searchName || fullName.includes(searchName);
-                const matchSubject = !searchSubject || row.รหัสวิชา.toLowerCase().includes(searchSubject);
-                const matchYear = !filterYear || row.ชั้นปี === filterYear;
-                const matchSemester = !filterSemester || row['ภาคเรียน/ปีการศึกษา'] === filterSemester;
-                const matchGradeStatus = !filterGradeStatus || grade === filterGradeStatus;
-                const matchStatus = filterStatus === '' || 
-                    (filterStatus === 'แก้ไขแล้ว' && row.Correction_Status === 'แก้ไขแล้ว') ||
-                    (filterStatus === '' && row.Correction_Status !== 'แก้ไขแล้ว');
-
-                return matchName && matchSubject && matchYear && matchSemester && matchGradeStatus && matchStatus;
-            });
-
-            currentPage = 1;
-            displayData();
-        }
-
-        // Display data in table
-        function displayData() {
-            const tableBody = document.getElementById('dataTable');
-            const startIndex = (currentPage - 1) * CONFIG.RECORDS_PER_PAGE;
-            const endIndex = startIndex + CONFIG.RECORDS_PER_PAGE;
-            const pageData = filteredData.slice(startIndex, endIndex);
-
-            if (pageData.length === 0) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="10" class="px-4 py-8 text-center text-gray-500">
-                            ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา
-                        </td>
-                    </tr>
-                `;
-            } else {
-                tableBody.innerHTML = pageData.map((row, index) => {
-                    const isEdited = row.Correction_Status === 'แก้ไขแล้ว';
-                    const rowClass = isEdited ? 'edited-row' : '';
-                    const statusIcon = isEdited ? '✓' : '';
-                    const logIcon = isEdited ? '📋' : '';
-                    
-                    return `
-                        <tr class="${rowClass}">
-                            <td class="px-4 py-3">
-                                <span class="text-green-600 font-bold">${statusIcon}</span>
-                                ${isEdited ? `<button onclick="viewLog(${startIndex + index})" class="ml-2 text-blue-600 hover:text-blue-800" title="ดูประวัติการแก้ไข">${logIcon}</button>` : ''}
-                            </td>
-                            <td class="px-4 py-3">${row.ชั้นปี || ''}</td>
-                            <td class="px-4 py-3">${row['ภาคเรียน/ปีการศึกษา'] || ''}</td>
-                            <td class="px-4 py-3">${row.คำนำหน้า || ''} ${row.ชื่อ || ''} ${row.สกุล || ''}</td>
-                            <td class="px-4 py-3">${row.รหัสวิชา || ''}</td>
-                            <td class="px-4 py-3">${row.ชื่อวิชา || ''}</td>
-                            <td class="px-4 py-3">${row.ชั้น || ''}</td>
-                            <td class="px-4 py-3">
-                                <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">${row.ผลการเรียน || ''}</span>
-                            </td>
-                            <td class="px-4 py-3">
-                                ${row.New_Result ? `<span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">${row.New_Result}</span>` : '-'}
-                            </td>
-                            <td class="px-4 py-3 text-center">
-                                <button onclick="editRecord(${startIndex + index})" class="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
-                                    แก้ไข
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-
-            updatePagination();
-        }
-
-        // Update pagination
-        function updatePagination() {
-            const totalPages = Math.ceil(filteredData.length / CONFIG.RECORDS_PER_PAGE);
-            const startIndex = (currentPage - 1) * CONFIG.RECORDS_PER_PAGE;
-            const endIndex = Math.min(startIndex + CONFIG.RECORDS_PER_PAGE, filteredData.length);
-
-            document.getElementById('showingFrom').textContent = filteredData.length > 0 ? startIndex + 1 : 0;
-            document.getElementById('showingTo').textContent = endIndex;
-            document.getElementById('totalRecords').textContent = filteredData.length;
-            document.getElementById('pageInfo').textContent = `หน้า ${currentPage} จาก ${totalPages}`;
-
-            document.getElementById('prevBtn').disabled = currentPage <= 1;
-            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
-        }
-
-        // Pagination functions
-        function previousPage() {
-            if (currentPage > 1) {
-                currentPage--;
-                displayData();
-            }
-        }
-
-        function nextPage() {
-            const totalPages = Math.ceil(filteredData.length / CONFIG.RECORDS_PER_PAGE);
-            if (currentPage < totalPages) {
-                currentPage++;
-                displayData();
-            }
-        }
-
-        // Edit record
-        function editRecord(index) {
-            currentEditRow = index;
-            const record = filteredData[index];
-            
-            document.getElementById('editStudentName').textContent = `${record.คำนำหน้า || ''} ${record.ชื่อ || ''} ${record.สกุล || ''}`;
-            document.getElementById('editClass').textContent = record.ชั้น || '';
-            document.getElementById('editSubjectCode').textContent = record.รหัสวิชา || '';
-            document.getElementById('editSubjectName').textContent = record.ชื่อวิชา || '';
-            document.getElementById('editOldResult').textContent = record.ผลการเรียน || '';
-            document.getElementById('editNewResult').value = record.New_Result || '';
-            document.getElementById('editEditor').value = '';
-            document.getElementById('editImageFile').value = '';
-            document.getElementById('editPassword').value = ''; // เพิ่มบรรทัดนี้
-
-            document.getElementById('editModal').classList.add('show');
-        }
-
-        // Close edit modal
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('show');
-            currentEditRow = null;
-        }
-
-        // Save edit
-        async function saveEdit() {
-            const newResult = document.getElementById('editNewResult').value;
-            const editor = document.getElementById('editEditor').value;
-            const password = document.getElementById('editPassword').value;
-            const imageFile = document.getElementById('editImageFile').files[0];
-
-            // ตรวจสอบว่ากรอกข้อมูลครบหรือไม่
-            if (!newResult || !editor || !password) {
-                alert('❌ กรุณากรอกข้อมูลให้ครบถ้วน\n\n- ผลการเรียนใหม่\n- ผู้แก้ไข\n- รหัสผ่านฝ่ายวิชาการ');
-                return;
-            }
-
-            // ตรวจสอบรหัสผ่าน (กำหนดรหัส 4 หลัก)
-            const CORRECT_PASSWORD = '1234'; // เปลี่ยนรหัสตรงนี้
-            
-            if (password !== CORRECT_PASSWORD) {
-                alert('❌ รหัสผ่านไม่ถูกต้อง!\n\nกรุณาติดต่อฝ่ายวิชาการเพื่อขอรหัสผ่าน');
-                // เคลียร์รหัสผ่านที่กรอกผิด
-                document.getElementById('editPassword').value = '';
-                document.getElementById('editPassword').focus();
-                return;
-            }
-
-            const saveBtn = document.getElementById('saveBtn');
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<div class="loading mr-2"></div>กำลังบันทึก...';
-
-            try {
-                const record = filteredData[currentEditRow];
-                
-                // Create comprehensive update data
-                const updateData = {
-                    action: 'updateRecord',
-                    rowIndex: record.rowIndex,
-                    studentName: `${record.คำนำหน้า || ''} ${record.ชื่อ || ''} ${record.สกุล || ''}`.trim(),
-                    subjectCode: record.รหัสวิชา || '',
-                    subjectName: record.ชื่อวิชา || '',
-                    oldResult: record.ผลการเรียน || '',
-                    newResult: newResult,
-                    editor: editor,
-                    year: record.ชั้นปี || '',
-                    semester: record['ภาคเรียน/ปีการศึกษา'] || '',
-                    class: record.ชั้น || '',
-                    editDate: new Date().toLocaleDateString('th-TH'),
-                    editTime: new Date().toLocaleTimeString('th-TH'),
-                    timestamp: new Date().getTime()
-                };
-
-                console.log('Sending update data:', updateData);
-
-                // Handle image upload
-                if (imageFile) {
-                    if (imageFile.size > 5 * 1024 * 1024) {
-                        alert('ขนาดไฟล์ใหญ่เกินไป (ไม่เกิน 5MB)');
-                        saveBtn.disabled = false;
-                        saveBtn.innerHTML = 'บันทึกการแก้ไข';
-                        return;
-                    }
-
-                    try {
-                        const base64Data = await fileToBase64(imageFile);
-                        updateData.imageData = {
-                            base64Data: base64Data,
-                            fileName: imageFile.name,
-                            mimeType: imageFile.type
-                        };
-                        console.log('Image data prepared for upload');
-                    } catch (error) {
-                        console.error('Error processing image:', error);
-                        alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ');
-                        saveBtn.disabled = false;
-                        saveBtn.innerHTML = 'บันทึกการแก้ไข';
-                        return;
-                    }
-                }
-
-                // Send POST request
-                const response = await fetch(CONFIG.APP_SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(updateData)
-                });
-
-                console.log('Response status:', response.status);
-                console.log('Response ok:', response.ok);
-
-                // Check response
-                let result;
-                if (response.ok) {
-                    try {
-                        result = await response.json();
-                        console.log('Response data:', result);
-                    } catch (error) {
-                        console.log('Response is not JSON, assuming success');
-                        result = { success: true, message: 'Data sent successfully' };
-                    }
-                } else {
-                    const errorText = await response.text();
-                    console.error('Response error:', errorText);
-                    throw new Error(`HTTP ${response.status}: ${errorText}`);
-                }
-
-                if (result.success !== false) {
-                    // Update local data for immediate UI update
-                    const originalIndex = allData.findIndex(row => row.rowIndex === record.rowIndex);
-                    if (originalIndex !== -1) {
-                        allData[originalIndex].New_Result = newResult;
-                        allData[originalIndex].Correction_Status = 'แก้ไขแล้ว';
-                        allData[originalIndex].Editor = editor;
-                        allData[originalIndex].EditDate = updateData.editDate;
-                        allData[originalIndex].EditTime = updateData.editTime;
-                    }
-                    
-                    filteredData[currentEditRow].New_Result = newResult;
-                    filteredData[currentEditRow].Correction_Status = 'แก้ไขแล้ว';
-                    filteredData[currentEditRow].Editor = editor;
-                    filteredData[currentEditRow].EditDate = updateData.editDate;
-                    filteredData[currentEditRow].EditTime = updateData.editTime;
-                    
-                    // Show success message
-                    alert('✅ บันทึกการแก้ไขเรียบร้อยแล้ว\n\nข้อมูลได้ถูกส่งไปยัง Google Sheets แล้ว');
-                    
-                    closeEditModal();
-                    displayData(); // Update display immediately
-                    
-                    // Reload data from server to confirm changes
-                    setTimeout(() => {
-                        console.log('Reloading data to confirm changes...');
-                        loadData();
-                    }, 3000);
-                } else {
-                    throw new Error('Server returned error: ' + (result.message || 'Unknown error'));
-                }
-                
-            } catch (error) {
-                console.error('Error saving edit:', error);
-                
-                // Even if there's an error, update local data for better user experience
-                const record = filteredData[currentEditRow];
-                const originalIndex = allData.findIndex(row => row.rowIndex === record.rowIndex);
-                if (originalIndex !== -1) {
-                    allData[originalIndex].New_Result = newResult;
-                    allData[originalIndex].Correction_Status = 'แก้ไขแล้ว (ท้องถิ่น)';
-                    allData[originalIndex].Editor = editor;
-                    allData[originalIndex].EditDate = new Date().toLocaleDateString('th-TH');
-                    allData[originalIndex].EditTime = new Date().toLocaleTimeString('th-TH');
-                }
-                
-                filteredData[currentEditRow].New_Result = newResult;
-                filteredData[currentEditRow].Correction_Status = 'แก้ไขแล้ว (ท้องถิ่น)';
-                filteredData[currentEditRow].Editor = editor;
-                filteredData[currentEditRow].EditDate = new Date().toLocaleDateString('th-TH');
-                filteredData[currentEditRow].EditTime = new Date().toLocaleTimeString('th-TH');
-                
-                // Show error message
-                alert('❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล\n\n' + 
-                      'รายละเอียด: ' + error.message + '\n\n' +
-                      'กรุณาตรวจสอบ:\n' +
-                      '• การเชื่อมต่ออินเทอร์เน็ต\n' +
-                      '• URL ของ Google Apps Script\n' +
-                      '• การตั้งค่าสิทธิ์ Google Sheets');
-                closeEditModal();
-                displayData(); // Update display with local changes
-            } finally {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = 'บันทึกการแก้ไข';
-            }
-        }
-
-        // View log
-        async function viewLog(index) {
-            const record = filteredData[index];
-            document.getElementById('logModal').classList.add('show');
-            
-            // Show loading state
-            document.getElementById('logContent').innerHTML = `
-                <div class="text-center text-gray-500">
-                    <div class="loading mx-auto mb-2"></div>
-                    กำลังโหลดประวัติการแก้ไขจาก Google Sheets...
-                </div>
-            `;
-            
-            try {
-                const studentName = `${record.คำนำหน้า || ''} ${record.ชื่อ || ''} ${record.สกุล || ''}`.trim();
-                const url = CONFIG.APP_SCRIPT_URL + '?action=getLog&studentName=' + encodeURIComponent(studentName) + '&subjectCode=' + encodeURIComponent(record.รหัสวิชา || '') + '&rowIndex=' + encodeURIComponent(record.rowIndex || '') + '&t=' + new Date().getTime();
-                
-                console.log('Fetching edit log from Google Sheets:', url);
-                
-                const response = await fetch(url, {
-                    method: 'GET',
-                    redirect: 'follow'
-                });
-
-                console.log('Log response status:', response.status);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                console.log('Log result from Google Sheets:', result);
-                
-                if (result.success && result.data) {
-                    const logData = result.data;
-                    document.getElementById('logContent').innerHTML = `
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <h4 class="font-semibold text-gray-800 mb-3">ประวัติการแก้ไขจาก Google Sheets</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                <div><strong>วันที่แก้ไข:</strong> ${logData.วันที่แก้ไข || logData.EditDate || '-'}</div>
-                                <div><strong>เวลา:</strong> ${logData.เวลา || logData.EditTime || '-'}</div>
-                                <div><strong>นักเรียน:</strong> ${logData['ชื่อ-สกุลนักเรียน'] || logData.studentName || studentName}</div>
-                                <div><strong>รหัสวิชา:</strong> ${logData.รหัสวิชา || logData.subjectCode || record.รหัสวิชา || '-'}</div>
-                                <div><strong>ชื่อวิชา:</strong> ${logData.ชื่อวิชา || logData.subjectName || record.ชื่อวิชา || '-'}</div>
-                                <div><strong>ชั้น:</strong> ${logData.ชั้น || logData.class || record.ชั้น || '-'}</div>
-                                <div><strong>ผลการเรียนเดิม:</strong> <span class="text-red-600 font-medium">${logData.ผลการเรียนเดิม || logData.oldResult || record.ผลการเรียน || '-'}</span></div>
-                                <div><strong>ผลการเรียนใหม่:</strong> <span class="text-green-600 font-medium">${logData.ผลการเรียนใหม่ || logData.newResult || record.New_Result || '-'}</span></div>
-                                <div><strong>ผู้แก้ไข:</strong> ${logData.ผู้แก้ไข || logData.editor || record.Editor || '-'}</div>
-                                <div><strong>หมายเหตุ:</strong> ${logData.หมายเหตุ || logData.note || '-'}</div>
-                            </div>
-                            ${(logData['ภาพใบคำร้อง'] || logData.imageUrl) ? `
-                                <div class="mt-4">
-                                    <strong>ภาพใบคำร้อง:</strong> 
-                                    <a href="${logData['ภาพใบคำร้อง'] || logData.imageUrl}" target="_blank" rel="noopener noreferrer" 
-                                       class="text-blue-600 hover:text-blue-800 underline ml-2">ดูภาพ</a>
-                                </div>
-                            ` : ''}
-                            <div class="mt-4 p-3 bg-green-50 rounded-lg">
-                                <p class="text-sm text-green-700">✅ ข้อมูลจาก Google Sheets - อัปเดตล่าสุด</p>
-                                <p class="text-xs text-green-600 mt-1">ข้อมูลนี้ดึงมาจาก Sheet "Edit_Log" ใน Google Sheets</p>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    // No log data found in Google Sheets
-                    document.getElementById('logContent').innerHTML = `
-                        <div class="text-center text-gray-500 p-8">
-                            <div class="text-4xl mb-4">📝</div>
-                            <p class="text-lg mb-2">ไม่พบประวัติการแก้ไขใน Google Sheets</p>
-                            <p class="text-sm mb-4">รายการนี้อาจยังไม่ได้รับการแก้ไข หรือข้อมูลยังไม่ได้บันทึกใน Sheet "Edit_Log"</p>
-                            <div class="mt-4 p-3 bg-blue-50 rounded-lg">
-                                <p class="text-sm text-blue-700">💡 หากเพิ่งแก้ไขข้อมูล กรุณารอสักครู่แล้วลองใหม่</p>
-                            </div>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Error loading log from Google Sheets:', error);
-                
-                document.getElementById('logContent').innerHTML = `
-                    <div class="text-center text-red-500 p-8">
-                        <div class="text-4xl mb-4">❌</div>
-                        <p class="text-lg mb-2">ไม่สามารถโหลดประวัติการแก้ไขจาก Google Sheets ได้</p>
-                        <p class="text-sm mb-4">เกิดข้อผิดพลาดในการเชื่อมต่อ</p>
-                        <div class="text-xs text-left bg-red-50 p-3 rounded-lg">
-                            <strong>รายละเอียดข้อผิดพลาด:</strong><br>
-                            ${error.message}<br><br>
-                            <strong>แนวทางแก้ไข:</strong><br>
-                            • ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต<br>
-                            • ตรวจสอบ URL ของ Google Apps Script<br>
-                            • ตรวจสอบว่ามี Sheet "Edit_Log" ใน Google Sheets หรือไม่<br>
-                            • ตรวจสอบสิทธิ์การเข้าถึง Google Sheets
-                        </div>
-                        <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
-                            <p class="text-sm text-yellow-700">⚠️ กรุณาติดต่อผู้ดูแลระบบหากปัญหายังคงอยู่</p>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        // Close log modal
-        function closeLogModal() {
-            document.getElementById('logModal').classList.remove('show');
-        }
-
-        // Utility functions
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
-            });
-        }
-
-        function showLoading() {
-            document.getElementById('dataTable').innerHTML = `
-                <tr>
-                    <td colspan="10" class="px-4 py-8 text-center text-gray-500">
-                        <div class="loading mx-auto mb-2"></div>
-                        กำลังโหลดข้อมูล...
-                    </td>
-                </tr>
-            `;
-        }
-
-        function showError(message) {
-            document.getElementById('dataTable').innerHTML = `
-                <tr>
-                    <td colspan="10" class="px-4 py-8 text-center text-red-500">
-                        ❌ ${message}
-                    </td>
-                </tr>
-            `;
-        }
-    </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'991ddcba57e37325',t:'MTc2MTAxOTM3Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
-</html>
+// Test function - Check log sheet structure
+function checkLogSheetStructure() {
+  try {
+    const spreadsheet = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = spreadsheet.getSheetByName(SHEET2_NAME);
+    
+    if (!sheet) {
+      Logger.log('❌ Log sheet does not exist');
+      return;
+    }
+    
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    
+    Logger.log('=== Log Sheet Structure ===');
+    Logger.log('Last Row: ' + lastRow);
+    Logger.log('Last Column: ' + lastCol);
+    
+    if (lastRow > 0 && lastCol > 0) {
+      const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+      Logger.log('Headers: ' + JSON.stringify(headers));
+      
+      if (lastRow > 1) {
+        Logger.log('\nSample data (first data row):');
+        const sampleRow = sheet.getRange(2, 1, 1, lastCol).getValues()[0];
+        headers.forEach((header, index) => {
+          Logger.log('  ' + header + ': ' + sampleRow[index]);
+        });
+      } else {
+        Logger.log('No data rows found (only headers)');
+      }
+    } else {
+      Logger.log('Sheet is empty');
+    }
+  } catch (error) {
+    Logger.log('Error: ' + error.toString());
+  }
+}
