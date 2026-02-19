@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการข้อมูลแก้ไขผลการเรียน - โรงเรียนกระดุมทองวิทยา</title>
+    <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- SweetAlert2 -->
@@ -350,6 +351,56 @@
         .table-wrapper::-webkit-scrollbar-track { background:#f1f5f9; }
         .table-wrapper::-webkit-scrollbar-thumb { background:#c7d2fe; border-radius:3px; }
 
+        /* ── Student summary card ── */
+        .student-summary-card {
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 16px rgba(79,70,229,.06);
+            overflow: hidden;
+        }
+        .student-summary-card .card-header {
+            background: linear-gradient(135deg,#f5f3ff,#ede9fe);
+            padding: 14px 18px;
+            border-bottom: 1px solid #e0e7ff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .student-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 18px;
+            border-bottom: 1px solid #f8fafc;
+            transition: background .15s;
+            font-size: .83rem;
+            animation: rowSlideIn .3s ease both;
+        }
+        .student-row:last-child { border-bottom: none; }
+        .student-row:hover { background: #f5f3ff; }
+        .student-name { font-weight: 500; color: #374151; flex: 1; min-width: 0; }
+        .student-badges { display: flex; gap: 5px; flex-shrink: 0; }
+        .count-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: .75rem;
+            font-weight: 600;
+        }
+        .count-pill.zero  { background:#fee2e2; color:#b91c1c; }
+        .count-pill.ror   { background:#fef3c7; color:#92400e; }
+        .count-pill.ms    { background:#ede9fe; color:#5b21b6; }
+        .student-summary-scroll {
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .student-summary-scroll::-webkit-scrollbar { width:4px; }
+        .student-summary-scroll::-webkit-scrollbar-track { background:#f1f5f9; }
+        .student-summary-scroll::-webkit-scrollbar-thumb { background:#c7d2fe; border-radius:2px; }
+
         /* ── Print styles ── */
         @media print {
             body::before, .orb, .no-print { display:none !important; }
@@ -448,6 +499,36 @@
                 <p class="text-xs text-gray-500 mb-1">แก้ไขแล้ว</p>
                 <p class="stat-number text-emerald-500" id="statDone">—</p>
                 <p class="text-xs text-gray-400 mt-1">รายการ</p>
+            </div>
+        </div>
+
+        <!-- ══ STUDENT SUMMARY CARD ══ -->
+        <div class="glass p-6 mb-6 no-print" id="studentSummarySection" style="display:none">
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <h2 class="font-semibold text-gray-700">สรุปนักเรียนที่ยังมีผลการเรียนค้างอยู่</h2>
+                    <span class="badge badge-purple ml-1" id="summaryStudentCount">—</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400">เรียงตามจำนวนวิชา</span>
+                    <button onclick="toggleSummarySort()" id="summaryToggleBtn" class="btn btn-sm btn-secondary">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
+                        มาก→น้อย
+                    </button>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="flex gap-3 mb-3 flex-wrap">
+                <span class="count-pill zero">0 วิชา</span>
+                <span class="count-pill ror">ร วิชา</span>
+                <span class="count-pill ms">มส วิชา</span>
+                <span class="text-xs text-gray-400 self-center">— นับเฉพาะที่ยังไม่แก้ไข</span>
+            </div>
+
+            <div class="student-summary-scroll" id="studentSummaryList">
+                <div class="text-center py-8 text-gray-400 text-sm">กำลังประมวลผล...</div>
             </div>
         </div>
 
@@ -821,6 +902,71 @@
         const pct  = base.length ? Math.round(done/base.length*100) : 0;
         document.getElementById('progressFill').style.width = pct + '%';
         document.getElementById('progressLabel').textContent = `แก้ไขแล้ว ${done}/${base.length} (${pct}%)`;
+
+        // student summary
+        updateStudentSummary();
+    }
+
+    // ─── Student Summary ──────────────────────────────
+    let summarySortAsc = false; // true = น้อย→มาก, false = มาก→น้อย
+
+    function updateStudentSummary() {
+        // นับเฉพาะรายการที่ยังไม่แก้ไข
+        const pending = filterFailedGrades(allData).filter(r => r.Correction_Status !== 'แก้ไขแล้ว');
+
+        // group by ชื่อ-สกุลเต็ม
+        const map = {};
+        pending.forEach(r => {
+            const name = `${r.คำนำหน้า||''} ${r.ชื่อ||''} ${r.สกุล||''}`.trim();
+            if (!map[name]) map[name] = { zero:0, ror:0, ms:0 };
+            const g = String(r.ผลการเรียน||'').trim();
+            if (g==='0')  map[name].zero++;
+            if (g==='ร')  map[name].ror++;
+            if (g==='มส') map[name].ms++;
+        });
+
+        const students = Object.entries(map).map(([name, counts]) => ({
+            name,
+            total: counts.zero + counts.ror + counts.ms,
+            ...counts
+        }));
+
+        // sort
+        students.sort((a,b) => summarySortAsc ? a.total - b.total : b.total - a.total);
+
+        // update count badge
+        document.getElementById('summaryStudentCount').textContent = students.length + ' คน';
+
+        // show/hide section
+        const section = document.getElementById('studentSummarySection');
+        section.style.display = students.length > 0 ? '' : 'none';
+
+        if (!students.length) return;
+
+        // render list
+        const list = document.getElementById('studentSummaryList');
+        list.innerHTML = students.map((s, idx) => `
+            <div class="student-row" style="animation-delay:${Math.min(idx*20,400)}ms">
+                <div class="flex items-center gap-3 flex-1 min-w-0 mr-3">
+                    <span class="text-xs text-gray-300 w-5 text-right flex-shrink-0">${idx+1}</span>
+                    <span class="student-name truncate">${s.name}</span>
+                </div>
+                <div class="student-badges">
+                    ${s.zero ? `<span class="count-pill zero">0 × ${s.zero}</span>` : ''}
+                    ${s.ror  ? `<span class="count-pill ror">ร × ${s.ror}</span>`   : ''}
+                    ${s.ms   ? `<span class="count-pill ms">มส × ${s.ms}</span>`   : ''}
+                    <span class="text-xs text-gray-400 self-center ml-1">(${s.total} วิชา)</span>
+                </div>
+            </div>`).join('');
+    }
+
+    function toggleSummarySort() {
+        summarySortAsc = !summarySortAsc;
+        const btn = document.getElementById('summaryToggleBtn');
+        btn.innerHTML = summarySortAsc
+            ? `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4 4m-4-4v12"/></svg>น้อย→มาก`
+            : `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4 4m-4-4v12"/></svg>มาก→น้อย`;
+        updateStudentSummary();
     }
 
     // ─── Filters ──────────────────────────────────────
