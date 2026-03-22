@@ -735,7 +735,9 @@
 
                 <div class="mb-5">
                     <label class="form-label">ผู้แก้ไข <span class="text-red-500">*</span></label>
-                    <input type="text" id="editEditor" placeholder="เช่น นางสาวสมหญิง ดีใจ" class="input-field">
+                    <input type="text" id="editEditor" placeholder="เช่น นางสาวสมหญิง ดีใจ" class="input-field" autocomplete="off" list="editorSuggestions">
+                    <datalist id="editorSuggestions"></datalist>
+                    <p class="text-xs text-gray-400 mt-1">💡 ระบบจะจำชื่อที่เคยกรอกไว้ให้อัตโนมัติ</p>
                 </div>
 
                 <div class="mb-5">
@@ -745,9 +747,9 @@
                 </div>
 
                 <div class="mb-2">
-                    <label class="form-label">อัปโหลดภาพใบคำร้อง</label>
+                    <label class="form-label">อัปโหลดภาพใบคำร้อง <span class="text-gray-400 font-normal">(ไม่บังคับ)</span></label>
                     <input type="file" id="editImageFile" accept=".jpg,.jpeg,.png,.pdf" class="input-field">
-                    <p class="text-xs text-gray-400 mt-1">รองรับ JPG, PNG, PDF (ไม่เกิน 5MB)</p>
+                    <p class="text-xs text-gray-400 mt-1">รองรับ JPG, PNG, PDF (ไม่เกิน 5MB) — สามารถบันทึกได้โดยไม่ต้องแนบภาพ</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -798,6 +800,39 @@
     let currentPage = 1;
     let currentEditRow = null;
 
+    // ─── Filter state save/restore (sessionStorage) ───
+    const FILTER_STATE_KEY = 'ktw_filter_state';
+
+    function saveFilterState() {
+        const state = {
+            searchName:        document.getElementById('searchName').value,
+            searchSubject:     document.getElementById('searchSubject').value,
+            filterYear:        document.getElementById('filterYear').value,
+            filterSemester:    document.getElementById('filterSemester').value,
+            filterGradeStatus: document.getElementById('filterGradeStatus').value,
+            filterStatus:      document.getElementById('filterStatus').value,
+            currentPage:       currentPage
+        };
+        sessionStorage.setItem(FILTER_STATE_KEY, JSON.stringify(state));
+    }
+
+    function restoreFilterState() {
+        try {
+            const raw = sessionStorage.getItem(FILTER_STATE_KEY);
+            if (!raw) return false;
+            const state = JSON.parse(raw);
+            sessionStorage.removeItem(FILTER_STATE_KEY); // ใช้ครั้งเดียวแล้วลบทิ้ง
+            document.getElementById('searchName').value        = state.searchName        || '';
+            document.getElementById('searchSubject').value     = state.searchSubject     || '';
+            document.getElementById('filterYear').value        = state.filterYear        || '';
+            document.getElementById('filterSemester').value    = state.filterSemester    || '';
+            document.getElementById('filterGradeStatus').value = state.filterGradeStatus || '';
+            document.getElementById('filterStatus').value      = state.filterStatus      || '';
+            currentPage = state.currentPage || 1;
+            return true;
+        } catch { return false; }
+    }
+
     // ─── Init ─────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', loadData);
 
@@ -812,9 +847,14 @@
 
             if (result.success && result.data && result.data.length > 0) {
                 allData = result.data.map(normalizeRow);
-                filteredData = filterFailedGrades(allData);
-                populateFilters();
-                displayData();
+                populateFilters();           // ต้อง populate ก่อน restore เพื่อให้ option พร้อม
+                const hasState = restoreFilterState();
+                if (hasState) {
+                    searchData(true);        // กรองตาม state ที่ restore มา (currentPage ถูก set แล้ว)
+                } else {
+                    filteredData = filterFailedGrades(allData);
+                    displayData();
+                }
                 updateStats();
 
                 Swal.fire({
@@ -986,7 +1026,7 @@
         searchData();
     }
 
-    function searchData() {
+    function searchData(keepPage = false) {
         const name    = document.getElementById('searchName').value.toLowerCase();
         const subj    = document.getElementById('searchSubject').value.toLowerCase();
         const year    = document.getElementById('filterYear').value;
@@ -1009,7 +1049,10 @@
             return matchName && matchSubj && matchYear && matchSem && matchGrade && matchStatus;
         });
 
-        currentPage = 1;
+        if (!keepPage) currentPage = 1;
+        // clamp หน้าไม่ให้เกินจำนวนหน้าจริง
+        const totalPages = Math.ceil(filteredData.length / CONFIG.RECORDS_PER_PAGE) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
         displayData();
     }
 
@@ -1132,6 +1175,7 @@
         document.getElementById('editEditor').value     = '';
         document.getElementById('editPassword').value   = '';
         document.getElementById('editImageFile').value  = '';
+        refreshEditorDatalist();
         document.getElementById('editModal').classList.add('show');
     }
 
@@ -1158,6 +1202,9 @@
             document.getElementById('editPassword').focus();
             return;
         }
+
+        // บันทึกชื่อครูไว้ใน localStorage
+        saveEditorName(editor);
 
         const saveBtn = document.getElementById('saveBtn');
         saveBtn.disabled = true;
@@ -1215,10 +1262,14 @@
                 icon:'success', title:'บันทึกสำเร็จ!',
                 html:`บันทึกการแก้ไขผลการเรียนของ<br><b>${updateData.studentName}</b><br>วิชา ${updateData.subjectName} เรียบร้อยแล้ว`,
                 confirmButtonColor:'#4f46e5',
-                footer:'<small>ข้อมูลได้รับการส่งไปยัง Google Sheets แล้ว</small>'
+                footer:'<small>ข้อมูลได้รับการส่งไปยัง Google Sheets แล้ว</small>',
+                timer: 2500,
+                timerProgressBar: true,
+                showConfirmButton: false
+            }).then(() => {
+                saveFilterState();   // บันทึก filter+หน้าปัจจุบันไว้
+                location.reload();   // reload เพื่อดึงข้อมูลใหม่จาก Sheets
             });
-
-            setTimeout(loadData, 4000);
 
         } catch(err) {
             console.error(err);
@@ -1454,6 +1505,32 @@
             <script>window.onload=()=>{ window.print(); }<\/script>
         </body></html>`);
         win.document.close();
+    }
+
+    // ─── Editor name memory (localStorage) ───────────
+    const EDITOR_STORAGE_KEY = 'ktw_editor_names';
+
+    function getStoredEditors() {
+        try {
+            return JSON.parse(localStorage.getItem(EDITOR_STORAGE_KEY) || '[]');
+        } catch { return []; }
+    }
+
+    function saveEditorName(name) {
+        if (!name || name.length < 2) return;
+        const list = getStoredEditors();
+        if (!list.includes(name)) {
+            list.unshift(name); // ใส่ไว้ต้นสุด (ล่าสุดก่อน)
+            if (list.length > 20) list.pop(); // เก็บไม่เกิน 20 ชื่อ
+            localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(list));
+        }
+    }
+
+    function refreshEditorDatalist() {
+        const dl = document.getElementById('editorSuggestions');
+        if (!dl) return;
+        const list = getStoredEditors();
+        dl.innerHTML = list.map(n => `<option value="${n}">`).join('');
     }
 
     // ─── Utils ────────────────────────────────────────
