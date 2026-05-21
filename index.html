@@ -7,10 +7,13 @@
     <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- SheetJS for Excel export -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+    <!-- Firebase v9 compat (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
     <style>
         :root {
@@ -57,397 +60,208 @@
             100% { filter: hue-rotate(20deg); }
         }
 
-        /* ── Floating orbs ── */
-        .orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(60px);
-            opacity: .35;
-            animation: orbFloat 8s ease-in-out infinite alternate;
-            pointer-events: none;
-            z-index: -1;
-        }
-        .orb-1 { width: 400px; height: 400px; background: #818cf8; top: -100px; left: -100px; animation-delay: 0s; }
-        .orb-2 { width: 300px; height: 300px; background: #a78bfa; bottom: 0; right: -80px; animation-delay: -3s; }
-        .orb-3 { width: 200px; height: 200px; background: #67e8f9; top: 40%; left: 60%; animation-delay: -5s; }
-        @keyframes orbFloat {
-            0%   { transform: translate(0,0) scale(1); }
-            100% { transform: translate(30px,20px) scale(1.1); }
-        }
+        .orb { position:fixed; border-radius:50%; filter:blur(60px); opacity:.35; animation:orbFloat 8s ease-in-out infinite alternate; pointer-events:none; z-index:-1; }
+        .orb-1 { width:400px; height:400px; background:#818cf8; top:-100px; left:-100px; animation-delay:0s; }
+        .orb-2 { width:300px; height:300px; background:#a78bfa; bottom:0; right:-80px; animation-delay:-3s; }
+        .orb-3 { width:200px; height:200px; background:#67e8f9; top:40%; left:60%; animation-delay:-5s; }
+        @keyframes orbFloat { 0%{transform:translate(0,0)scale(1);} 100%{transform:translate(30px,20px)scale(1.1);} }
 
-        /* ── Glass card ── */
-        .glass {
-            background: rgba(255,255,255,.82);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border: 1px solid rgba(255,255,255,.7);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(79,70,229,.08), 0 2px 8px rgba(0,0,0,.04);
-        }
+        .glass { background:rgba(255,255,255,.82); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); border:1px solid rgba(255,255,255,.7); border-radius:20px; box-shadow:0 8px 32px rgba(79,70,229,.08),0 2px 8px rgba(0,0,0,.04); }
 
-        /* ── Header ── */
-        .header-card {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #06b6d4 100%);
-            border-radius: 24px;
-            box-shadow: 0 20px 60px rgba(79,70,229,.35);
-            position: relative;
-            overflow: hidden;
-        }
-        .header-card::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: repeating-linear-gradient(
-                -45deg,
-                rgba(255,255,255,.03) 0px,
-                rgba(255,255,255,.03) 2px,
-                transparent 2px,
-                transparent 16px
-            );
-        }
-        .header-card h1 { text-shadow: 0 2px 16px rgba(0,0,0,.2); }
-        .logo-ring {
-            background: rgba(255,255,255,.2);
-            border: 2px solid rgba(255,255,255,.4);
-            border-radius: 50%;
-            padding: 8px;
-            animation: pulse-ring 3s ease-in-out infinite;
-        }
-        @keyframes pulse-ring {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.3); }
-            50%       { box-shadow: 0 0 0 12px rgba(255,255,255,.0); }
-        }
+        /* ── Nav bar ── */
+        .navbar { background:rgba(255,255,255,.9); backdrop-filter:blur(20px); border-bottom:1px solid rgba(79,70,229,.12); position:sticky; top:0; z-index:100; box-shadow:0 2px 16px rgba(79,70,229,.08); }
+        .nav-link { padding:8px 16px; border-radius:10px; font-size:.88rem; font-weight:500; cursor:pointer; transition:all .2s; color:var(--text-muted); display:flex; align-items:center; gap:6px; border:none; background:transparent; font-family:'Kanit',sans-serif; }
+        .nav-link:hover { background:#eef2ff; color:var(--primary); }
+        .nav-link.active { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; box-shadow:0 4px 14px rgba(79,70,229,.3); }
 
-        /* ── Stats cards ── */
-        .stat-card {
-            background: var(--card);
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            padding: 20px;
-            transition: transform .25s, box-shadow .25s;
-            box-shadow: 0 4px 16px rgba(79,70,229,.06);
-            position: relative;
-            overflow: hidden;
-            cursor: default;
-        }
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 3px;
-            border-radius: 16px 16px 0 0;
-        }
-        .stat-card.total::before  { background: linear-gradient(90deg,#4f46e5,#7c3aed); }
-        .stat-card.zero::before   { background: linear-gradient(90deg,#ef4444,#f87171); }
-        .stat-card.ror::before    { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
-        .stat-card.ms::before     { background: linear-gradient(90deg,#8b5cf6,#a78bfa); }
-        .stat-card.done::before   { background: linear-gradient(90deg,#10b981,#34d399); }
-        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(79,70,229,.14); }
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            line-height: 1;
-            transition: transform .2s;
-        }
-        .stat-card:hover .stat-number { transform: scale(1.08); }
+        /* ── Header card ── */
+        .header-card { background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 60%,#06b6d4 100%); border-radius:24px; box-shadow:0 20px 60px rgba(79,70,229,.35); position:relative; overflow:hidden; }
+        .header-card::after { content:''; position:absolute; inset:0; background:repeating-linear-gradient(-45deg,rgba(255,255,255,.03) 0px,rgba(255,255,255,.03) 2px,transparent 2px,transparent 16px); }
+        .logo-ring { background:rgba(255,255,255,.2); border:2px solid rgba(255,255,255,.4); border-radius:50%; padding:8px; animation:pulse-ring 3s ease-in-out infinite; }
+        @keyframes pulse-ring { 0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.3);} 50%{box-shadow:0 0 0 12px rgba(255,255,255,.0);} }
 
-        /* ── Inputs & selects ── */
-        .input-field {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1.5px solid var(--border);
-            border-radius: 10px;
-            font-family: 'Kanit', sans-serif;
-            font-size: .9rem;
-            color: var(--text);
-            background: rgba(255,255,255,.9);
-            transition: border-color .2s, box-shadow .2s;
-            outline: none;
-        }
-        .input-field:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79,70,229,.12);
-        }
+        /* ── Stats ── */
+        .stat-card { background:var(--card); border-radius:16px; border:1px solid var(--border); padding:20px; transition:transform .25s,box-shadow .25s; box-shadow:0 4px 16px rgba(79,70,229,.06); position:relative; overflow:hidden; cursor:default; }
+        .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:16px 16px 0 0; }
+        .stat-card.total::before { background:linear-gradient(90deg,#4f46e5,#7c3aed); }
+        .stat-card.zero::before  { background:linear-gradient(90deg,#ef4444,#f87171); }
+        .stat-card.ror::before   { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
+        .stat-card.ms::before    { background:linear-gradient(90deg,#8b5cf6,#a78bfa); }
+        .stat-card.done::before  { background:linear-gradient(90deg,#10b981,#34d399); }
+        .stat-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(79,70,229,.14); }
+        .stat-number { font-size:2rem; font-weight:700; line-height:1; }
+
+        /* ── Inputs ── */
+        .input-field { width:100%; padding:10px 14px; border:1.5px solid var(--border); border-radius:10px; font-family:'Kanit',sans-serif; font-size:.9rem; color:var(--text); background:rgba(255,255,255,.9); transition:border-color .2s,box-shadow .2s; outline:none; }
+        .input-field:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(79,70,229,.12); }
 
         /* ── Buttons ── */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-family: 'Kanit', sans-serif;
-            font-size: .9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all .2s;
-            border: none;
-            outline: none;
-            position: relative;
-            overflow: hidden;
-        }
-        .btn::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: rgba(255,255,255,0);
-            transition: background .15s;
-        }
-        .btn:hover::after { background: rgba(255,255,255,.12); }
-        .btn:active { transform: scale(.97); }
-
-        .btn-primary   { background: linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; box-shadow:0 4px 16px rgba(79,70,229,.3); }
-        .btn-success   { background: linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 16px rgba(16,185,129,.3); }
-        .btn-warning   { background: linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 4px 16px rgba(245,158,11,.3); }
-        .btn-danger    { background: linear-gradient(135deg,#ef4444,#dc2626); color:#fff; box-shadow:0 4px 16px rgba(239,68,68,.3); }
-        .btn-info      { background: linear-gradient(135deg,#06b6d4,#0891b2); color:#fff; box-shadow:0 4px 16px rgba(6,182,212,.3); }
-        .btn-secondary { background: #f1f5f9; color:#475569; border:1.5px solid #e2e8f0; }
+        .btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:10px; font-family:'Kanit',sans-serif; font-size:.9rem; font-weight:500; cursor:pointer; transition:all .2s; border:none; outline:none; position:relative; overflow:hidden; }
+        .btn:active { transform:scale(.97); }
+        .btn-primary   { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; box-shadow:0 4px 16px rgba(79,70,229,.3); }
+        .btn-success   { background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 16px rgba(16,185,129,.3); }
+        .btn-warning   { background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 4px 16px rgba(245,158,11,.3); }
+        .btn-danger    { background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; box-shadow:0 4px 16px rgba(239,68,68,.3); }
+        .btn-info      { background:linear-gradient(135deg,#06b6d4,#0891b2); color:#fff; box-shadow:0 4px 16px rgba(6,182,212,.3); }
+        .btn-secondary { background:#f1f5f9; color:#475569; border:1.5px solid #e2e8f0; }
         .btn-secondary:hover { background:#e2e8f0; }
-        .btn-sm { padding: 7px 14px; font-size: .82rem; border-radius: 8px; }
-
-        .btn-primary:hover   { box-shadow:0 8px 24px rgba(79,70,229,.4); transform:translateY(-1px); }
-        .btn-success:hover   { box-shadow:0 8px 24px rgba(16,185,129,.4); transform:translateY(-1px); }
-        .btn-warning:hover   { box-shadow:0 8px 24px rgba(245,158,11,.4); transform:translateY(-1px); }
-        .btn-danger:hover    { box-shadow:0 8px 24px rgba(239,68,68,.4);  transform:translateY(-1px); }
-        .btn-info:hover      { box-shadow:0 8px 24px rgba(6,182,212,.4);  transform:translateY(-1px); }
+        .btn-sm { padding:7px 14px; font-size:.82rem; border-radius:8px; }
+        .btn-primary:hover { box-shadow:0 8px 24px rgba(79,70,229,.4); transform:translateY(-1px); }
+        .btn-success:hover { box-shadow:0 8px 24px rgba(16,185,129,.4); transform:translateY(-1px); }
+        .btn-warning:hover { box-shadow:0 8px 24px rgba(245,158,11,.4); transform:translateY(-1px); }
+        .btn-danger:hover  { box-shadow:0 8px 24px rgba(239,68,68,.4); transform:translateY(-1px); }
+        .btn-info:hover    { box-shadow:0 8px 24px rgba(6,182,212,.4); transform:translateY(-1px); }
 
         /* ── Table ── */
-        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .data-table thead tr { background: linear-gradient(135deg,#4f46e5,#7c3aed); }
-        .data-table thead th {
-            padding: 14px 12px;
-            text-align: left;
-            font-size: .82rem;
-            font-weight: 600;
-            color: #fff;
-            letter-spacing: .03em;
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        .data-table thead th:first-child { border-radius: 12px 0 0 0; }
-        .data-table thead th:last-child  { border-radius: 0 12px 0 0; }
-
-        .data-table tbody tr {
-            transition: background .15s, transform .1s;
-            animation: rowSlideIn .3s ease both;
-        }
-        .data-table tbody tr:hover { background: #eef2ff; transform: scale(1.002); }
-        .data-table tbody td {
-            padding: 12px;
-            font-size: .85rem;
-            border-bottom: 1px solid #f1f5f9;
-            vertical-align: middle;
-        }
-        .data-table tbody tr:last-child td { border-bottom: none; }
-        .data-table tbody tr.edited-row { background: #f0fdf4; }
-        .data-table tbody tr.edited-row:hover { background: #dcfce7; }
-
-        @keyframes rowSlideIn {
-            from { opacity:0; transform: translateX(-8px); }
-            to   { opacity:1; transform: translateX(0); }
-        }
+        .data-table { width:100%; border-collapse:separate; border-spacing:0; }
+        .data-table thead tr { background:linear-gradient(135deg,#4f46e5,#7c3aed); }
+        .data-table thead th { padding:14px 12px; text-align:left; font-size:.82rem; font-weight:600; color:#fff; letter-spacing:.03em; white-space:nowrap; position:sticky; top:0; z-index:10; }
+        .data-table thead th:first-child { border-radius:12px 0 0 0; }
+        .data-table thead th:last-child  { border-radius:0 12px 0 0; }
+        .data-table tbody tr { transition:background .15s; animation:rowSlideIn .3s ease both; }
+        .data-table tbody tr:hover { background:#eef2ff; }
+        .data-table tbody td { padding:12px; font-size:.85rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        .data-table tbody tr:last-child td { border-bottom:none; }
+        .data-table tbody tr.edited-row { background:#f0fdf4; }
+        .data-table tbody tr.edited-row:hover { background:#dcfce7; }
+        @keyframes rowSlideIn { from{opacity:0;transform:translateX(-8px);} to{opacity:1;transform:translateX(0);} }
 
         /* ── Badges ── */
-        .badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: .78rem;
-            font-weight: 600;
-        }
+        .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:.78rem; font-weight:600; }
         .badge-danger  { background:#fee2e2; color:#b91c1c; }
         .badge-success { background:#d1fae5; color:#065f46; }
         .badge-warning { background:#fef3c7; color:#92400e; }
         .badge-info    { background:#e0f2fe; color:#0c4a6e; }
         .badge-purple  { background:#ede9fe; color:#5b21b6; }
 
-        /* ── Status dot ── */
-        .status-dot {
-            display: inline-block;
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
+        .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
         .status-dot.done    { background:#10b981; box-shadow:0 0 6px #10b981; }
         .status-dot.pending { background:#f59e0b; box-shadow:0 0 6px #f59e0b; }
 
         /* ── Modal ── */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 1000;
-            background: rgba(15,10,40,.55);
-            backdrop-filter: blur(6px);
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-        }
-        .modal-overlay.show { display: flex; animation: fadeIn .2s ease; }
-        .modal-box {
-            background: #fff;
-            border-radius: 20px;
-            max-width: 680px;
-            width: 100%;
-            max-height: 92vh;
-            overflow-y: auto;
-            box-shadow: 0 32px 80px rgba(0,0,0,.25);
-            animation: slideUp .3s cubic-bezier(.34,1.56,.64,1);
-        }
-        .modal-header {
-            padding: 24px 28px 16px;
-            border-bottom: 1px solid #f1f5f9;
-            background: linear-gradient(135deg,#4f46e5,#7c3aed);
-            border-radius: 20px 20px 0 0;
-        }
+        .modal-overlay { display:none; position:fixed; inset:0; z-index:1000; background:rgba(15,10,40,.55); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px; }
+        .modal-overlay.show { display:flex; animation:fadeIn .2s ease; }
+        .modal-box { background:#fff; border-radius:20px; max-width:680px; width:100%; max-height:92vh; overflow-y:auto; box-shadow:0 32px 80px rgba(0,0,0,.25); animation:slideUp .3s cubic-bezier(.34,1.56,.64,1); }
+        .modal-header { padding:24px 28px 16px; border-bottom:1px solid #f1f5f9; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:20px 20px 0 0; }
         .modal-header h3 { color:#fff; font-size:1.15rem; font-weight:600; }
-        .modal-body  { padding: 24px 28px; }
-        .modal-footer { padding: 16px 28px; background:#f8fafc; border-top:1px solid #f1f5f9; border-radius:0 0 20px 20px; display:flex; justify-content:flex-end; gap:10px; }
+        .modal-body  { padding:24px 28px; }
+        .modal-footer { padding:16px 28px; background:#f8fafc; border-top:1px solid #f1f5f9; border-radius:0 0 20px 20px; display:flex; justify-content:flex-end; gap:10px; }
+        @keyframes fadeIn  { from{opacity:0;} to{opacity:1;} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(24px)scale(.97);} to{opacity:1;transform:translateY(0)scale(1);} }
 
-        @keyframes fadeIn  { from{opacity:0;}  to{opacity:1;} }
-        @keyframes slideUp { from{opacity:0; transform:translateY(24px) scale(.97);} to{opacity:1; transform:translateY(0) scale(1);} }
+        .spinner { display:inline-block; width:22px; height:22px; border:3px solid rgba(79,70,229,.2); border-top-color:#4f46e5; border-radius:50%; animation:spin 0.7s linear infinite; }
+        @keyframes spin { to{transform:rotate(360deg);} }
 
-        /* ── Loading spinner ── */
-        .spinner {
-            display: inline-block;
-            width: 22px; height: 22px;
-            border: 3px solid rgba(79,70,229,.2);
-            border-top-color: #4f46e5;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-        @keyframes spin { to { transform:rotate(360deg); } }
-
-        /* ── Pagination ── */
-        .page-btn {
-            padding: 7px 14px;
-            border-radius: 8px;
-            border: 1.5px solid var(--border);
-            background: #fff;
-            color: var(--text);
-            font-family:'Kanit',sans-serif;
-            font-size:.85rem;
-            cursor:pointer;
-            transition: all .18s;
-        }
+        .page-btn { padding:7px 14px; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--text); font-family:'Kanit',sans-serif; font-size:.85rem; cursor:pointer; transition:all .18s; }
         .page-btn:hover:not(:disabled) { background:#eef2ff; border-color:#4f46e5; color:#4f46e5; }
         .page-btn:disabled { opacity:.4; cursor:not-allowed; }
-        .page-btn.active { background: linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; border-color:#4f46e5; }
+        .page-btn.active { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; border-color:#4f46e5; }
 
-        /* ── Form label ── */
         .form-label { display:block; font-size:.82rem; font-weight:500; color:#374151; margin-bottom:5px; }
-
-        /* ── Info box in modal ── */
         .info-box { background:#eff6ff; border-left:4px solid #3b82f6; border-radius:0 8px 8px 0; padding:12px 14px; }
-
-        /* ── Toolbar action row ── */
         .toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-
-        /* ── Scroll fade for table wrapper ── */
         .table-wrapper { overflow-x:auto; }
         .table-wrapper::-webkit-scrollbar { height:6px; }
         .table-wrapper::-webkit-scrollbar-track { background:#f1f5f9; }
         .table-wrapper::-webkit-scrollbar-thumb { background:#c7d2fe; border-radius:3px; }
 
-        /* ── Student summary card ── */
-        .student-summary-card {
-            background: var(--card);
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            box-shadow: 0 4px 16px rgba(79,70,229,.06);
-            overflow: hidden;
-        }
-        .student-summary-card .card-header {
-            background: linear-gradient(135deg,#f5f3ff,#ede9fe);
-            padding: 14px 18px;
-            border-bottom: 1px solid #e0e7ff;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .student-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 9px 18px;
-            border-bottom: 1px solid #f8fafc;
-            transition: background .15s;
-            font-size: .83rem;
-            animation: rowSlideIn .3s ease both;
-        }
-        .student-row:last-child { border-bottom: none; }
-        .student-row:hover { background: #f5f3ff; }
-        .student-name { font-weight: 500; color: #374151; flex: 1; min-width: 0; }
-        .student-badges { display: flex; gap: 5px; flex-shrink: 0; }
-        .count-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: .75rem;
-            font-weight: 600;
-        }
-        .count-pill.zero  { background:#fee2e2; color:#b91c1c; }
-        .count-pill.ror   { background:#fef3c7; color:#92400e; }
-        .count-pill.ms    { background:#ede9fe; color:#5b21b6; }
-        .student-summary-scroll {
-            max-height: 320px;
-            overflow-y: auto;
-        }
+        /* ── Student summary ── */
+        .student-summary-card { background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:0 4px 16px rgba(79,70,229,.06); overflow:hidden; }
+        .student-row { display:flex; align-items:center; justify-content:space-between; padding:9px 18px; border-bottom:1px solid #f8fafc; transition:background .15s; font-size:.83rem; animation:rowSlideIn .3s ease both; }
+        .student-row:last-child { border-bottom:none; }
+        .student-row:hover { background:#f5f3ff; }
+        .student-name { font-weight:500; color:#374151; flex:1; min-width:0; }
+        .student-badges { display:flex; gap:5px; flex-shrink:0; }
+        .count-pill { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-size:.75rem; font-weight:600; }
+        .count-pill.zero { background:#fee2e2; color:#b91c1c; }
+        .count-pill.ror  { background:#fef3c7; color:#92400e; }
+        .count-pill.ms   { background:#ede9fe; color:#5b21b6; }
+        .student-summary-scroll { max-height:320px; overflow-y:auto; }
         .student-summary-scroll::-webkit-scrollbar { width:4px; }
         .student-summary-scroll::-webkit-scrollbar-track { background:#f1f5f9; }
         .student-summary-scroll::-webkit-scrollbar-thumb { background:#c7d2fe; border-radius:2px; }
 
-        /* ── Print styles ── */
+        /* ── Teacher page ── */
+        .subject-group-card { background:#fff; border-radius:16px; border:1px solid var(--border); overflow:hidden; box-shadow:0 4px 16px rgba(79,70,229,.06); transition:transform .2s,box-shadow .2s; cursor:pointer; }
+        .subject-group-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(79,70,229,.14); }
+        .group-header { padding:18px 20px; display:flex; align-items:center; gap:12px; }
+        .group-icon { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
+        .subject-item { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; border-top:1px solid #f1f5f9; gap:10px; flex-wrap:wrap; }
+        .subject-item:hover { background:#f8fafc; }
+        .teacher-input { flex:1; min-width:160px; padding:6px 12px; border:1.5px solid var(--border); border-radius:8px; font-family:'Kanit',sans-serif; font-size:.83rem; color:var(--text); background:#fff; outline:none; transition:border-color .2s; }
+        .teacher-input:focus { border-color:var(--primary); }
+        .save-teacher-btn { padding:6px 14px; border-radius:8px; background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; border:none; font-family:'Kanit',sans-serif; font-size:.8rem; cursor:pointer; transition:all .2s; white-space:nowrap; }
+        .save-teacher-btn:hover { box-shadow:0 4px 12px rgba(79,70,229,.35); transform:translateY(-1px); }
+        .teacher-saved { color:#059669; font-size:.8rem; font-weight:500; animation:fadeIn .3s ease; }
+
+        /* ── Settings page ── */
+        .settings-section { background:#fff; border-radius:16px; border:1px solid var(--border); overflow:hidden; box-shadow:0 4px 16px rgba(79,70,229,.06); margin-bottom:20px; }
+        .settings-section-header { padding:16px 20px; background:linear-gradient(135deg,#f5f3ff,#ede9fe); border-bottom:1px solid #e0e7ff; display:flex; align-items:center; gap:10px; }
+        .settings-section-body { padding:20px; }
+
+        /* ── Page visibility ── */
+        .page { display:none; }
+        .page.active { display:block; animation:fadeIn .25s ease; }
+
+        /* ── Misc ── */
+        .progress-bar { height:6px; background:#e0e7ff; border-radius:3px; overflow:hidden; }
+        .progress-fill { height:100%; background:linear-gradient(90deg,#4f46e5,#06b6d4); border-radius:3px; transition:width .5s ease; }
+        .shimmer { background:linear-gradient(90deg,#f0f4ff 25%,#e0e7ff 50%,#f0f4ff 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
+        @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+        .empty-state { text-align:center; padding:60px 20px; color:#9ca3af; }
+        mark { background:#fef3c7; border-radius:3px; padding:0 2px; }
+        [data-tooltip] { position:relative; }
+        [data-tooltip]::after { content:attr(data-tooltip); position:absolute; bottom:110%; left:50%; transform:translateX(-50%); background:#1e1b4b; color:#fff; font-size:.75rem; padding:4px 10px; border-radius:6px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .15s; font-family:'Kanit',sans-serif; }
+        [data-tooltip]:hover::after { opacity:1; }
+
+        /* ── Tag pill for settings editor list ── */
+        .name-tag { display:inline-flex; align-items:center; gap:5px; background:#eef2ff; color:#4f46e5; border-radius:20px; padding:4px 12px; font-size:.82rem; font-weight:500; }
+        .name-tag button { background:none; border:none; cursor:pointer; color:#818cf8; font-size:1rem; line-height:1; padding:0; }
+        .name-tag button:hover { color:#ef4444; }
+
+        /* ── QR Modal ── */
+        .qr-modal-box {
+            background:#fff;
+            border-radius:20px;
+            width:320px;
+            padding:28px 24px 20px;
+            box-shadow:0 32px 80px rgba(0,0,0,.25);
+            animation:slideUp .3s cubic-bezier(.34,1.56,.64,1);
+            text-align:center;
+            position:relative;
+        }
+        .qr-modal-box .close-btn {
+            position:absolute; top:12px; right:14px;
+            background:none; border:none; font-size:1.3rem;
+            cursor:pointer; color:#9ca3af; line-height:1;
+            transition:color .15s;
+        }
+        .qr-modal-box .close-btn:hover { color:#ef4444; }
+        #qrCanvas { border-radius:12px; border:4px solid #eef2ff; display:block; margin:0 auto 14px; }
+        .copy-link-btn {
+            display:inline-flex; align-items:center; gap:6px;
+            width:100%; justify-content:center;
+            padding:10px 16px; border-radius:10px;
+            background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff;
+            border:none; font-family:'Kanit',sans-serif; font-size:.88rem;
+            font-weight:500; cursor:pointer; transition:all .2s;
+            box-shadow:0 4px 14px rgba(79,70,229,.3);
+        }
+        .copy-link-btn:hover { box-shadow:0 8px 24px rgba(79,70,229,.4); transform:translateY(-1px); }
+        .copy-link-btn:active { transform:scale(.97); }
+        .qr-url-label {
+            font-size:.72rem; color:#9ca3af; word-break:break-all;
+            margin:10px 0 14px; line-height:1.4;
+            background:#f8fafc; border-radius:8px; padding:6px 10px;
+        }
+
         @media print {
-            body::before, .orb, .no-print { display:none !important; }
-            body { background:#fff; font-size:11pt; }
-            .print-area { display:block !important; }
+            body::before,.orb,.no-print,.navbar { display:none !important; }
+            body { background:#fff; }
             .glass { box-shadow:none; border:1px solid #ccc; }
             .data-table thead tr { background:#4f46e5 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
             .data-table thead th { color:#fff !important; }
-            .badge-danger  { background:#fee2e2 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-            .badge-success { background:#d1fae5 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-            .edited-row { background:#f0fdf4 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
         }
-
-        /* ── Transition helpers ── */
-        .fade-enter { animation: fadeIn .25s ease; }
-
-        /* ── Search highlight ── */
-        mark { background:#fef3c7; border-radius:3px; padding:0 2px; }
-
-        /* ── Empty state ── */
-        .empty-state { text-align:center; padding:60px 20px; color:#9ca3af; }
-        .empty-state svg { margin: 0 auto 16px; display:block; opacity:.5; }
-
-        /* ── Tooltip ── */
-        [data-tooltip] { position:relative; }
-        [data-tooltip]::after {
-            content: attr(data-tooltip);
-            position:absolute; bottom:110%; left:50%; transform:translateX(-50%);
-            background:#1e1b4b; color:#fff; font-size:.75rem; padding:4px 10px;
-            border-radius:6px; white-space:nowrap; pointer-events:none;
-            opacity:0; transition:opacity .15s;
-            font-family:'Kanit',sans-serif;
-        }
-        [data-tooltip]:hover::after { opacity:1; }
-
-        /* ── Progress bar ── */
-        .progress-bar { height:6px; background:#e0e7ff; border-radius:3px; overflow:hidden; }
-        .progress-fill { height:100%; background:linear-gradient(90deg,#4f46e5,#06b6d4); border-radius:3px; transition:width .5s ease; }
-
-        /* ── Shimmer loading ── */
-        .shimmer {
-            background: linear-gradient(90deg, #f0f4ff 25%, #e0e7ff 50%, #f0f4ff 75%);
-            background-size:200% 100%;
-            animation: shimmer 1.4s infinite;
-            border-radius:6px;
-        }
-        @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
     </style>
 </head>
 <body>
@@ -456,300 +270,290 @@
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
 
+    <!-- ══ NAVBAR ══ -->
+    <nav class="navbar no-print">
+        <div class="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <img src="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png" class="w-8 h-8 object-contain" alt="logo">
+                <span class="font-bold text-indigo-700 text-sm hidden sm:block">กระดุมทองวิทยา</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <button onclick="navigate('home')" class="nav-link" id="nav-home">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    <span class="hidden sm:inline">หน้าหลัก</span>
+                </button>
+                <button onclick="navigate('teachers')" class="nav-link" id="nav-teachers">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    <span class="hidden sm:inline">ระบุผู้สอน</span>
+                </button>
+                <button onclick="navigate('settings')" class="nav-link" id="nav-settings">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span class="hidden sm:inline">ตั้งค่า</span>
+                </button>
+                <!-- QR button -->
+                <button onclick="openQrModal()" class="nav-link" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 4px 14px rgba(79,70,229,.3);margin-left:4px">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                    <span class="hidden sm:inline">ออก QR</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
     <div class="container mx-auto px-4 py-8 max-w-screen-2xl">
 
-        <!-- ══ HEADER ══ -->
-        <div class="header-card p-8 mb-8 relative z-10">
-            <div class="flex flex-col items-center text-white">
-                <div class="logo-ring mb-4">
-                    <img src="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png"
-                         alt="โลโก้" class="w-16 h-16 object-contain">
-                </div>
-                <h1 class="text-3xl md:text-4xl font-bold text-center mb-2 relative z-10">
-                    ระบบจัดการข้อมูลแก้ไขผลการเรียน
-                </h1>
-                <p class="text-indigo-100 font-medium mb-1">โรงเรียนกระดุมทองวิทยา</p>
-                <p class="text-indigo-200 text-sm">พัฒนาโดย ครูนนทพัทธ์ หิรัญเรือง · งานทะเบียนและเทียบโอนผลการเรียน</p>
-            </div>
-        </div>
+        <!-- ════════════════════════════════════════════════
+             PAGE: HOME
+        ════════════════════════════════════════════════ -->
+        <div id="page-home" class="page">
 
-        <!-- ══ STATS ══ -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 no-print">
-            <div class="stat-card total">
-                <p class="text-xs text-gray-500 mb-1">รายการทั้งหมด</p>
-                <p class="stat-number text-indigo-600" id="statTotal">—</p>
-                <p class="text-xs text-gray-400 mt-1">รายการ</p>
-            </div>
-            <div class="stat-card zero">
-                <p class="text-xs text-gray-500 mb-1">ผล 0</p>
-                <p class="stat-number text-red-500" id="statZero">—</p>
-                <p class="text-xs text-gray-400 mt-1">รายการ</p>
-            </div>
-            <div class="stat-card ror">
-                <p class="text-xs text-gray-500 mb-1">ผล ร</p>
-                <p class="stat-number text-amber-500" id="statRor">—</p>
-                <p class="text-xs text-gray-400 mt-1">รายการ</p>
-            </div>
-            <div class="stat-card ms">
-                <p class="text-xs text-gray-500 mb-1">ผล มส</p>
-                <p class="stat-number text-purple-500" id="statMs">—</p>
-                <p class="text-xs text-gray-400 mt-1">รายการ</p>
-            </div>
-            <div class="stat-card done">
-                <p class="text-xs text-gray-500 mb-1">แก้ไขแล้ว</p>
-                <p class="stat-number text-emerald-500" id="statDone">—</p>
-                <p class="text-xs text-gray-400 mt-1">รายการ</p>
-            </div>
-        </div>
-
-        <!-- ══ STUDENT SUMMARY CARD ══ -->
-        <div class="glass p-6 mb-6 no-print" id="studentSummarySection" style="display:none">
-            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <div class="flex items-center gap-2">
-                    <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    <h2 class="font-semibold text-gray-700">สรุปนักเรียนที่ยังมีผลการเรียนค้างอยู่</h2>
-                    <span class="badge badge-purple ml-1" id="summaryStudentCount">—</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-400">เรียงตามจำนวนวิชา</span>
-                    <button onclick="toggleSummarySort()" id="summaryToggleBtn" class="btn btn-sm btn-secondary">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
-                        มาก→น้อย
-                    </button>
-                </div>
-            </div>
-
-            <!-- Legend -->
-            <div class="flex gap-3 mb-3 flex-wrap">
-                <span class="count-pill zero">0 วิชา</span>
-                <span class="count-pill ror">ร วิชา</span>
-                <span class="count-pill ms">มส วิชา</span>
-                <span class="text-xs text-gray-400 self-center">— นับเฉพาะที่ยังไม่แก้ไข</span>
-            </div>
-
-            <div class="student-summary-scroll" id="studentSummaryList">
-                <div class="text-center py-8 text-gray-400 text-sm">กำลังประมวลผล...</div>
-            </div>
-        </div>
-
-        <!-- ══ FILTER PANEL ══ -->
-        <div class="glass p-6 mb-6 no-print">
-            <div class="flex items-center gap-2 mb-5">
-                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
-                <h2 class="font-semibold text-gray-700">ตัวกรองและค้นหา</h2>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div>
-                    <label class="form-label">ค้นหาชื่อ-สกุล</label>
-                    <input type="text" id="searchName" placeholder="ชื่อ หรือ สกุล" class="input-field" oninput="searchData()">
-                </div>
-                <div>
-                    <label class="form-label">รหัสวิชา</label>
-                    <input type="text" id="searchSubject" placeholder="รหัสวิชา" class="input-field" oninput="searchData()">
-                </div>
-                <div>
-                    <label class="form-label">ชั้นปีปัจจุบัน</label>
-                    <select id="filterYear" class="input-field" onchange="searchData()">
-                        <option value="">ทุกชั้นปี</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="form-label">ภาคเรียน/ปีการศึกษา</label>
-                    <select id="filterSemester" class="input-field" onchange="searchData()">
-                        <option value="">ทุกภาคเรียน</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-                <div>
-                    <label class="form-label">สถานะผลการเรียน</label>
-                    <select id="filterGradeStatus" class="input-field" onchange="searchData()">
-                        <option value="">ทุกสถานะ</option>
-                        <option value="0">0</option>
-                        <option value="ร">ร</option>
-                        <option value="มส">มส</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="form-label">สถานะการแก้ไข</label>
-                    <select id="filterStatus" class="input-field" onchange="searchData()">
-                        <option value="">ทั้งหมด</option>
-                        <option value="แก้ไขแล้ว">แก้ไขแล้ว</option>
-                        <option value="ยังไม่แก้ไข">ยังไม่แก้ไข</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="toolbar">
-                <button onclick="searchData()" class="btn btn-primary">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 0 5 11a6 6 0 0 0 12 0z"/></svg>
-                    ค้นหา
-                </button>
-                <button onclick="resetFilters()" class="btn btn-secondary">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    ล้างตัวกรอง
-                </button>
-                <button onclick="loadData()" class="btn btn-info">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    รีเฟรช
-                </button>
-                <div class="flex-1"></div>
-                <!-- Export buttons -->
-                <button onclick="exportExcel()" class="btn btn-success" data-tooltip="ส่งออกเป็น Excel">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    Export Excel
-                </button>
-                <button onclick="printData()" class="btn btn-warning" data-tooltip="พิมพ์รายการปัจจุบัน">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                    พิมพ์
-                </button>
-            </div>
-        </div>
-
-        <!-- ══ TABLE CARD ══ -->
-        <div class="glass overflow-hidden mb-6">
-            <div class="p-5 border-b border-indigo-50 flex items-center justify-between flex-wrap gap-3 no-print">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-800">รายการผลการเรียนที่ไม่ผ่าน</h2>
-                    <p class="text-xs text-gray-400 mt-1">แสดงเฉพาะผลการเรียน: <span class="badge badge-danger">0</span> <span class="badge badge-warning ml-1">ร</span> <span class="badge badge-purple ml-1">มส</span></p>
-                </div>
-                <!-- Progress -->
-                <div class="flex items-center gap-3 text-sm text-gray-500">
-                    <span id="progressLabel">กำลังโหลด...</span>
-                    <div class="progress-bar w-32 no-print">
-                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+            <!-- Header -->
+            <div class="header-card p-8 mb-8 relative z-10">
+                <div class="flex flex-col items-center text-white">
+                    <div class="logo-ring mb-4">
+                        <img src="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png" alt="โลโก้" class="w-16 h-16 object-contain">
+                    </div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-center mb-2 relative z-10">ระบบจัดการข้อมูลแก้ไขผลการเรียน</h1>
+                    <p class="text-indigo-100 font-medium mb-1">โรงเรียนกระดุมทองวิทยา</p>
+                    <p class="text-indigo-200 text-sm">พัฒนาโดย ครูนนทพัทธ์ หิรัญเรือง · งานทะเบียนและเทียบโอนผลการเรียน</p>
+                    <div class="flex items-center gap-2 mt-3 bg-white bg-opacity-15 px-4 py-1.5 rounded-full">
+                        <div class="w-2 h-2 rounded-full bg-green-300 animate-pulse"></div>
+                        <span class="text-xs text-indigo-100" id="dbStatusLabel">เชื่อมต่อ Firestore...</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Print header (hidden normally, visible on print) -->
-            <div style="display:none" id="printHeader">
-                <div style="text-align:center; padding:16px 0 8px;">
-                    <h2 style="font-size:16pt; font-weight:700; margin:0;">รายการผลการเรียนที่ไม่ผ่าน</h2>
-                    <p style="font-size:11pt; margin:4px 0;">โรงเรียนกระดุมทองวิทยา</p>
-                    <p style="font-size:9pt; color:#555;" id="printMeta"></p>
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 no-print">
+                <div class="stat-card total"><p class="text-xs text-gray-500 mb-1">รายการทั้งหมด</p><p class="stat-number text-indigo-600" id="statTotal">—</p><p class="text-xs text-gray-400 mt-1">รายการ</p></div>
+                <div class="stat-card zero"><p class="text-xs text-gray-500 mb-1">ผล 0</p><p class="stat-number text-red-500" id="statZero">—</p><p class="text-xs text-gray-400 mt-1">รายการ</p></div>
+                <div class="stat-card ror"><p class="text-xs text-gray-500 mb-1">ผล ร</p><p class="stat-number text-amber-500" id="statRor">—</p><p class="text-xs text-gray-400 mt-1">รายการ</p></div>
+                <div class="stat-card ms"><p class="text-xs text-gray-500 mb-1">ผล มส</p><p class="stat-number text-purple-500" id="statMs">—</p><p class="text-xs text-gray-400 mt-1">รายการ</p></div>
+                <div class="stat-card done"><p class="text-xs text-gray-500 mb-1">แก้ไขแล้ว</p><p class="stat-number text-emerald-500" id="statDone">—</p><p class="text-xs text-gray-400 mt-1">รายการ</p></div>
+            </div>
+
+            <!-- Student summary -->
+            <div class="glass p-6 mb-6 no-print" id="studentSummarySection" style="display:none">
+                <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <h2 class="font-semibold text-gray-700">สรุปนักเรียนที่ยังมีผลการเรียนค้างอยู่</h2>
+                        <span class="badge badge-purple ml-1" id="summaryStudentCount">—</span>
+                    </div>
+                    <button onclick="toggleSummarySort()" id="summaryToggleBtn" class="btn btn-sm btn-secondary">มาก→น้อย</button>
+                </div>
+                <div class="flex gap-3 mb-3 flex-wrap">
+                    <span class="count-pill zero">0 วิชา</span>
+                    <span class="count-pill ror">ร วิชา</span>
+                    <span class="count-pill ms">มส วิชา</span>
+                    <span class="text-xs text-gray-400 self-center">— นับเฉพาะที่ยังไม่แก้ไข</span>
+                </div>
+                <div class="student-summary-scroll" id="studentSummaryList"></div>
+            </div>
+
+            <!-- Filter panel -->
+            <div class="glass p-6 mb-6 no-print">
+                <div class="flex items-center gap-2 mb-5">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+                    <h2 class="font-semibold text-gray-700">ตัวกรองและค้นหา</h2>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div><label class="form-label">ค้นหาชื่อ-สกุล</label><input type="text" id="searchName" placeholder="ชื่อ หรือ สกุล" class="input-field" oninput="searchData()"></div>
+                    <div><label class="form-label">รหัสวิชา</label><input type="text" id="searchSubject" placeholder="รหัสวิชา" class="input-field" oninput="searchData()"></div>
+                    <div><label class="form-label">ชั้นปีปัจจุบัน</label><select id="filterYear" class="input-field" onchange="searchData()"><option value="">ทุกชั้นปี</option></select></div>
+                    <div><label class="form-label">ภาคเรียน/ปีการศึกษา</label><select id="filterSemester" class="input-field" onchange="searchData()"><option value="">ทุกภาคเรียน</option></select></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                    <div><label class="form-label">สถานะผลการเรียน</label><select id="filterGradeStatus" class="input-field" onchange="searchData()"><option value="">ทุกสถานะ</option><option value="0">0</option><option value="ร">ร</option><option value="มส">มส</option></select></div>
+                    <div><label class="form-label">สถานะการแก้ไข</label><select id="filterStatus" class="input-field" onchange="searchData()"><option value="">ทั้งหมด</option><option value="แก้ไขแล้ว">แก้ไขแล้ว</option><option value="ยังไม่แก้ไข">ยังไม่แก้ไข</option></select></div>
+                    <div><label class="form-label">ครูผู้สอน</label><select id="filterTeacher" class="input-field" onchange="searchData()"><option value="">ทุกครูผู้สอน</option></select></div>
+                </div>
+                <div class="toolbar">
+                    <button onclick="searchData()" class="btn btn-primary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 0 5 11a6 6 0 0 0 12 0z"/></svg>ค้นหา</button>
+                    <button onclick="resetFilters()" class="btn btn-secondary">ล้างตัวกรอง</button>
+                    <button onclick="loadData()" class="btn btn-info">รีเฟรช</button>
+                    <div class="flex-1"></div>
+                    <button onclick="exportExcel()" class="btn btn-success" data-tooltip="Export Excel">Export Excel</button>
+                    <button onclick="printData()" class="btn btn-warning" data-tooltip="พิมพ์">พิมพ์</button>
                 </div>
             </div>
 
-            <div class="table-wrapper">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>สถานะ</th>
-                            <th>ชั้นปี</th>
-                            <th>ภาคเรียน/ปีการศึกษา</th>
-                            <th>ชื่อ-สกุล</th>
-                            <th>รหัสวิชา</th>
-                            <th>ชื่อวิชา</th>
-                            <th>ชั้น</th>
-                            <th>ผลเดิม</th>
-                            <th>ผลใหม่</th>
-                            <th class="no-print">การดำเนินการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dataTable">
-                        <tr><td colspan="10" class="px-4 py-16 text-center">
-                            <div class="flex flex-col items-center gap-3 text-gray-400">
-                                <div class="spinner"></div>
-                                <span>กำลังโหลดข้อมูล...</span>
-                            </div>
-                        </td></tr>
-                    </tbody>
-                </table>
+            <!-- Table card -->
+            <div class="glass overflow-hidden mb-6">
+                <div class="p-5 border-b border-indigo-50 flex items-center justify-between flex-wrap gap-3 no-print">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-800">รายการผลการเรียนที่ไม่ผ่าน</h2>
+                        <p class="text-xs text-gray-400 mt-1">แสดงเฉพาะผลการเรียน: <span class="badge badge-danger">0</span> <span class="badge badge-warning ml-1">ร</span> <span class="badge badge-purple ml-1">มส</span></p>
+                    </div>
+                    <div class="flex items-center gap-3 text-sm text-gray-500">
+                        <span id="progressLabel">กำลังโหลด...</span>
+                        <div class="progress-bar w-32 no-print"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>สถานะ</th><th>ชั้นปี</th><th>ภาคเรียน/ปีการศึกษา</th>
+                                <th>ชื่อ-สกุล</th><th>รหัสวิชา</th><th>ชื่อวิชา</th>
+                                <th>ชั้น</th><th>ครูผู้สอน</th><th>ผลเดิม</th><th>ผลใหม่</th>
+                                <th class="no-print">การดำเนินการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTable">
+                            <tr><td colspan="11" class="px-4 py-16 text-center"><div class="flex flex-col items-center gap-3 text-gray-400"><div class="spinner"></div><span>กำลังโหลดข้อมูล...</span></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-5 py-4 border-t border-indigo-50 flex items-center justify-between flex-wrap gap-3 no-print">
+                    <div class="text-sm text-gray-500">แสดง <b id="showingFrom">0</b>–<b id="showingTo">0</b> จากทั้งหมด <b id="totalRecords">0</b> รายการ</div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="previousPage()" id="prevBtn" class="page-btn" disabled>← ก่อนหน้า</button>
+                        <span id="pageInfo" class="px-3 py-1 text-sm text-gray-600 font-medium"></span>
+                        <button onclick="nextPage()" id="nextBtn" class="page-btn" disabled>ถัดไป →</button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Pagination -->
-            <div class="px-5 py-4 border-t border-indigo-50 flex items-center justify-between flex-wrap gap-3 no-print">
-                <div class="text-sm text-gray-500">
-                    แสดง <b id="showingFrom">0</b>–<b id="showingTo">0</b> จากทั้งหมด <b id="totalRecords">0</b> รายการ
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="previousPage()" id="prevBtn" class="page-btn" disabled>← ก่อนหน้า</button>
-                    <span id="pageInfo" class="px-3 py-1 text-sm text-gray-600 font-medium"></span>
-                    <button onclick="nextPage()" id="nextBtn" class="page-btn" disabled>ถัดไป →</button>
+        </div><!-- /page-home -->
+
+        <!-- ════════════════════════════════════════════════
+             PAGE: TEACHERS
+        ════════════════════════════════════════════════ -->
+        <div id="page-teachers" class="page">
+            <div class="header-card p-6 mb-8 relative z-10">
+                <div class="flex flex-col items-center text-white">
+                    <h1 class="text-2xl md:text-3xl font-bold text-center mb-2 relative z-10">ระบุผู้สอน</h1>
+                    <p class="text-indigo-200 text-sm">กำหนดชื่อครูผู้สอนสำหรับแต่ละวิชา แยกตามกลุ่มสาระการเรียนรู้</p>
                 </div>
             </div>
-        </div>
+
+            <!-- Group cards grid -->
+            <div id="teacherGroupsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+                <div class="col-span-full text-center py-12 text-gray-400">
+                    <div class="spinner mx-auto mb-3"></div>
+                    <p>กำลังโหลดข้อมูลวิชา...</p>
+                </div>
+            </div>
+
+            <!-- Selected group detail -->
+            <div id="teacherGroupDetail" class="glass p-6" style="display:none">
+                <div class="flex items-center justify-between mb-5">
+                    <h2 class="text-lg font-semibold text-gray-800" id="detailGroupTitle"></h2>
+                    <button onclick="closeGroupDetail()" class="btn btn-sm btn-secondary">ปิด</button>
+                </div>
+                <div id="detailSubjectList"></div>
+            </div>
+        </div><!-- /page-teachers -->
+
+        <!-- ════════════════════════════════════════════════
+             PAGE: SETTINGS
+        ════════════════════════════════════════════════ -->
+        <div id="page-settings" class="page">
+            <div class="header-card p-6 mb-8 relative z-10">
+                <div class="flex flex-col items-center text-white">
+                    <h1 class="text-2xl md:text-3xl font-bold text-center mb-2 relative z-10">ตั้งค่าระบบ</h1>
+                    <p class="text-indigo-200 text-sm">จัดการข้อมูล ชื่อครู และนำเข้าข้อมูลผลการเรียน</p>
+                </div>
+            </div>
+
+            <!-- Section 1: Editor name list -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    <h3 class="font-semibold text-gray-700">จัดการชื่อครู (AutoFill Suggest)</h3>
+                </div>
+                <div class="settings-section-body">
+                    <p class="text-sm text-gray-500 mb-4">ชื่อครูที่ปรากฏด้านล่างจะถูกแนะนำเวลากรอกชื่อผู้แก้ไข สามารถเพิ่มหรือลบได้</p>
+                    <div class="flex gap-3 mb-4">
+                        <input type="text" id="newEditorName" placeholder="ชื่อครูที่ต้องการเพิ่ม เช่น นายสมชาย ดีใจ" class="input-field">
+                        <button onclick="addEditorNameManual()" class="btn btn-primary" style="white-space:nowrap">เพิ่ม</button>
+                    </div>
+                    <div id="editorNameTags" class="flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+
+            <!-- Section 2: Import xlsx -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+                    <h3 class="font-semibold text-gray-700">นำเข้าข้อมูลผลการเรียน (0, ร, มส) จากไฟล์ .xlsx</h3>
+                </div>
+                <div class="settings-section-body">
+                    <div class="info-box mb-4">
+                        <p class="text-sm text-blue-700">📋 <b>คอลัมน์ที่รองรับ:</b> <code>ชั้นปี, คำนำหน้า, ชื่อ, สกุล, รหัสวิชา, ชื่อวิชา, ภาคเรียน/ปีการศึกษา, ชั้น, คะแนน, ผลการเรียน</code><br>ระบบจะกรองเฉพาะแถวที่ <b>ผลการเรียน</b> เป็น <b>0, ร หรือ มส</b> เท่านั้น</p>
+                    </div>
+                    <div class="flex gap-3 mb-4 flex-wrap">
+                        <input type="file" id="importXlsxFile" accept=".xlsx,.xls" class="input-field" style="max-width:360px">
+                        <button onclick="previewImport()" class="btn btn-info">ดูตัวอย่าง</button>
+                        <button onclick="confirmImport()" id="importConfirmBtn" class="btn btn-success" style="display:none">นำเข้าข้อมูล (<span id="importCount">0</span> รายการ)</button>
+                    </div>
+                    <div id="importPreviewArea"></div>
+                </div>
+            </div>
+
+            <!-- Section 3: Data management -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/></svg>
+                    <h3 class="font-semibold text-gray-700">จัดการข้อมูล Firestore</h3>
+                </div>
+                <div class="settings-section-body">
+                    <p class="text-sm text-gray-500 mb-4">สถิติการใช้งาน Firestore และการจัดการข้อมูล</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5" id="firestoreStats">
+                        <div class="bg-indigo-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-indigo-600" id="fsStatRecords">—</p><p class="text-xs text-gray-500">บันทึกผลการเรียน</p></div>
+                        <div class="bg-green-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-green-600" id="fsStatLogs">—</p><p class="text-xs text-gray-500">บันทึกการแก้ไข</p></div>
+                        <div class="bg-purple-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-purple-600" id="fsStatTeachers">—</p><p class="text-xs text-gray-500">วิชาที่ระบุครู</p></div>
+                        <div class="bg-amber-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-amber-600" id="fsStatEditors">—</p><p class="text-xs text-gray-500">ชื่อครูผู้แก้ไข</p></div>
+                    </div>
+                    <button onclick="refreshFirestoreStats()" class="btn btn-secondary btn-sm">รีเฟรชสถิติ</button>
+                </div>
+            </div>
+
+        </div><!-- /page-settings -->
 
     </div><!-- /container -->
 
-    <!-- ══════════════════════════════════════
-         EDIT MODAL
-    ══════════════════════════════════════ -->
+    <!-- ══ EDIT MODAL ══ -->
     <div id="editModal" class="modal-overlay">
         <div class="modal-box">
-            <div class="modal-header">
-                <h3>✏️ แก้ไขผลการเรียน</h3>
-            </div>
+            <div class="modal-header"><h3>✏️ แก้ไขผลการเรียน</h3></div>
             <div class="modal-body">
                 <div class="info-box mb-6">
-                    <p class="text-sm text-blue-700">
-                        📋 <b>คำอธิบาย:</b> เมื่อได้รับใบคำร้องแก้ไขผลการเรียนจากนักเรียน ครูทะเบียน/วัดผลบันทึกข้อมูลพร้อมถ่ายภาพใบคำร้องฯประกอบ
-                    </p>
+                    <p class="text-sm text-blue-700">📋 <b>คำอธิบาย:</b> เมื่อได้รับใบคำร้องแก้ไขผลการเรียนจากนักเรียน ครูทะเบียน/วัดผลบันทึกข้อมูลพร้อมถ่ายภาพใบคำร้องฯประกอบ</p>
                 </div>
-
-                <!-- Student info grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                    <div class="bg-gray-50 rounded-12 p-3 rounded-xl">
-                        <p class="text-xs text-gray-400 mb-1">ชื่อ-สกุลนักเรียน</p>
-                        <p id="editStudentName" class="font-semibold text-gray-800"></p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-xl">
-                        <p class="text-xs text-gray-400 mb-1">ชั้น</p>
-                        <p id="editClass" class="font-semibold text-gray-800"></p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-xl">
-                        <p class="text-xs text-gray-400 mb-1">รหัสวิชา</p>
-                        <p id="editSubjectCode" class="font-semibold text-gray-800"></p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-xl">
-                        <p class="text-xs text-gray-400 mb-1">ชื่อวิชา</p>
-                        <p id="editSubjectName" class="font-semibold text-gray-800"></p>
-                    </div>
+                    <div class="bg-gray-50 p-3 rounded-xl"><p class="text-xs text-gray-400 mb-1">ชื่อ-สกุลนักเรียน</p><p id="editStudentName" class="font-semibold text-gray-800"></p></div>
+                    <div class="bg-gray-50 p-3 rounded-xl"><p class="text-xs text-gray-400 mb-1">ชั้น</p><p id="editClass" class="font-semibold text-gray-800"></p></div>
+                    <div class="bg-gray-50 p-3 rounded-xl"><p class="text-xs text-gray-400 mb-1">รหัสวิชา</p><p id="editSubjectCode" class="font-semibold text-gray-800"></p></div>
+                    <div class="bg-gray-50 p-3 rounded-xl"><p class="text-xs text-gray-400 mb-1">ชื่อวิชา</p><p id="editSubjectName" class="font-semibold text-gray-800"></p></div>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-                    <div>
-                        <label class="form-label">ผลการเรียนเดิม</label>
-                        <p id="editOldResult" class="text-2xl font-bold text-red-500"></p>
-                    </div>
+                    <div><label class="form-label">ผลการเรียนเดิม</label><p id="editOldResult" class="text-2xl font-bold text-red-500"></p></div>
                     <div>
                         <label class="form-label">ผลการเรียนใหม่ <span class="text-red-500">*</span></label>
                         <select id="editNewResult" class="input-field">
                             <option value="">เลือกผลการเรียน</option>
-                            <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="1.5">1.5</option>
-                            <option value="2">2</option>
-                            <option value="2.5">2.5</option>
-                            <option value="3">3</option>
-                            <option value="3.5">3.5</option>
-                            <option value="4">4</option>
-                            <option value="ร">ร</option>
-                            <option value="มส">มส</option>
+                            <option>0</option><option>1</option><option>1.5</option><option>2</option>
+                            <option>2.5</option><option>3</option><option>3.5</option><option>4</option>
+                            <option>ร</option><option>มส</option>
                         </select>
                     </div>
                 </div>
-
                 <div class="mb-5">
                     <label class="form-label">ผู้แก้ไข <span class="text-red-500">*</span></label>
                     <input type="text" id="editEditor" placeholder="เช่น นางสาวสมหญิง ดีใจ" class="input-field" autocomplete="off" list="editorSuggestions">
                     <datalist id="editorSuggestions"></datalist>
                     <p class="text-xs text-gray-400 mt-1">💡 ระบบจะจำชื่อที่เคยกรอกไว้ให้อัตโนมัติ</p>
                 </div>
-
                 <div class="mb-5">
                     <label class="form-label">รหัสผ่านฝ่ายวิชาการ <span class="text-red-500">*</span></label>
                     <input type="password" id="editPassword" placeholder="กรอกรหัส 4 หลัก" maxlength="4" class="input-field">
-                    <p class="text-xs text-red-400 mt-1">🔒 เฉพาะครูฝ่ายวิชาการเท่านั้นที่สามารถแก้ไขผลการเรียนได้</p>
+                    <p class="text-xs text-red-400 mt-1">🔒 เฉพาะครูฝ่ายวิชาการเท่านั้น</p>
                 </div>
-
                 <div class="mb-2">
                     <label class="form-label">อัปโหลดภาพใบคำร้อง <span class="text-gray-400 font-normal">(ไม่บังคับ)</span></label>
                     <input type="file" id="editImageFile" accept=".jpg,.jpeg,.png,.pdf" class="input-field">
-                    <p class="text-xs text-gray-400 mt-1">รองรับ JPG, PNG, PDF (ไม่เกิน 5MB) — สามารถบันทึกได้โดยไม่ต้องแนบภาพ</p>
+                    <p class="text-xs text-gray-400 mt-1">รองรับ JPG, PNG, PDF (ไม่เกิน 5MB)</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -762,139 +566,290 @@
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════
-         LOG MODAL
-    ══════════════════════════════════════ -->
+    <!-- ══ LOG MODAL ══ -->
     <div id="logModal" class="modal-overlay">
         <div class="modal-box" style="max-width:720px">
-            <div class="modal-header">
-                <h3>📋 ประวัติการแก้ไข</h3>
-            </div>
-            <div class="modal-body">
-                <div id="logContent">
-                    <div class="flex items-center justify-center gap-3 py-10 text-gray-400">
-                        <div class="spinner"></div>
-                        <span>กำลังโหลดข้อมูล...</span>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button onclick="closeLogModal()" class="btn btn-secondary">ปิด</button>
-            </div>
+            <div class="modal-header"><h3>📋 ประวัติการแก้ไข</h3></div>
+            <div class="modal-body"><div id="logContent"><div class="flex items-center justify-center gap-3 py-10 text-gray-400"><div class="spinner"></div><span>กำลังโหลดข้อมูล...</span></div></div></div>
+            <div class="modal-footer"><button onclick="closeLogModal()" class="btn btn-secondary">ปิด</button></div>
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════
-         JAVASCRIPT
-    ══════════════════════════════════════ -->
+    <!-- ══ QR MODAL ══ -->
+    <div id="qrModal" class="modal-overlay" onclick="if(event.target===this)closeQrModal()">
+        <div class="qr-modal-box">
+            <button class="close-btn" onclick="closeQrModal()">×</button>
+            <p class="font-semibold text-gray-700 mb-3" style="font-size:.95rem">📱 QR Code เข้าใช้งานระบบ</p>
+            <canvas id="qrCanvas" width="200" height="200"></canvas>
+            <p class="qr-url-label" id="qrUrlLabel"></p>
+            <button class="copy-link-btn" onclick="copyPageLink()">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                คัดลอกลิงก์
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ JAVASCRIPT ══ -->
     <script>
-    // ─── Config ───────────────────────────────────────
+    // ═══════════════════════════════════════════════════════
+    //  FIREBASE CONFIG
+    // ═══════════════════════════════════════════════════════
+    const firebaseConfig = {
+        apiKey: "AIzaSyDWVvqoaFpYOGIezDNQW7Twk7FAXFbVA6Y",
+        authDomain: "recordacademicresults.firebaseapp.com",
+        projectId: "recordacademicresults",
+        storageBucket: "recordacademicresults.firebasestorage.app",
+        messagingSenderId: "439160962162",
+        appId: "1:439160962162:web:d090bcbc4e39fc6aaed6eb"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Firestore collections
+    const COL_GRADES    = 'grades';       // รายการผลการเรียน (imported from xlsx / GAS)
+    const COL_LOGS      = 'correction_logs'; // บันทึกการแก้ไข
+    const COL_TEACHERS  = 'teacher_assignments'; // ครูผู้สอน: { subjectCode, subjectName, teacherName }
+    const COL_EDITORS   = 'editor_names';  // ชื่อครูผู้แก้ไข (autofill): { name, usedAt }
+
+    // ═══════════════════════════════════════════════════════
+    //  GLOBAL STATE
+    // ═══════════════════════════════════════════════════════
     const CONFIG = {
         APP_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbynM3jhKBptP9JoDMH0c8CWHqADwj-yV7g3tScby6beJpSgJKsAnyIrkQZNo0gKN_yTEg/exec',
         RECORDS_PER_PAGE: 20,
-        CORRECT_PASSWORD: '1234'
+        CORRECT_PASSWORD: '1234',
+        SETTINGS_PASSWORD: '1111'
     };
 
     let allData = [];
     let filteredData = [];
     let currentPage = 1;
     let currentEditRow = null;
+    let importRows = [];       // staging for xlsx import
 
-    // ─── Filter state save/restore (sessionStorage) ───
     const FILTER_STATE_KEY = 'ktw_filter_state';
 
+    // ═══════════════════════════════════════════════════════
+    //  SUBJECT GROUP DEFINITIONS (8 กลุ่มสาระ)
+    // ═══════════════════════════════════════════════════════
+    const SUBJECT_GROUPS = [
+        { id: 'thai',    label: 'ภาษาไทย',             icon: '📖', color: '#ef4444', bg: '#fee2e2', prefixes: ['ท'] },
+        { id: 'math',    label: 'คณิตศาสตร์',           icon: '🔢', color: '#f59e0b', bg: '#fef3c7', prefixes: ['ค'] },
+        { id: 'sci',     label: 'วิทยาศาสตร์และเทคโนโลยี', icon: '🔬', color: '#10b981', bg: '#d1fae5', prefixes: ['ว'] },
+        { id: 'social',  label: 'สังคมศึกษาฯ',           icon: '🌏', color: '#3b82f6', bg: '#dbeafe', prefixes: ['ส'] },
+        { id: 'health',  label: 'สุขศึกษาและพลศึกษา',   icon: '⚽', color: '#06b6d4', bg: '#e0f2fe', prefixes: ['พ'] },
+        { id: 'arts',    label: 'ศิลปะ',                 icon: '🎨', color: '#8b5cf6', bg: '#ede9fe', prefixes: ['ศ'] },
+        { id: 'career',  label: 'การงานอาชีพ',           icon: '🔧', color: '#f97316', bg: '#ffedd5', prefixes: ['ง'] },
+        { id: 'english', label: 'ภาษาต่างประเทศ',        icon: '🌐', color: '#ec4899', bg: '#fce7f3', prefixes: ['อ', 'จ', 'จีน', 'ฝ'] },
+    ];
+
+    function getGroupForSubject(code) {
+        const upper = String(code||'').trim();
+        for (const g of SUBJECT_GROUPS) {
+            for (const p of g.prefixes) {
+                if (upper.startsWith(p)) return g;
+            }
+        }
+        return { id: 'other', label: 'อื่น ๆ', icon: '📚', color: '#6b7280', bg: '#f3f4f6', prefixes: [] };
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  HASH-BASED NAVIGATION (SPA)
+    // ═══════════════════════════════════════════════════════
+    let _settingsUnlocked = false; // ล็อกใหม่ทุกครั้งที่ออกจากหน้า settings
+
+    async function navigate(page) {
+        // ถ้าจะเข้า settings และยังไม่ได้ unlock ในรอบนี้ → ถามรหัส
+        if (page === 'settings' && !_settingsUnlocked) {
+            const { value, isConfirmed } = await Swal.fire({
+                title: '🔒 ตั้งค่าระบบ',
+                text: 'กรุณากรอกรหัสผ่านเพื่อเข้าใช้งาน',
+                input: 'password',
+                inputAttributes: { maxlength: 4, autocomplete: 'off', placeholder: 'รหัส 4 หลัก' },
+                inputValidator: v => !v && 'กรุณากรอกรหัสผ่าน',
+                showCancelButton: true,
+                confirmButtonText: 'เข้าสู่ระบบ',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#4f46e5',
+                allowOutsideClick: false
+            });
+            if (!isConfirmed) return; // กด cancel → ไม่ไปไหน
+            if (value !== CONFIG.SETTINGS_PASSWORD) {
+                Swal.fire({ icon: 'error', title: 'รหัสผ่านไม่ถูกต้อง', confirmButtonColor: '#ef4444', timer: 2000, timerProgressBar: true, showConfirmButton: false });
+                return;
+            }
+            _settingsUnlocked = true;
+        }
+
+        // รีเซ็ต unlock เมื่อออกจากหน้า settings
+        if (page !== 'settings') _settingsUnlocked = false;
+
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+        document.getElementById('page-' + page).classList.add('active');
+        document.getElementById('nav-' + page).classList.add('active');
+        location.hash = page;
+        if (page === 'teachers') renderTeacherPage();
+        if (page === 'settings') renderSettingsPage();
+    }
+
+    window.addEventListener('hashchange', () => {
+        const hash = location.hash.replace('#','') || 'home';
+        const valid = ['home','teachers','settings'];
+        navigate(valid.includes(hash) ? hash : 'home');
+    });
+
+    // ═══════════════════════════════════════════════════════
+    //  INIT
+    // ═══════════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Test Firestore connection
+        try {
+            await db.collection(COL_GRADES).limit(1).get();
+            document.getElementById('dbStatusLabel').textContent = 'เชื่อมต่อ Firestore สำเร็จ ✓';
+        } catch (e) {
+            document.getElementById('dbStatusLabel').textContent = 'Firestore ไม่พร้อม – ใช้ GAS แทน';
+        }
+
+        // Route on load — ถ้า hash เป็น settings จะถูก prompt รหัสโดย navigate() อัตโนมัติ
+        const hash = location.hash.replace('#','') || 'home';
+        const valid = ['home','teachers','settings'];
+        const startPage = valid.includes(hash) ? hash : 'home';
+
+        // โหลดข้อมูลหน้าหลักเสมอ (ต้องการสำหรับทุกหน้า)
+        loadData();
+
+        // navigate จะ prompt รหัสถ้าเป็น settings
+        navigate(startPage);
+    });
+
+    // ═══════════════════════════════════════════════════════
+    //  FILTER STATE (sessionStorage)
+    // ═══════════════════════════════════════════════════════
     function saveFilterState() {
-        const state = {
+        sessionStorage.setItem(FILTER_STATE_KEY, JSON.stringify({
             searchName:        document.getElementById('searchName').value,
             searchSubject:     document.getElementById('searchSubject').value,
             filterYear:        document.getElementById('filterYear').value,
             filterSemester:    document.getElementById('filterSemester').value,
             filterGradeStatus: document.getElementById('filterGradeStatus').value,
             filterStatus:      document.getElementById('filterStatus').value,
-            currentPage:       currentPage
-        };
-        sessionStorage.setItem(FILTER_STATE_KEY, JSON.stringify(state));
+            filterTeacher:     document.getElementById('filterTeacher').value,
+            currentPage
+        }));
     }
 
     function restoreFilterState() {
         try {
             const raw = sessionStorage.getItem(FILTER_STATE_KEY);
             if (!raw) return false;
-            const state = JSON.parse(raw);
-            sessionStorage.removeItem(FILTER_STATE_KEY); // ใช้ครั้งเดียวแล้วลบทิ้ง
-            document.getElementById('searchName').value        = state.searchName        || '';
-            document.getElementById('searchSubject').value     = state.searchSubject     || '';
-            document.getElementById('filterYear').value        = state.filterYear        || '';
-            document.getElementById('filterSemester').value    = state.filterSemester    || '';
-            document.getElementById('filterGradeStatus').value = state.filterGradeStatus || '';
-            document.getElementById('filterStatus').value      = state.filterStatus      || '';
-            currentPage = state.currentPage || 1;
+            const s = JSON.parse(raw);
+            sessionStorage.removeItem(FILTER_STATE_KEY);
+            document.getElementById('searchName').value        = s.searchName        || '';
+            document.getElementById('searchSubject').value     = s.searchSubject     || '';
+            document.getElementById('filterYear').value        = s.filterYear        || '';
+            document.getElementById('filterSemester').value    = s.filterSemester    || '';
+            document.getElementById('filterGradeStatus').value = s.filterGradeStatus || '';
+            document.getElementById('filterStatus').value      = s.filterStatus      || '';
+            document.getElementById('filterTeacher').value     = s.filterTeacher     || '';
+            currentPage = s.currentPage || 1;
             return true;
         } catch { return false; }
     }
 
-    // ─── Init ─────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', loadData);
-
-    // ─── Load data ────────────────────────────────────
+    // ═══════════════════════════════════════════════════════
+    //  LOAD DATA (Firestore first, fallback GAS)
+    // ═══════════════════════════════════════════════════════
     async function loadData() {
         showShimmer();
         try {
-            const url = CONFIG.APP_SCRIPT_URL + '?action=getData&t=' + Date.now();
-            const res = await fetch(url, { method: 'GET', redirect: 'follow' });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const result = await res.json();
+            // Try Firestore
+            const snap = await db.collection(COL_GRADES).get();
+            if (!snap.empty) {
+                allData = snap.docs.map(doc => ({ ...doc.data(), _docId: doc.id })).map(normalizeRow);
+                // Also merge any correction log data
+                await mergeFirestoreLogs();
+                setupAfterLoad();
+                return;
+            }
+        } catch (e) {
+            console.warn('Firestore load error:', e);
+        }
 
+        // Fallback: GAS
+        try {
+            const url = CONFIG.APP_SCRIPT_URL + '?action=getData&t=' + Date.now();
+            const res = await fetch(url, { method:'GET', redirect:'follow' });
+            const result = await res.json();
             if (result.success && result.data && result.data.length > 0) {
                 allData = result.data.map(normalizeRow);
-                populateFilters();           // ต้อง populate ก่อน restore เพื่อให้ option พร้อม
-                const hasState = restoreFilterState();
-                if (hasState) {
-                    searchData(true);        // กรองตาม state ที่ restore มา (currentPage ถูก set แล้ว)
-                } else {
-                    filteredData = filterFailedGrades(allData);
-                    displayData();
-                }
-                updateStats();
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'โหลดข้อมูลสำเร็จ',
-                    html: `พบผลการเรียนที่ไม่ผ่าน <b>${filteredData.length}</b> รายการ`,
-                    timer: 2500,
-                    timerProgressBar: true,
-                    showConfirmButton: false,
-                    toast: true,
-                    position: 'top-end'
-                });
-            } else {
-                loadSampleData();
+                // Still load teacher assignments from Firestore for display
+                try {
+                    const tSnap = await db.collection(COL_TEACHERS).get();
+                    teacherAssignments = {};
+                    tSnap.docs.forEach(doc => { teacherAssignments[doc.data().subjectCode] = doc.data().teacherName; });
+                } catch(e) { console.warn('Teacher load (GAS path) failed:', e); }
+                setupAfterLoad();
+                return;
             }
         } catch (err) {
-            console.warn('loadData error:', err);
-            Swal.fire({
-                icon: 'warning',
-                title: 'ไม่สามารถเชื่อมต่อได้',
-                text: 'กำลังโหลดข้อมูลตัวอย่างเพื่อทดสอบ',
-                timer: 3000, timerProgressBar: true,
-                showConfirmButton: false, toast: true, position: 'top-end'
-            });
-            setTimeout(loadSampleData, 600);
+            console.warn('GAS fallback error:', err);
         }
+
+        loadSampleData();
     }
 
-    // ─── Normalize row keys (Thai <-> English) ────────
-    // GAS อาจส่ง key เป็นภาษาไทยหรืออังกฤษขึ้นอยู่กับ header ใน Sheet
-    // ฟังก์ชันนี้ทำให้ key มาตรฐานเสมอ
+    async function mergeFirestoreLogs() {
+        // Load teacher assignments so displayData and filter dropdown can use them
+        try {
+            const tSnap = await db.collection(COL_TEACHERS).get();
+            teacherAssignments = {};
+            tSnap.docs.forEach(doc => { teacherAssignments[doc.data().subjectCode] = doc.data().teacherName; });
+        } catch(e) { console.warn('mergeFirestoreLogs/teachers error:', e); }
+
+        // Merge correction status from logs into allData for display
+        try {
+            const logSnap = await db.collection(COL_LOGS).get();
+            const logMap = {};
+            logSnap.docs.forEach(doc => {
+                const d = doc.data();
+                const key = (d.studentName||'') + '|' + (d.subjectCode||'');
+                if (!logMap[key] || (d.editedAt > (logMap[key].editedAt||''))) {
+                    logMap[key] = d;
+                }
+            });
+            allData.forEach(r => {
+                const studentName = `${r.คำนำหน้า||''} ${r.ชื่อ||''} ${r.สกุล||''}`.trim();
+                const key = studentName + '|' + (r.รหัสวิชา||'');
+                if (logMap[key]) {
+                    r.Correction_Status = 'แก้ไขแล้ว';
+                    r.New_Result  = logMap[key].newResult || r.New_Result;
+                    r.Editor      = logMap[key].editor    || r.Editor;
+                    r.EditDate    = logMap[key].editDate  || r.EditDate;
+                    r._logData    = logMap[key];
+                }
+            });
+        } catch(e) { console.warn('mergeFirestoreLogs/logs error:', e); }
+    }
+
+    function setupAfterLoad() {
+        populateFilters();
+        const hasState = restoreFilterState();
+        if (hasState) { searchData(true); } else { filteredData = filterFailedGrades(allData); displayData(); }
+        updateStats();
+        Swal.fire({ icon:'success', title:'โหลดข้อมูลสำเร็จ', html:`พบผลการเรียนที่ไม่ผ่าน <b>${filteredData.length}</b> รายการ`, timer:2500, timerProgressBar:true, showConfirmButton:false, toast:true, position:'top-end' });
+    }
+
     function normalizeRow(r) {
         return {
             ...r,
-            New_Result:        r.New_Result        || r['ผลการเรียนใหม่']  || '',
-            Correction_Status: r.Correction_Status || r['สถานะการแก้ไข']   || r['Correction Status'] || '',
-            Editor:            r.Editor            || r['ผู้แก้ไข']         || '',
-            EditDate:          r.EditDate          || r['วันที่แก้ไข']      || '',
-            EditTime:          r.EditTime          || r['เวลาที่แก้ไข']     || '',
-            Log_Link:          r.Log_Link          || r['Log Link']         || '',
+            New_Result:        r.New_Result        || r['ผลการเรียนใหม่']    || '',
+            Correction_Status: r.Correction_Status || r['สถานะการแก้ไข']     || r['Correction Status'] || '',
+            Editor:            r.Editor            || r['ผู้แก้ไข']           || '',
+            EditDate:          r.EditDate          || r['วันที่แก้ไข']        || '',
+            EditTime:          r.EditTime          || r['เวลาที่แก้ไข']       || '',
+            Log_Link:          r.Log_Link          || r['Log Link']           || '',
         };
     }
 
@@ -902,14 +857,13 @@
         return data.filter(r => ['0','ร','มส'].includes(String(r.ผลการเรียน||'').trim()));
     }
 
-    // ─── Sample data ──────────────────────────────────
+    // ── Sample data ──────────────────────────────────────
     function loadSampleData() {
         allData = [
-            { rowIndex:2, ชั้นปี:'2567', คำนำหน้า:'เด็กชาย', ชื่อ:'สมชาย', สกุล:'ใจดี', รหัสวิชา:'TH101', ชื่อวิชา:'ภาษาไทย', 'ภาคเรียน/ปีการศึกษา':'1/2567', ชั้น:'ม.1/1', คะแนน:'45', ผลการเรียน:'0', New_Result:'', Correction_Status:'', Editor:'', EditDate:'', EditTime:'', Log_Link:'' },
-            { rowIndex:3, ชั้นปี:'2567', คำนำหน้า:'เด็กหญิง', ชื่อ:'สมหญิง', สกุล:'รักเรียน', รหัสวิชา:'EN102', ชื่อวิชา:'ภาษาอังกฤษ', 'ภาคเรียน/ปีการศึกษา':'1/2567', ชั้น:'ม.1/2', คะแนน:'0', ผลการเรียน:'ร', New_Result:'', Correction_Status:'', Editor:'', EditDate:'', EditTime:'', Log_Link:'' },
-            { rowIndex:4, ชั้นปี:'2567', คำนำหน้า:'นาย', ชื่อ:'วิชัย', สกุล:'เก่งมาก', รหัสวิชา:'MA103', ชื่อวิชา:'คณิตศาสตร์', 'ภาคเรียน/ปีการศึกษา':'1/2567', ชั้น:'ม.2/1', คะแนน:'0', ผลการเรียน:'มส', New_Result:'2.5', Correction_Status:'แก้ไขแล้ว', Editor:'นางสาวสมหญิง ดีใจ', EditDate:'15/12/2567', EditTime:'14:30:25', Log_Link:'' },
-            { rowIndex:5, ชั้นปี:'2567', คำนำหน้า:'นางสาว', ชื่อ:'มาลี', สกุล:'สวยงาม', รหัสวิชา:'SC104', ชื่อวิชา:'วิทยาศาสตร์', 'ภาคเรียน/ปีการศึกษา':'1/2567', ชั้น:'ม.3/1', คะแนน:'35', ผลการเรียน:'0', New_Result:'', Correction_Status:'', Editor:'', EditDate:'', EditTime:'', Log_Link:'' },
-            { rowIndex:6, ชั้นปี:'2567', คำนำหน้า:'เด็กชาย', ชื่อ:'สมศักดิ์', สกุล:'ขยันเรียน', รหัสวิชา:'SO105', ชื่อวิชา:'สังคมศึกษา', 'ภาคเรียน/ปีการศึกษา':'2/2567', ชั้น:'ม.1/3', คะแนน:'0', ผลการเรียน:'0', New_Result:'1.5', Correction_Status:'แก้ไขแล้ว', Editor:'นายสมชาย ใจดี', EditDate:'16/12/2567', EditTime:'09:15:42', Log_Link:'' }
+            { rowIndex:2, ชั้นปี:'2567', คำนำหน้า:'เด็กชาย', ชื่อ:'สมชาย', สกุล:'ใจดี',     รหัสวิชา:'ท21101', ชื่อวิชา:'ภาษาไทย 1',    'ภาคเรียน/ปีการศึกษา':'1/2567', ชั้น:'ม.1/1', ผลการเรียน:'0',  New_Result:'', Correction_Status:'', Editor:'', EditDate:'', EditTime:'', Log_Link:'' },
+            { rowIndex:3, ชั้นปี:'2567', คำนำหน้า:'เด็กหญิง', ชื่อ:'สมหญิง', สกุล:'รักเรียน', รหัสวิชา:'อ21101', ชื่อวิชา:'ภาษาอังกฤษ 1','ภาคเรียน/ปีการศึกษา':'1/2567', ชั้น:'ม.1/2', ผลการเรียน:'ร',  New_Result:'', Correction_Status:'', Editor:'', EditDate:'', EditTime:'', Log_Link:'' },
+            { rowIndex:4, ชั้นปี:'2567', คำนำหน้า:'นาย',     ชื่อ:'วิชัย',  สกุล:'เก่งมาก',  รหัสวิชา:'ค21101', ชื่อวิชา:'คณิตศาสตร์ 1', 'ภาคเรียน/ปีการศึกษา':'1/2567', ชั้น:'ม.2/1', ผลการเรียน:'มส', New_Result:'2.5', Correction_Status:'แก้ไขแล้ว', Editor:'นางสาวสมหญิง ดีใจ', EditDate:'15/12/2567', EditTime:'14:30:25', Log_Link:'' },
+            { rowIndex:5, ชั้นปี:'2567', คำนำหน้า:'นางสาว',  ชื่อ:'มาลี',   สกุล:'สวยงาม',   รหัสวิชา:'ว21101', ชื่อวิชา:'วิทยาศาสตร์ 1','ภาคเรียน/ปีการศึกษา':'1/2567', ชั้น:'ม.3/1', ผลการเรียน:'0',  New_Result:'', Correction_Status:'', Editor:'', EditDate:'', EditTime:'', Log_Link:'' },
         ];
         filteredData = filterFailedGrades(allData);
         populateFilters();
@@ -917,84 +871,57 @@
         updateStats();
     }
 
-    // ─── Stats ────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════
+    //  STATS
+    // ═══════════════════════════════════════════════════════
     function updateStats() {
         const base = filterFailedGrades(allData);
         const animNum = (el, val) => {
-            let start = 0;
-            const end = parseInt(val);
-            const dur = 600;
-            const step = Math.ceil(end / (dur / 16));
-            const t = setInterval(() => {
-                start = Math.min(start + step, end);
-                el.textContent = start;
-                if (start >= end) clearInterval(t);
-            }, 16);
+            let start = 0, end = parseInt(val)||0;
+            const step = Math.max(1, Math.ceil(end/40));
+            const t = setInterval(() => { start = Math.min(start+step, end); el.textContent = start; if(start>=end) clearInterval(t); }, 16);
         };
         animNum(document.getElementById('statTotal'), base.length);
         animNum(document.getElementById('statZero'),  base.filter(r=>r.ผลการเรียน==='0').length);
         animNum(document.getElementById('statRor'),   base.filter(r=>r.ผลการเรียน==='ร').length);
         animNum(document.getElementById('statMs'),    base.filter(r=>r.ผลการเรียน==='มส').length);
         animNum(document.getElementById('statDone'),  base.filter(r=>r.Correction_Status==='แก้ไขแล้ว').length);
-
-        // progress
         const done = base.filter(r=>r.Correction_Status==='แก้ไขแล้ว').length;
         const pct  = base.length ? Math.round(done/base.length*100) : 0;
         document.getElementById('progressFill').style.width = pct + '%';
         document.getElementById('progressLabel').textContent = `แก้ไขแล้ว ${done}/${base.length} (${pct}%)`;
-
-        // student summary
         updateStudentSummary();
     }
 
-    // ─── Student Summary ──────────────────────────────
-    let summarySortAsc = false; // true = น้อย→มาก, false = มาก→น้อย
-
+    // ═══════════════════════════════════════════════════════
+    //  STUDENT SUMMARY
+    // ═══════════════════════════════════════════════════════
+    let summarySortAsc = false;
     function updateStudentSummary() {
-        // นับเฉพาะรายการที่ยังไม่แก้ไข
         const pending = filterFailedGrades(allData).filter(r => r.Correction_Status !== 'แก้ไขแล้ว');
-
-        // group by ชื่อ-สกุลเต็ม
         const map = {};
         pending.forEach(r => {
             const name = `${r.คำนำหน้า||''} ${r.ชื่อ||''} ${r.สกุล||''}`.trim();
             if (!map[name]) map[name] = { zero:0, ror:0, ms:0 };
             const g = String(r.ผลการเรียน||'').trim();
-            if (g==='0')  map[name].zero++;
-            if (g==='ร')  map[name].ror++;
-            if (g==='มส') map[name].ms++;
+            if (g==='0') map[name].zero++; if (g==='ร') map[name].ror++; if (g==='มส') map[name].ms++;
         });
-
-        const students = Object.entries(map).map(([name, counts]) => ({
-            name,
-            total: counts.zero + counts.ror + counts.ms,
-            ...counts
-        }));
-
-        // sort
-        students.sort((a,b) => summarySortAsc ? a.total - b.total : b.total - a.total);
-
-        // update count badge
+        const students = Object.entries(map).map(([name, c]) => ({ name, total:c.zero+c.ror+c.ms, ...c }));
+        students.sort((a,b) => summarySortAsc ? a.total-b.total : b.total-a.total);
         document.getElementById('summaryStudentCount').textContent = students.length + ' คน';
-
-        // show/hide section
         const section = document.getElementById('studentSummarySection');
         section.style.display = students.length > 0 ? '' : 'none';
-
         if (!students.length) return;
-
-        // render list
-        const list = document.getElementById('studentSummaryList');
-        list.innerHTML = students.map((s, idx) => `
-            <div class="student-row" style="animation-delay:${Math.min(idx*20,400)}ms">
+        document.getElementById('studentSummaryList').innerHTML = students.map((s,i) => `
+            <div class="student-row" style="animation-delay:${Math.min(i*20,400)}ms">
                 <div class="flex items-center gap-3 flex-1 min-w-0 mr-3">
-                    <span class="text-xs text-gray-300 w-5 text-right flex-shrink-0">${idx+1}</span>
+                    <span class="text-xs text-gray-300 w-5 text-right flex-shrink-0">${i+1}</span>
                     <span class="student-name truncate">${s.name}</span>
                 </div>
                 <div class="student-badges">
-                    ${s.zero ? `<span class="count-pill zero">0 × ${s.zero}</span>` : ''}
-                    ${s.ror  ? `<span class="count-pill ror">ร × ${s.ror}</span>`   : ''}
-                    ${s.ms   ? `<span class="count-pill ms">มส × ${s.ms}</span>`   : ''}
+                    ${s.zero?`<span class="count-pill zero">0×${s.zero}</span>`:''}
+                    ${s.ror?`<span class="count-pill ror">ร×${s.ror}</span>`:''}
+                    ${s.ms?`<span class="count-pill ms">มส×${s.ms}</span>`:''}
                     <span class="text-xs text-gray-400 self-center ml-1">(${s.total} วิชา)</span>
                 </div>
             </div>`).join('');
@@ -1002,167 +929,138 @@
 
     function toggleSummarySort() {
         summarySortAsc = !summarySortAsc;
-        const btn = document.getElementById('summaryToggleBtn');
-        btn.innerHTML = summarySortAsc
-            ? `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4 4m-4-4v12"/></svg>น้อย→มาก`
-            : `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4 4m-4-4v12"/></svg>มาก→น้อย`;
+        document.getElementById('summaryToggleBtn').textContent = summarySortAsc ? 'น้อย→มาก' : 'มาก→น้อย';
         updateStudentSummary();
     }
 
-    // ─── Filters ──────────────────────────────────────
+    // ═══════════════════════════════════════════════════════
+    //  FILTERS & SEARCH
+    // ═══════════════════════════════════════════════════════
     function populateFilters() {
         const base = filterFailedGrades(allData);
-        const yearSel = document.getElementById('filterYear');
-        const semSel  = document.getElementById('filterSemester');
         const years = [...new Set(base.map(r=>r.ชั้นปี))].sort();
         const sems  = [...new Set(base.map(r=>r['ภาคเรียน/ปีการศึกษา']))].sort();
-        yearSel.innerHTML = '<option value="">ทุกชั้นปี</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join('');
-        semSel.innerHTML  = '<option value="">ทุกภาคเรียน</option>' + sems.map(s=>`<option value="${s}">${s}</option>`).join('');
+        document.getElementById('filterYear').innerHTML = '<option value="">ทุกชั้นปี</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join('');
+        document.getElementById('filterSemester').innerHTML = '<option value="">ทุกภาคเรียน</option>' + sems.map(s=>`<option value="${s}">${s}</option>`).join('');
+        // Teacher dropdown — built from teacherAssignments that have subjects in current data
+        const codes = [...new Set(base.map(r=>r.รหัสวิชา||'').filter(Boolean))];
+        const teachers = [...new Set(codes.map(c=>teacherAssignments[c]||'').filter(Boolean))].sort();
+        document.getElementById('filterTeacher').innerHTML = '<option value="">ทุกครูผู้สอน</option>' + teachers.map(t=>`<option value="${t}">${t}</option>`).join('');
     }
 
     function resetFilters() {
         ['searchName','searchSubject'].forEach(id => document.getElementById(id).value='');
-        ['filterYear','filterSemester','filterGradeStatus','filterStatus'].forEach(id => document.getElementById(id).value='');
+        ['filterYear','filterSemester','filterGradeStatus','filterStatus','filterTeacher'].forEach(id => document.getElementById(id).value='');
         searchData();
     }
 
-    function searchData(keepPage = false) {
+    function searchData(keepPage=false) {
         const name    = document.getElementById('searchName').value.toLowerCase();
         const subj    = document.getElementById('searchSubject').value.toLowerCase();
         const year    = document.getElementById('filterYear').value;
         const sem     = document.getElementById('filterSemester').value;
         const grade   = document.getElementById('filterGradeStatus').value;
         const status  = document.getElementById('filterStatus').value;
-
+        const teacher = document.getElementById('filterTeacher').value;
         filteredData = allData.filter(r => {
             const g = String(r.ผลการเรียน||'').trim();
             if (!['0','ร','มส'].includes(g)) return false;
-            const fullName = `${r.ชื่อ} ${r.สกุล}`.toLowerCase();
-            const matchName  = !name  || fullName.includes(name);
-            const matchSubj  = !subj  || r.รหัสวิชา.toLowerCase().includes(subj);
-            const matchYear  = !year  || r.ชั้นปี === year;
-            const matchSem   = !sem   || r['ภาคเรียน/ปีการศึกษา'] === sem;
-            const matchGrade = !grade || g === grade;
-            let matchStatus = true;
-            if (status === 'แก้ไขแล้ว')  matchStatus = r.Correction_Status === 'แก้ไขแล้ว';
-            if (status === 'ยังไม่แก้ไข') matchStatus = r.Correction_Status !== 'แก้ไขแล้ว';
-            return matchName && matchSubj && matchYear && matchSem && matchGrade && matchStatus;
+            const fullName = `${r.ชื่อ||''} ${r.สกุล||''}`.toLowerCase();
+            if (name    && !fullName.includes(name)) return false;
+            if (subj    && !(r.รหัสวิชา||'').toLowerCase().includes(subj)) return false;
+            if (year    && r.ชั้นปี !== year) return false;
+            if (sem     && r['ภาคเรียน/ปีการศึกษา'] !== sem) return false;
+            if (grade   && g !== grade) return false;
+            if (teacher && (teacherAssignments[r.รหัสวิชา||'']||'') !== teacher) return false;
+            if (status === 'แก้ไขแล้ว'  && r.Correction_Status !== 'แก้ไขแล้ว') return false;
+            if (status === 'ยังไม่แก้ไข' && r.Correction_Status === 'แก้ไขแล้ว') return false;
+            return true;
         });
-
         if (!keepPage) currentPage = 1;
-        // clamp หน้าไม่ให้เกินจำนวนหน้าจริง
-        const totalPages = Math.ceil(filteredData.length / CONFIG.RECORDS_PER_PAGE) || 1;
-        if (currentPage > totalPages) currentPage = totalPages;
+        const tp = Math.ceil(filteredData.length/CONFIG.RECORDS_PER_PAGE)||1;
+        if (currentPage > tp) currentPage = tp;
         displayData();
     }
 
-    // ─── Display ──────────────────────────────────────
+    // ═══════════════════════════════════════════════════════
+    //  DISPLAY TABLE
+    // ═══════════════════════════════════════════════════════
     function displayData() {
         const tb = document.getElementById('dataTable');
         const start = (currentPage-1)*CONFIG.RECORDS_PER_PAGE;
-        const end   = start + CONFIG.RECORDS_PER_PAGE;
-        const page  = filteredData.slice(start, end);
-
+        const page  = filteredData.slice(start, start+CONFIG.RECORDS_PER_PAGE);
         if (!page.length) {
-            tb.innerHTML = `
-                <tr><td colspan="10">
-                    <div class="empty-state">
-                        <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                        </svg>
-                        <p class="text-lg font-medium">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</p>
-                        <p class="text-sm mt-1">ลองเปลี่ยนตัวกรองหรือล้างค่าการค้นหา</p>
-                    </div>
-                </td></tr>`;
-            updatePagination();
-            return;
+            tb.innerHTML = `<tr><td colspan="11"><div class="empty-state"><p class="text-lg font-medium">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</p><p class="text-sm mt-1">ลองเปลี่ยนตัวกรองหรือล้างค่าการค้นหา</p></div></td></tr>`;
+            updatePagination(); return;
         }
-
-        const searchName = document.getElementById('searchName').value;
+        const qName    = document.getElementById('searchName').value;
+        const qSubj    = document.getElementById('searchSubject').value;
+        const qTeacher = document.getElementById('filterTeacher').value;
         tb.innerHTML = page.map((row, idx) => {
             const isEdited = row.Correction_Status === 'แก้ไขแล้ว';
-            const rowClass = isEdited ? 'edited-row' : '';
-            const grade    = row.ผลการเรียน;
+            const grade = row.ผลการเรียน;
             let gradeBadge = 'badge-danger';
-            if (grade==='ร')  gradeBadge = 'badge-warning';
-            if (grade==='มส') gradeBadge = 'badge-purple';
-
-            const fullName = `${row.คำนำหน้า||''} ${row.ชื่อ||''} ${row.สกุล||''}`.trim();
-            const hiName   = highlight(fullName, searchName);
-            const hiCode   = highlight(row.รหัสวิชา||'', document.getElementById('searchSubject').value);
-
-            const delay = Math.min(idx * 30, 300);
-
+            if (grade==='ร') gradeBadge='badge-warning'; if (grade==='มส') gradeBadge='badge-purple';
+            const fullName   = `${row.คำนำหน้า||''} ${row.ชื่อ||''} ${row.สกุล||''}`.trim();
+            const teacher    = teacherAssignments[row.รหัสวิชา||''] || '';
             return `
-            <tr class="${rowClass} fade-enter" style="animation-delay:${delay}ms">
+            <tr class="${isEdited?'edited-row':''}" style="animation-delay:${Math.min(idx*30,300)}ms">
                 <td class="px-3 py-3">
                     ${isEdited
                         ? `<span class="status-dot done"></span><span class="text-xs text-emerald-600 font-medium">แก้ไขแล้ว</span>
-                           <button onclick="viewLog(${start+idx})" class="ml-2 text-blue-500 hover:text-blue-700 text-xs underline no-print" title="ดูประวัติ">📋 ประวัติ</button>`
-                        : `<span class="status-dot pending"></span><span class="text-xs text-amber-600">รอดำเนินการ</span>`
-                    }
+                           <button onclick="viewLog(${start+idx})" class="ml-2 text-blue-500 hover:text-blue-700 text-xs underline no-print">📋 ประวัติ</button>`
+                        : `<span class="status-dot pending"></span><span class="text-xs text-amber-600">รอดำเนินการ</span>`}
                 </td>
                 <td class="px-3 py-3 text-sm">${row.ชั้นปี||''}</td>
                 <td class="px-3 py-3 text-sm">${row['ภาคเรียน/ปีการศึกษา']||''}</td>
-                <td class="px-3 py-3 text-sm font-medium">${hiName}</td>
-                <td class="px-3 py-3"><span class="text-xs font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">${hiCode}</span></td>
+                <td class="px-3 py-3 text-sm font-medium">${highlight(fullName,qName)}</td>
+                <td class="px-3 py-3"><span class="text-xs font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">${highlight(row.รหัสวิชา||'',qSubj)}</span></td>
                 <td class="px-3 py-3 text-sm">${row.ชื่อวิชา||''}</td>
                 <td class="px-3 py-3 text-sm">${row.ชั้น||''}</td>
+                <td class="px-3 py-3 text-sm">${teacher
+                    ? `<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span class="truncate max-w-[120px]" title="${teacher}">${highlight(teacher,qTeacher)}</span></span>`
+                    : '<span class="text-gray-300 text-xs">—</span>'}</td>
                 <td class="px-3 py-3"><span class="badge ${gradeBadge}">${grade}</span></td>
-                <td class="px-3 py-3">
-                    ${row.New_Result
-                        ? `<span class="badge badge-success">${row.New_Result}</span>`
-                        : '<span class="text-gray-300 text-xs">—</span>'
-                    }
-                </td>
+                <td class="px-3 py-3">${row.New_Result?`<span class="badge badge-success">${row.New_Result}</span>`:'<span class="text-gray-300 text-xs">—</span>'}</td>
                 <td class="px-3 py-3 text-center no-print">
                     <button onclick="editRecord(${start+idx})" class="btn btn-sm btn-primary">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>
-                        แก้ไข
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>แก้ไข
                     </button>
                 </td>
             </tr>`;
         }).join('');
-
         updatePagination();
     }
 
-    function highlight(text, query) {
-        if (!query) return text;
-        const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
-        return text.replace(re, '<mark>$1</mark>');
+    function highlight(text, q) {
+        if (!q) return text;
+        return text.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark>$1</mark>');
     }
 
-    // ─── Pagination ───────────────────────────────────
     function updatePagination() {
         const total = filteredData.length;
-        const totalPages = Math.ceil(total/CONFIG.RECORDS_PER_PAGE);
+        const tp = Math.ceil(total/CONFIG.RECORDS_PER_PAGE);
         const start = total ? (currentPage-1)*CONFIG.RECORDS_PER_PAGE+1 : 0;
         const end   = Math.min(currentPage*CONFIG.RECORDS_PER_PAGE, total);
         document.getElementById('showingFrom').textContent = start;
         document.getElementById('showingTo').textContent   = end;
         document.getElementById('totalRecords').textContent= total;
-        document.getElementById('pageInfo').textContent    = `หน้า ${currentPage} / ${totalPages||1}`;
+        document.getElementById('pageInfo').textContent    = `หน้า ${currentPage} / ${tp||1}`;
         document.getElementById('prevBtn').disabled = currentPage<=1;
-        document.getElementById('nextBtn').disabled = currentPage>=totalPages;
+        document.getElementById('nextBtn').disabled = currentPage>=tp;
     }
 
-    function previousPage() { if(currentPage>1){ currentPage--; displayData(); } }
-    function nextPage() {
-        const tp=Math.ceil(filteredData.length/CONFIG.RECORDS_PER_PAGE);
-        if(currentPage<tp){ currentPage++; displayData(); }
-    }
+    function previousPage() { if(currentPage>1){currentPage--;displayData();} }
+    function nextPage() { const tp=Math.ceil(filteredData.length/CONFIG.RECORDS_PER_PAGE); if(currentPage<tp){currentPage++;displayData();} }
 
-    // ─── Shimmer loading ──────────────────────────────
     function showShimmer() {
-        const rows = Array.from({length:5},(_,i)=>`
-            <tr style="animation-delay:${i*80}ms">
-                ${Array.from({length:10},()=>'<td class="px-3 py-3"><div class="shimmer h-4 rounded w-full"></div></td>').join('')}
-            </tr>`).join('');
-        document.getElementById('dataTable').innerHTML = rows;
+        document.getElementById('dataTable').innerHTML = Array.from({length:5},(_,i)=>`
+            <tr style="animation-delay:${i*80}ms">${Array.from({length:11},()=>'<td class="px-3 py-3"><div class="shimmer h-4 rounded w-full"></div></td>').join('')}</tr>`).join('');
     }
 
-    // ─── Edit record ──────────────────────────────────
+    // ═══════════════════════════════════════════════════════
+    //  EDIT RECORD
+    // ═══════════════════════════════════════════════════════
     function editRecord(index) {
         currentEditRow = index;
         const r = filteredData[index];
@@ -1171,40 +1069,32 @@
         document.getElementById('editSubjectCode').textContent = r.รหัสวิชา||'';
         document.getElementById('editSubjectName').textContent = r.ชื่อวิชา||'';
         document.getElementById('editOldResult').textContent   = r.ผลการเรียน||'';
-        document.getElementById('editNewResult').value  = r.New_Result||'';
-        document.getElementById('editEditor').value     = '';
-        document.getElementById('editPassword').value   = '';
-        document.getElementById('editImageFile').value  = '';
+        document.getElementById('editNewResult').value = r.New_Result||'';
+        document.getElementById('editEditor').value = '';
+        document.getElementById('editPassword').value = '';
+        document.getElementById('editImageFile').value = '';
         refreshEditorDatalist();
         document.getElementById('editModal').classList.add('show');
     }
 
-    function closeEditModal() {
-        document.getElementById('editModal').classList.remove('show');
-        currentEditRow = null;
-    }
+    function closeEditModal() { document.getElementById('editModal').classList.remove('show'); currentEditRow = null; }
 
-    // ─── Save edit ────────────────────────────────────
+    // ═══════════════════════════════════════════════════════
+    //  SAVE EDIT  (Firestore log + GAS for image)
+    // ═══════════════════════════════════════════════════════
     async function saveEdit() {
-        const newResult  = document.getElementById('editNewResult').value;
-        const editor     = document.getElementById('editEditor').value.trim();
-        const password   = document.getElementById('editPassword').value;
-        const imageFile  = document.getElementById('editImageFile').files[0];
+        const newResult = document.getElementById('editNewResult').value;
+        const editor    = document.getElementById('editEditor').value.trim();
+        const password  = document.getElementById('editPassword').value;
+        const imageFile = document.getElementById('editImageFile').files[0];
 
         if (!newResult || !editor || !password) {
-            Swal.fire({ icon:'warning', title:'กรอกข้อมูลไม่ครบ', html:'กรุณากรอก<br>• ผลการเรียนใหม่<br>• ผู้แก้ไข<br>• รหัสผ่านฝ่ายวิชาการ', confirmButtonColor:'#4f46e5' });
-            return;
+            Swal.fire({ icon:'warning', title:'กรอกข้อมูลไม่ครบ', html:'กรุณากรอก<br>• ผลการเรียนใหม่<br>• ผู้แก้ไข<br>• รหัสผ่าน', confirmButtonColor:'#4f46e5' }); return;
         }
-
         if (password !== CONFIG.CORRECT_PASSWORD) {
-            Swal.fire({ icon:'error', title:'รหัสผ่านไม่ถูกต้อง', text:'กรุณาติดต่อฝ่ายวิชาการเพื่อขอรหัสผ่าน', confirmButtonColor:'#ef4444' });
-            document.getElementById('editPassword').value='';
-            document.getElementById('editPassword').focus();
-            return;
+            Swal.fire({ icon:'error', title:'รหัสผ่านไม่ถูกต้อง', confirmButtonColor:'#ef4444' });
+            document.getElementById('editPassword').value=''; return;
         }
-
-        // บันทึกชื่อครูไว้ใน localStorage
-        saveEditorName(editor);
 
         const saveBtn = document.getElementById('saveBtn');
         saveBtn.disabled = true;
@@ -1212,335 +1102,566 @@
 
         try {
             const record = filteredData[currentEditRow];
-            const updateData = {
-                action: 'updateRecord',
-                rowIndex: record.rowIndex,
-                studentName: `${record.คำนำหน้า||''} ${record.ชื่อ||''} ${record.สกุล||''}`.trim(),
-                subjectCode:  record.รหัสวิชา||'',
-                subjectName:  record.ชื่อวิชา||'',
-                oldResult:    record.ผลการเรียน||'',
-                newResult:    newResult,
-                editor:       editor,
-                year:         record.ชั้นปี||'',
-                semester:     record['ภาคเรียน/ปีการศึกษา']||'',
-                class:        record.ชั้น||'',
-                editDate:     new Date().toLocaleDateString('th-TH'),
-                editTime:     new Date().toLocaleTimeString('th-TH'),
-                timestamp:    Date.now()
-            };
+            const studentName = `${record.คำนำหน้า||''} ${record.ชื่อ||''} ${record.สกุล||''}`.trim();
+            const now = new Date();
+            const editDate = now.toLocaleDateString('th-TH');
+            const editTime = now.toLocaleTimeString('th-TH');
 
+            let imageUrl = '';
+
+            // Upload image via GAS if provided
             if (imageFile) {
                 if (imageFile.size > 5*1024*1024) {
-                    Swal.fire({icon:'warning',title:'ไฟล์ใหญ่เกินไป',text:'กรุณาใช้ไฟล์ไม่เกิน 5MB',confirmButtonColor:'#f59e0b'});
-                    saveBtn.disabled=false; saveBtn.innerHTML='<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>บันทึกการแก้ไข';
-                    return;
+                    Swal.fire({icon:'warning',title:'ไฟล์ใหญ่เกิน 5MB',confirmButtonColor:'#f59e0b'}); return;
                 }
-                updateData.imageData = { base64Data: await fileToBase64(imageFile), fileName: imageFile.name, mimeType: imageFile.type };
+                const updateData = {
+                    action: 'updateRecord',
+                    rowIndex: record.rowIndex || 0,
+                    studentName, subjectCode: record.รหัสวิชา||'',
+                    subjectName: record.ชื่อวิชา||'', oldResult: record.ผลการเรียน||'',
+                    newResult, editor, year: record.ชั้นปี||'',
+                    semester: record['ภาคเรียน/ปีการศึกษา']||'', class: record.ชั้น||'',
+                    imageData: { base64Data: await fileToBase64(imageFile), fileName: imageFile.name, mimeType: imageFile.type }
+                };
+                try {
+                    const res = await fetch(CONFIG.APP_SCRIPT_URL, { method:'POST', body: JSON.stringify(updateData) });
+                    const result = await res.json();
+                    imageUrl = result.imageUrl || '';
+                } catch(e) { console.warn('GAS image upload failed:', e); }
             }
 
-            const res = await fetch(CONFIG.APP_SCRIPT_URL, { method:'POST', body:JSON.stringify(updateData) });
-            let result;
-            try { result = await res.json(); } catch(e){ result = {success:true}; }
+            // Save correction log to Firestore
+            const logEntry = {
+                studentName, subjectCode: record.รหัสวิชา||'', subjectName: record.ชื่อวิชา||'',
+                oldResult: record.ผลการเรียน||'', newResult, editor,
+                year: record.ชั้นปี||'', semester: record['ภาคเรียน/ปีการศึกษา']||'',
+                class: record.ชั้น||'', editDate, editTime, imageUrl,
+                editedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                gradeDocId: record._docId || null
+            };
+            await db.collection(COL_LOGS).add(logEntry);
+
+            // If grade is from Firestore, update the grade doc too
+            if (record._docId) {
+                await db.collection(COL_GRADES).doc(record._docId).update({
+                    New_Result: newResult,
+                    Correction_Status: 'แก้ไขแล้ว',
+                    Editor: editor, EditDate: editDate, EditTime: editTime
+                });
+            }
+
+            // Save editor name
+            saveEditorName(editor);
 
             // Update local state
-            const upd = (obj) => {
-                obj.New_Result = newResult;
-                obj.Correction_Status = 'แก้ไขแล้ว';
-                obj.Editor   = editor;
-                obj.EditDate = updateData.editDate;
-                obj.EditTime = updateData.editTime;
-            };
-            const origIdx = allData.findIndex(r=>r.rowIndex===record.rowIndex);
-            if(origIdx!==-1) upd(allData[origIdx]);
+            const upd = obj => { obj.New_Result=newResult; obj.Correction_Status='แก้ไขแล้ว'; obj.Editor=editor; obj.EditDate=editDate; obj.EditTime=editTime; };
+            const origIdx = allData.findIndex(r=>r._docId===record._docId || r.rowIndex===record.rowIndex);
+            if (origIdx!==-1) upd(allData[origIdx]);
             upd(filteredData[currentEditRow]);
 
-            closeEditModal();
-            displayData();
-            updateStats();
+            closeEditModal(); displayData(); updateStats();
 
             Swal.fire({
                 icon:'success', title:'บันทึกสำเร็จ!',
-                html:`บันทึกการแก้ไขผลการเรียนของ<br><b>${updateData.studentName}</b><br>วิชา ${updateData.subjectName} เรียบร้อยแล้ว`,
-                confirmButtonColor:'#4f46e5',
-                footer:'<small>ข้อมูลได้รับการส่งไปยัง Google Sheets แล้ว</small>',
-                timer: 2500,
-                timerProgressBar: true,
-                showConfirmButton: false
-            }).then(() => {
-                saveFilterState();   // บันทึก filter+หน้าปัจจุบันไว้
-                location.reload();   // reload เพื่อดึงข้อมูลใหม่จาก Sheets
-            });
+                html:`บันทึกการแก้ไขของ <b>${studentName}</b><br>วิชา ${record.ชื่อวิชา||''} เรียบร้อย`,
+                timer:2500, timerProgressBar:true, showConfirmButton:false,
+                footer:'<small>บันทึกใน Firestore เรียบร้อยแล้ว</small>'
+            }).then(() => { saveFilterState(); location.reload(); });
 
         } catch(err) {
             console.error(err);
-            // Still update local for UX
-            const r2 = filteredData[currentEditRow];
-            r2.New_Result=''; r2.Correction_Status='แก้ไขแล้ว (ท้องถิ่น)'; r2.Editor=editor;
-            closeEditModal(); displayData();
-            Swal.fire({
-                icon:'error', title:'เกิดข้อผิดพลาด',
-                html:`<b>${err.message}</b><br><br>กรุณาตรวจสอบ:<br>• การเชื่อมต่ออินเทอร์เน็ต<br>• URL ของ Google Apps Script<br>• สิทธิ์การเข้าถึง Google Sheets`,
-                confirmButtonColor:'#ef4444'
-            });
+            Swal.fire({ icon:'error', title:'เกิดข้อผิดพลาด', html:`<b>${err.message}</b>`, confirmButtonColor:'#ef4444' });
         } finally {
             saveBtn.disabled=false;
             saveBtn.innerHTML='<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>บันทึกการแก้ไข';
         }
     }
 
-    // ─── View Log ─────────────────────────────────────
+    // ═══════════════════════════════════════════════════════
+    //  VIEW LOG (from Firestore)
+    // ═══════════════════════════════════════════════════════
     async function viewLog(index) {
         const record = filteredData[index];
         document.getElementById('logModal').classList.add('show');
-        document.getElementById('logContent').innerHTML = `
-            <div class="flex items-center justify-center gap-3 py-10 text-gray-400">
-                <div class="spinner"></div><span>กำลังโหลดประวัติจาก Google Sheets...</span>
-            </div>`;
-
+        document.getElementById('logContent').innerHTML = `<div class="flex items-center justify-center gap-3 py-10 text-gray-400"><div class="spinner"></div><span>กำลังโหลด...</span></div>`;
         try {
             const studentName = `${record.คำนำหน้า||''} ${record.ชื่อ||''} ${record.สกุล||''}`.trim();
-            const url = CONFIG.APP_SCRIPT_URL + `?action=getLog&studentName=${encodeURIComponent(studentName)}&subjectCode=${encodeURIComponent(record.รหัสวิชา||'')}&rowIndex=${record.rowIndex}&t=${Date.now()}`;
-            const res = await fetch(url, { method:'GET', redirect:'follow' });
+            // Check local _logData first
+            if (record._logData) { renderLogContent(record._logData, studentName, record); return; }
+            // Query Firestore
+            const snap = await db.collection(COL_LOGS)
+                .where('studentName','==',studentName)
+                .where('subjectCode','==',record.รหัสวิชา||'')
+                .orderBy('editedAt','desc').limit(1).get();
+            if (!snap.empty) { renderLogContent(snap.docs[0].data(), studentName, record); return; }
+            // Fallback: GAS
+            const url = CONFIG.APP_SCRIPT_URL + `?action=getLog&studentName=${encodeURIComponent(studentName)}&subjectCode=${encodeURIComponent(record.รหัสวิชา||'')}&t=${Date.now()}`;
+            const res = await fetch(url, {method:'GET',redirect:'follow'});
             const result = await res.json();
-
-            if (result.success && result.data) {
-                const d = result.data;
-                document.getElementById('logContent').innerHTML = `
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-2 gap-3 text-sm">
-                            ${[
-                                ['📅 วันที่แก้ไข', d.วันที่แก้ไข||d.EditDate||'—'],
-                                ['⏰ เวลา', d.เวลา||d.EditTime||'—'],
-                                ['👤 นักเรียน', d['ชื่อ-สกุลนักเรียน']||studentName],
-                                ['📚 รหัสวิชา', d.รหัสวิชา||record.รหัสวิชา||'—'],
-                                ['📖 ชื่อวิชา', d.ชื่อวิชา||record.ชื่อวิชา||'—'],
-                                ['🏫 ชั้น', d.ชั้น||record.ชั้น||'—'],
-                            ].map(([k,v])=>`
-                                <div class="bg-gray-50 p-3 rounded-xl">
-                                    <p class="text-xs text-gray-400 mb-0.5">${k}</p>
-                                    <p class="font-medium text-gray-800">${v}</p>
-                                </div>`).join('')}
-                        </div>
-                        <div class="grid grid-cols-2 gap-3 text-sm">
-                            <div class="bg-red-50 p-3 rounded-xl">
-                                <p class="text-xs text-red-400 mb-0.5">ผลการเรียนเดิม</p>
-                                <p class="text-xl font-bold text-red-600">${d.ผลการเรียนเดิม||record.ผลการเรียน||'—'}</p>
-                            </div>
-                            <div class="bg-green-50 p-3 rounded-xl">
-                                <p class="text-xs text-green-400 mb-0.5">ผลการเรียนใหม่</p>
-                                <p class="text-xl font-bold text-green-600">${d.ผลการเรียนใหม่||record.New_Result||'—'}</p>
-                            </div>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded-xl text-sm">
-                            <p class="text-xs text-gray-400 mb-0.5">✏️ ผู้แก้ไข</p>
-                            <p class="font-medium text-gray-800">${d.ผู้แก้ไข||record.Editor||'—'}</p>
-                        </div>
-                        ${(d['ภาพใบคำร้อง']||d.imageUrl)?`
-                        <div class="bg-blue-50 p-3 rounded-xl text-sm">
-                            <p class="text-xs text-blue-400 mb-1">📎 ภาพใบคำร้อง</p>
-                            <a href="${d['ภาพใบคำร้อง']||d.imageUrl}" target="_blank" class="text-blue-600 hover:underline font-medium">ดูภาพใบคำร้อง →</a>
-                        </div>`:''}
-                        <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-xs text-emerald-700">
-                            ✅ ข้อมูลดึงมาจาก Google Sheets (Sheet: บันทึกการแก้ไข) อัปเดตล่าสุด
-                        </div>
-                    </div>`;
-            } else {
-                document.getElementById('logContent').innerHTML = `
-                    <div class="empty-state">
-                        <svg width="56" height="56" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        <p class="text-lg font-medium">ไม่พบประวัติการแก้ไข</p>
-                        <p class="text-sm mt-1">อาจยังไม่มีการบันทึกใน Google Sheets</p>
-                    </div>`;
-            }
+            if (result.success && result.data) { renderLogContent(result.data, studentName, record); return; }
+            document.getElementById('logContent').innerHTML = `<div class="empty-state"><p class="text-lg font-medium">ไม่พบประวัติการแก้ไข</p></div>`;
         } catch(err) {
-            document.getElementById('logContent').innerHTML = `
-                <div class="text-center py-10">
-                    <p class="text-red-500 font-medium mb-2">❌ เกิดข้อผิดพลาด</p>
-                    <p class="text-sm text-gray-500">${err.message}</p>
-                </div>`;
+            document.getElementById('logContent').innerHTML = `<div class="text-center py-10"><p class="text-red-500">❌ ${err.message}</p></div>`;
         }
     }
 
-    function closeLogModal() {
-        document.getElementById('logModal').classList.remove('show');
+    function renderLogContent(d, studentName, record) {
+        const imageUrl = d['ภาพใบคำร้อง'] || d.imageUrl || '';
+        document.getElementById('logContent').innerHTML = `
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    ${[
+                        ['📅 วันที่แก้ไข', d.วันที่แก้ไข||d.editDate||'—'],
+                        ['⏰ เวลา', d.เวลา||d.editTime||'—'],
+                        ['👤 นักเรียน', d['ชื่อ-สกุลนักเรียน']||d.studentName||studentName],
+                        ['📚 รหัสวิชา', d.รหัสวิชา||d.subjectCode||record.รหัสวิชา||'—'],
+                        ['📖 ชื่อวิชา', d.ชื่อวิชา||d.subjectName||record.ชื่อวิชา||'—'],
+                        ['🏫 ชั้น', d.ชั้น||d.class||record.ชั้น||'—'],
+                    ].map(([k,v])=>`<div class="bg-gray-50 p-3 rounded-xl"><p class="text-xs text-gray-400 mb-0.5">${k}</p><p class="font-medium text-gray-800">${v}</p></div>`).join('')}
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-red-50 p-3 rounded-xl"><p class="text-xs text-red-400 mb-0.5">ผลการเรียนเดิม</p><p class="text-xl font-bold text-red-600">${d.ผลการเรียนเดิม||d.oldResult||record.ผลการเรียน||'—'}</p></div>
+                    <div class="bg-green-50 p-3 rounded-xl"><p class="text-xs text-green-400 mb-0.5">ผลการเรียนใหม่</p><p class="text-xl font-bold text-green-600">${d.ผลการเรียนใหม่||d.newResult||record.New_Result||'—'}</p></div>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-xl text-sm"><p class="text-xs text-gray-400 mb-0.5">✏️ ผู้แก้ไข</p><p class="font-medium text-gray-800">${d.ผู้แก้ไข||d.editor||record.Editor||'—'}</p></div>
+                ${imageUrl?`<div class="bg-blue-50 p-3 rounded-xl text-sm"><p class="text-xs text-blue-400 mb-1">📎 ภาพใบคำร้อง</p><a href="${imageUrl}" target="_blank" class="text-blue-600 hover:underline font-medium">ดูภาพใบคำร้อง →</a></div>`:''}
+                <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-xs text-emerald-700">✅ ข้อมูลจาก Firestore / Google Sheets</div>
+            </div>`;
     }
 
-    // ─── Export Excel ─────────────────────────────────
+    function closeLogModal() { document.getElementById('logModal').classList.remove('show'); }
+
+    // ═══════════════════════════════════════════════════════
+    //  EXPORT & PRINT
+    // ═══════════════════════════════════════════════════════
     function exportExcel() {
-        if (!filteredData.length) {
-            Swal.fire({icon:'info',title:'ไม่มีข้อมูล',text:'กรุณาค้นหาข้อมูลก่อน Export',confirmButtonColor:'#4f46e5'});
-            return;
-        }
-
-        Swal.fire({
-            title: 'เลือกรูปแบบ Export',
-            html: `
-                <div class="text-sm text-gray-600 mb-3">จะ Export <b>${filteredData.length}</b> รายการ (ตามตัวกรองปัจจุบัน)</div>
-            `,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: '📥 Export ทันที',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonColor: '#10b981',
-        }).then(res => {
-            if (!res.isConfirmed) return;
-
-            const headers = ['สถานะ','ชั้นปี','ภาคเรียน/ปีการศึกษา','ชื่อ-สกุล','รหัสวิชา','ชื่อวิชา','ชั้น','ผลการเรียนเดิม','ผลการเรียนใหม่','ผู้แก้ไข','วันที่แก้ไข','เวลาที่แก้ไข'];
-            const rows = filteredData.map(r => [
-                r.Correction_Status==='แก้ไขแล้ว' ? 'แก้ไขแล้ว' : 'รอดำเนินการ',
-                r.ชั้นปี||'',
-                r['ภาคเรียน/ปีการศึกษา']||'',
+        if (!filteredData.length) { Swal.fire({icon:'info',title:'ไม่มีข้อมูล',confirmButtonColor:'#4f46e5'}); return; }
+        Swal.fire({title:'Export Excel',html:`จะ Export <b>${filteredData.length}</b> รายการ`,icon:'question',showCancelButton:true,confirmButtonText:'Export',cancelButtonText:'ยกเลิก',confirmButtonColor:'#10b981'}).then(r=>{
+            if (!r.isConfirmed) return;
+            const headers = ['สถานะ','ชั้นปี','ภาคเรียน/ปีการศึกษา','ชื่อ-สกุล','รหัสวิชา','ชื่อวิชา','ชั้น','ครูผู้สอน','ผลการเรียนเดิม','ผลการเรียนใหม่','ผู้แก้ไข','วันที่แก้ไข','เวลา'];
+            const rows = filteredData.map(r=>[
+                r.Correction_Status==='แก้ไขแล้ว'?'แก้ไขแล้ว':'รอดำเนินการ',
+                r.ชั้นปี||'', r['ภาคเรียน/ปีการศึกษา']||'',
                 `${r.คำนำหน้า||''} ${r.ชื่อ||''} ${r.สกุล||''}`.trim(),
-                r.รหัสวิชา||'',
-                r.ชื่อวิชา||'',
-                r.ชั้น||'',
-                r.ผลการเรียน||'',
-                r.New_Result||'',
-                r.Editor||r['ผู้แก้ไข']||'',
-                r.EditDate||r['วันที่แก้ไข']||'',
-                r.EditTime||r['เวลาที่แก้ไข']||r['EditTime']||''
+                r.รหัสวิชา||'', r.ชื่อวิชา||'', r.ชั้น||'',
+                teacherAssignments[r.รหัสวิชา||'']||'',
+                r.ผลการเรียน||'', r.New_Result||'',
+                r.Editor||'', r.EditDate||'', r.EditTime||''
             ]);
-
             const ws = XLSX.utils.aoa_to_sheet([headers,...rows]);
-
-            // Column widths
-            ws['!cols'] = [12,10,18,24,12,22,8,14,14,22,14,14].map(w=>({wch:w}));
-
-            // Style header row (basic)
-            const range = XLSX.utils.decode_range(ws['!ref']);
-            for (let c=range.s.c; c<=range.e.c; c++) {
-                const cellAddr = XLSX.utils.encode_cell({r:0,c});
-                if (!ws[cellAddr]) continue;
-                ws[cellAddr].s = { font:{bold:true,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'4F46E5'}}, alignment:{horizontal:'center'} };
-            }
-
+            ws['!cols'] = [12,10,18,24,12,22,8,20,14,14,22,14,12].map(w=>({wch:w}));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'ผลการเรียน');
-
             const now = new Date();
-            const fname = `ผลการเรียน_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}_${now.getDate().toString().padStart(2,'0')}.xlsx`;
-            XLSX.writeFile(wb, fname);
-
-            Swal.fire({ icon:'success', title:'Export สำเร็จ', text:`บันทึกไฟล์ ${fname} เรียบร้อย`, timer:2500, timerProgressBar:true, showConfirmButton:false, toast:true, position:'top-end' });
+            XLSX.writeFile(wb,`ผลการเรียน_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}_${now.getDate().toString().padStart(2,'0')}.xlsx`);
+            Swal.fire({icon:'success',title:'Export สำเร็จ',timer:2000,timerProgressBar:true,showConfirmButton:false,toast:true,position:'top-end'});
         });
     }
 
-    // ─── Print ────────────────────────────────────────
     function printData() {
-        if (!filteredData.length) {
-            Swal.fire({icon:'info',title:'ไม่มีข้อมูล',text:'กรุณาค้นหาข้อมูลก่อนพิมพ์',confirmButtonColor:'#4f46e5'});
-            return;
-        }
-
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('th-TH', {year:'numeric',month:'long',day:'numeric'});
-        const filterInfo = (() => {
-            const parts = [];
-            const v = id => document.getElementById(id).value;
-            if (v('searchName'))       parts.push(`ชื่อ: ${v('searchName')}`);
-            if (v('searchSubject'))    parts.push(`รหัสวิชา: ${v('searchSubject')}`);
-            if (v('filterYear'))       parts.push(`ชั้นปี: ${v('filterYear')}`);
-            if (v('filterSemester'))   parts.push(`ภาคเรียน: ${v('filterSemester')}`);
-            if (v('filterGradeStatus'))parts.push(`ผลการเรียน: ${v('filterGradeStatus')}`);
-            if (v('filterStatus'))     parts.push(`สถานะ: ${v('filterStatus')}`);
-            return parts.length ? parts.join(' | ') : 'ทั้งหมด';
-        })();
-
-        // Build print window content
-        const rows = filteredData.map(r => `
-            <tr style="background:${r.Correction_Status==='แก้ไขแล้ว'?'#f0fdf4':'#fff'}">
-                <td>${r.Correction_Status==='แก้ไขแล้ว'?'✓ แก้ไขแล้ว':'⏳ รอดำเนินการ'}</td>
-                <td>${r.ชั้นปี||''}</td>
-                <td>${r['ภาคเรียน/ปีการศึกษา']||''}</td>
-                <td>${r.คำนำหน้า||''} ${r.ชื่อ||''} ${r.สกุล||''}</td>
-                <td>${r.รหัสวิชา||''}</td>
-                <td>${r.ชื่อวิชา||''}</td>
-                <td>${r.ชั้น||''}</td>
-                <td style="color:#b91c1c;font-weight:600">${r.ผลการเรียน||''}</td>
-                <td style="color:#065f46;font-weight:600">${r.New_Result||'—'}</td>
-                <td>${r.Editor||r['ผู้แก้ไข']||'—'}</td>
-                <td>${r.EditDate||r['วันที่แก้ไข']||'—'}</td>
-            </tr>`).join('');
-
+        if (!filteredData.length) { Swal.fire({icon:'info',title:'ไม่มีข้อมูล',confirmButtonColor:'#4f46e5'}); return; }
+        const dateStr = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+        const rows = filteredData.map(r=>`<tr style="background:${r.Correction_Status==='แก้ไขแล้ว'?'#f0fdf4':'#fff'}">
+            <td>${r.Correction_Status==='แก้ไขแล้ว'?'✓ แก้ไขแล้ว':'⏳ รอ'}</td>
+            <td>${r.ชั้นปี||''}</td><td>${r['ภาคเรียน/ปีการศึกษา']||''}</td>
+            <td>${r.คำนำหน้า||''} ${r.ชื่อ||''} ${r.สกุล||''}</td>
+            <td>${r.รหัสวิชา||''}</td><td>${r.ชื่อวิชา||''}</td><td>${r.ชั้น||''}</td>
+            <td>${teacherAssignments[r.รหัสวิชา||'']||'—'}</td>
+            <td style="color:#b91c1c;font-weight:600">${r.ผลการเรียน||''}</td>
+            <td style="color:#065f46;font-weight:600">${r.New_Result||'—'}</td>
+            <td>${r.Editor||'—'}</td></tr>`).join('');
         const win = window.open('','_blank');
-        win.document.write(`<!DOCTYPE html><html lang="th"><head>
-            <meta charset="UTF-8">
-            <title>ผลการเรียนที่ไม่ผ่าน</title>
-            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-            <style>
-                * { box-sizing:border-box; margin:0; padding:0; }
-                body { font-family:'Kanit',sans-serif; font-size:10pt; color:#1e1b4b; padding:20px; }
-                .header { text-align:center; margin-bottom:16px; padding-bottom:12px; border-bottom:2px solid #4f46e5; }
-                .header h1 { font-size:15pt; font-weight:700; color:#4f46e5; }
-                .header p  { font-size:10pt; color:#555; margin-top:3px; }
-                .meta { display:flex; justify-content:space-between; font-size:8pt; color:#666; margin-bottom:12px; }
-                table { width:100%; border-collapse:collapse; font-size:8.5pt; }
-                thead tr { background:#4f46e5; color:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-                th { padding:7px 8px; text-align:left; }
-                td { padding:6px 8px; border-bottom:1px solid #e5e7eb; }
-                tr:nth-child(even) td { background:#f9fafb; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-                .footer { margin-top:20px; font-size:8pt; color:#aaa; text-align:center; }
-                @media print { @page { size:A4 landscape; margin:1cm; } }
-            </style>
+        win.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์</title>
+            <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
+            <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Kanit',sans-serif;font-size:10pt;padding:20px}.header{text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #4f46e5}.header h1{font-size:15pt;font-weight:700;color:#4f46e5}.header p{font-size:10pt;color:#555}table{width:100%;border-collapse:collapse;font-size:8pt}thead tr{background:#4f46e5;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}th,td{padding:5px 7px;border-bottom:1px solid #e5e7eb;text-align:left}@media print{@page{size:A4 landscape;margin:1cm}}</style>
         </head><body>
-            <div class="header">
-                <h1>รายการผลการเรียนที่ไม่ผ่าน</h1>
-                <p>โรงเรียนกระดุมทองวิทยา</p>
-            </div>
-            <div class="meta">
-                <span>ตัวกรอง: ${filterInfo}</span>
-                <span>พิมพ์วันที่: ${dateStr} | รายการทั้งหมด: ${filteredData.length} รายการ</span>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>สถานะ</th><th>ชั้นปี</th><th>ภาคเรียน</th><th>ชื่อ-สกุล</th>
-                        <th>รหัสวิชา</th><th>ชื่อวิชา</th><th>ชั้น</th>
-                        <th>ผลเดิม</th><th>ผลใหม่</th><th>ผู้แก้ไข</th><th>วันที่แก้ไข</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
-            <div class="footer">พัฒนาโดย ครูนนทพัทธ์ หิรัญเรือง · งานทะเบียนและเทียบโอนผลการเรียน</div>
-            <script>window.onload=()=>{ window.print(); }<\/script>
-        </body></html>`);
+            <div class="header"><h1>รายการผลการเรียนที่ไม่ผ่าน</h1><p>โรงเรียนกระดุมทองวิทยา · พิมพ์วันที่ ${dateStr} · ${filteredData.length} รายการ</p></div>
+            <table><thead><tr>
+                <th>สถานะ</th><th>ชั้นปี</th><th>ภาคเรียน</th><th>ชื่อ-สกุล</th>
+                <th>รหัสวิชา</th><th>ชื่อวิชา</th><th>ชั้น</th><th>ครูผู้สอน</th>
+                <th>ผลเดิม</th><th>ผลใหม่</th><th>ผู้แก้ไข</th>
+            </tr></thead>
+            <tbody>${rows}</tbody></table>
+            <script>window.onload=()=>window.print()<\/script></body></html>`);
         win.document.close();
     }
 
-    // ─── Editor name memory (localStorage) ───────────
+    // ═══════════════════════════════════════════════════════
+    //  TEACHER PAGE
+    // ═══════════════════════════════════════════════════════
+    let teacherAssignments = {}; // subjectCode → teacherName
+
+    async function renderTeacherPage() {
+        const grid = document.getElementById('teacherGroupsGrid');
+        grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><div class="spinner mx-auto mb-3"></div><p>กำลังโหลด...</p></div>`;
+
+        // Load teacher assignments from Firestore
+        try {
+            const snap = await db.collection(COL_TEACHERS).get();
+            teacherAssignments = {};
+            snap.docs.forEach(doc => { teacherAssignments[doc.data().subjectCode] = doc.data().teacherName; });
+        } catch(e) { console.warn('Could not load teacher assignments:', e); }
+
+        // Collect unique subjects from allData
+        const subjectMap = {}; // code → { code, name, group }
+        filterFailedGrades(allData).forEach(r => {
+            const code = r.รหัสวิชา||'';
+            if (code && !subjectMap[code]) subjectMap[code] = { code, name: r.ชื่อวิชา||code, group: getGroupForSubject(code) };
+        });
+
+        // Group subjects
+        const grouped = {};
+        Object.values(subjectMap).forEach(s => {
+            const gid = s.group.id;
+            if (!grouped[gid]) grouped[gid] = { group: s.group, subjects: [] };
+            grouped[gid].subjects.push(s);
+        });
+
+        if (!Object.keys(grouped).length) {
+            grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><p class="text-lg font-medium">ยังไม่มีข้อมูลวิชา</p><p class="text-sm mt-1">กรุณาโหลดข้อมูลผลการเรียนก่อน</p></div>`;
+            return;
+        }
+
+        grid.innerHTML = SUBJECT_GROUPS.map(sg => {
+            const g = grouped[sg.id];
+            if (!g) return ''; // ไม่มีวิชาในกลุ่มนี้
+            const count = g.subjects.length;
+            const assigned = g.subjects.filter(s => teacherAssignments[s.code]).length;
+            return `
+            <div class="subject-group-card" onclick="openGroupDetail('${sg.id}')">
+                <div class="group-header">
+                    <div class="group-icon" style="background:${sg.bg};color:${sg.color}">${sg.icon}</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-gray-800 truncate">${sg.label}</p>
+                        <p class="text-xs text-gray-400">${count} วิชา</p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="text-sm font-bold" style="color:${sg.color}">${assigned}</p>
+                        <p class="text-xs text-gray-400">/${count}</p>
+                    </div>
+                </div>
+                <div class="px-4 pb-3">
+                    <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                        <div class="h-full rounded-full transition-all" style="width:${count?Math.round(assigned/count*100):0}%;background:${sg.color}"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">ระบุครูผู้สอนแล้ว ${count?Math.round(assigned/count*100):0}%</p>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    let _currentGroupId = null;
+    let _groupedSubjects = {};
+
+    function openGroupDetail(groupId) {
+        _currentGroupId = groupId;
+        const sg = SUBJECT_GROUPS.find(g=>g.id===groupId);
+        if (!sg) return;
+        const subjectMap = {};
+        filterFailedGrades(allData).forEach(r => {
+            const code = r.รหัสวิชา||'';
+            if (code && getGroupForSubject(code).id===groupId && !subjectMap[code]) {
+                subjectMap[code] = { code, name: r.ชื่อวิชา||code };
+            }
+        });
+        const subjects = Object.values(subjectMap).sort((a,b)=>a.code.localeCompare(b.code));
+        document.getElementById('detailGroupTitle').innerHTML = `<span style="color:${sg.color}">${sg.icon} ${sg.label}</span> — ระบุครูผู้สอน`;
+        document.getElementById('detailSubjectList').innerHTML = subjects.map(s => `
+            <div class="subject-item">
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm text-gray-800">${s.code}</p>
+                    <p class="text-xs text-gray-500 truncate">${s.name}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <input type="text" class="teacher-input" id="tinput-${s.code}"
+                        placeholder="ชื่อครูผู้สอน..." value="${teacherAssignments[s.code]||''}"
+                        list="teacherSuggest">
+                    <button class="save-teacher-btn" onclick="saveTeacher('${s.code}','${s.name.replace(/'/g,"\\'")}')">บันทึก</button>
+                    <span class="teacher-saved" id="tsaved-${s.code}" style="display:none">✓ บันทึกแล้ว</span>
+                </div>
+            </div>`).join('') + `<datalist id="teacherSuggest">${getStoredEditors().map(n=>`<option value="${n}">`).join('')}</datalist>`;
+        document.getElementById('teacherGroupDetail').style.display = '';
+        document.getElementById('teacherGroupDetail').scrollIntoView({behavior:'smooth',block:'start'});
+    }
+
+    function closeGroupDetail() { document.getElementById('teacherGroupDetail').style.display='none'; }
+
+    async function saveTeacher(code, name) {
+        const val = (document.getElementById('tinput-'+code)||{}).value || '';
+        try {
+            // Upsert: query existing doc or create new
+            const snap = await db.collection(COL_TEACHERS).where('subjectCode','==',code).limit(1).get();
+            if (!snap.empty) {
+                await db.collection(COL_TEACHERS).doc(snap.docs[0].id).update({ teacherName: val, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            } else {
+                await db.collection(COL_TEACHERS).add({ subjectCode: code, subjectName: name, teacherName: val, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            }
+            teacherAssignments[code] = val;
+            const s = document.getElementById('tsaved-'+code);
+            if (s) { s.style.display=''; setTimeout(()=>s.style.display='none',2500); }
+            // Re-render group cards to update progress
+            renderTeacherPage();
+        } catch(e) {
+            Swal.fire({icon:'error',title:'บันทึกไม่สำเร็จ',text:e.message,confirmButtonColor:'#ef4444'});
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  SETTINGS PAGE
+    // ═══════════════════════════════════════════════════════
+    async function renderSettingsPage() {
+        renderEditorTags();
+        refreshFirestoreStats();
+    }
+
+    // ── Editor names ──────────────────────────────────────
+    function renderEditorTags() {
+        const list = getStoredEditors();
+        const container = document.getElementById('editorNameTags');
+        if (!list.length) { container.innerHTML = '<span class="text-sm text-gray-400">ยังไม่มีชื่อครู</span>'; return; }
+        container.innerHTML = list.map(n => `
+            <span class="name-tag">${n}<button onclick="removeEditorName('${n.replace(/'/g,"\\'")}')">×</button></span>`).join('');
+    }
+
+    function addEditorNameManual() {
+        const input = document.getElementById('newEditorName');
+        const name = input.value.trim();
+        if (!name) { Swal.fire({icon:'warning',title:'กรอกชื่อก่อน',toast:true,position:'top-end',timer:1500,showConfirmButton:false}); return; }
+        saveEditorName(name);
+        input.value = '';
+        renderEditorTags();
+        refreshEditorDatalist();
+    }
+
+    function removeEditorName(name) {
+        const list = getStoredEditors().filter(n=>n!==name);
+        localStorage.setItem('ktw_editor_names', JSON.stringify(list));
+        renderEditorTags();
+        refreshEditorDatalist();
+    }
+
+    // ── XLSX Import ───────────────────────────────────────
+    // Header จริง: ชั้นปี | คำนำหน้า | ชื่อ | สกุล | รหัสวิชา | ชื่อวิชา | ภาคเรียน/ปีการศึกษา | ชั้น | คะแนน | ผลการเรียน
+    const IMPORT_PREVIEW_COLS = ['ชั้นปี','ภาคเรียน/ปีการศึกษา','คำนำหน้า','ชื่อ','สกุล','รหัสวิชา','ชื่อวิชา','ชั้น','คะแนน','ผลการเรียน'];
+
+    function getGradeVal(row) {
+        return String(row['ผลการเรียน'] ?? row['ผล'] ?? '').trim();
+    }
+
+    function previewImport() {
+        const file = document.getElementById('importXlsxFile').files[0];
+        if (!file) { Swal.fire({icon:'warning',title:'เลือกไฟล์ก่อน',toast:true,position:'top-end',timer:1500,showConfirmButton:false}); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const wb = XLSX.read(e.target.result, {type:'binary'});
+                // ใช้ sheet แรก (ผลการเรียน)
+                const sheetName = wb.SheetNames[0];
+                const ws = wb.Sheets[sheetName];
+                const raw = XLSX.utils.sheet_to_json(ws, {defval:''});
+                // กรองเฉพาะ 0 / ร / มส
+                importRows = raw.filter(r => ['0','ร','มส'].includes(getGradeVal(r)));
+                document.getElementById('importCount').textContent = importRows.length;
+                document.getElementById('importConfirmBtn').style.display = importRows.length ? '' : 'none';
+
+                const area = document.getElementById('importPreviewArea');
+                if (!importRows.length) {
+                    area.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-xl p-4 mt-2">
+                        <p class="text-sm text-red-600 font-medium">⚠️ ไม่พบข้อมูลที่เป็น 0, ร หรือ มส</p>
+                        <p class="text-xs text-red-400 mt-1">ตรวจสอบว่าคอลัมน์ "ผลการเรียน" มีค่า 0, ร หรือ มส และ sheet แรกชื่อ "${sheetName}"</p>
+                    </div>`;
+                    return;
+                }
+
+                const preview = importRows.slice(0, 10);
+                area.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm text-gray-500">แสดง <b>${preview.length}</b> รายการแรก จากทั้งหมด <b>${importRows.length}</b> รายการ (sheet: ${sheetName})</p>
+                        <span class="badge badge-success">พร้อม import</span>
+                    </div>
+                    <div class="table-wrapper rounded-xl border border-indigo-100 overflow-hidden">
+                        <table class="data-table" style="font-size:.78rem">
+                            <thead><tr>
+                                ${IMPORT_PREVIEW_COLS.map(h=>`<th style="padding:8px 10px">${h}</th>`).join('')}
+                            </tr></thead>
+                            <tbody>${preview.map(r=>`<tr>
+                                ${IMPORT_PREVIEW_COLS.map(k=>{
+                                    const val = String(r[k]??'');
+                                    const isGrade = k==='ผลการเรียน';
+                                    const color = isGrade ? (val==='0'?'color:#b91c1c':val==='ร'?'color:#92400e':'color:#5b21b6') : '';
+                                    return `<td style="padding:6px 10px;${color}${isGrade?';font-weight:700':''}">${val}</td>`;
+                                }).join('')}
+                            </tr>`).join('')}</tbody>
+                        </table>
+                    </div>`;
+            } catch(e) {
+                Swal.fire({icon:'error',title:'อ่านไฟล์ไม่ได้',text:e.message,confirmButtonColor:'#ef4444'});
+            }
+        };
+        reader.readAsBinaryString(file);
+    }
+
+    async function confirmImport() {
+        if (!importRows.length) return;
+        const result = await Swal.fire({
+            icon:'question', title:`นำเข้าข้อมูล ${importRows.length} รายการ?`,
+            html:'ข้อมูลจะถูกบันทึกลง Firestore collection <b>grades</b><br>หากต้องการล้างข้อมูลเก่าก่อน ให้ทำใน Firestore console',
+            showCancelButton:true, confirmButtonText:'ยืนยันนำเข้า', cancelButtonText:'ยกเลิก', confirmButtonColor:'#10b981'
+        });
+        if (!result.isConfirmed) return;
+
+        const btn = document.getElementById('importConfirmBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px"><span class="spinner" style="width:14px;height:14px;border-width:2px"></span>กำลังนำเข้า...</span>';
+
+        let ok = 0, fail = 0;
+        const BATCH_SIZE = 400;
+        const chunks = [];
+        for (let i = 0; i < importRows.length; i += BATCH_SIZE) chunks.push(importRows.slice(i, i + BATCH_SIZE));
+
+        for (const chunk of chunks) {
+            const b = db.batch();
+            for (const row of chunk) {
+                try {
+                    // Mapping ตรงกับ header จริง:
+                    // ชั้นปี | คำนำหน้า | ชื่อ | สกุล | รหัสวิชา | ชื่อวิชา | ภาคเรียน/ปีการศึกษา | ชั้น | คะแนน | ผลการเรียน
+                    const docData = {
+                        ชั้นปี:                   String(row['ชั้นปี']                   ?? ''),
+                        คำนำหน้า:                 String(row['คำนำหน้า']                 ?? ''),
+                        ชื่อ:                     String(row['ชื่อ']                     ?? ''),
+                        สกุล:                    String(row['สกุล']                    ?? ''),
+                        รหัสวิชา:                String(row['รหัสวิชา']                ?? ''),
+                        ชื่อวิชา:                 String(row['ชื่อวิชา']                 ?? ''),
+                        'ภาคเรียน/ปีการศึกษา':   String(row['ภาคเรียน/ปีการศึกษา']   ?? row['ภาคเรียน'] ?? ''),
+                        ชั้น:                    String(row['ชั้น']                    ?? ''),
+                        คะแนน:                   (() => { const v = row['คะแนน']; if (v===''||v===null||v===undefined) return ''; const n = Number(v); return Number.isInteger(n) ? String(n) : String(v); })(),
+                        ผลการเรียน:              getGradeVal(row),
+                        // ฟิลด์สำหรับระบบแก้ไข (เริ่มต้นว่าง)
+                        New_Result:              String(row['New_Result']              ?? ''),
+                        Correction_Status:       String(row['Correction_Status']       ?? ''),
+                        Log_Link:                String(row['Log_Link']                ?? ''),
+                        Editor:                  '',
+                        EditDate:                '',
+                        EditTime:                '',
+                        importedAt:              firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    const ref = db.collection(COL_GRADES).doc();
+                    b.set(ref, docData);
+                    ok++;
+                } catch(e) { console.error('row error:', e); fail++; }
+            }
+            await b.commit();
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = `นำเข้าข้อมูล (<span id="importCount">0</span> รายการ)`;
+
+        await Swal.fire({
+            icon: 'success', title: 'นำเข้าสำเร็จ',
+            html: `เพิ่มข้อมูลแล้ว <b>${ok}</b> รายการ${fail ? ` · ผิดพลาด <b>${fail}</b> รายการ` : ''}`,
+            confirmButtonColor: '#10b981'
+        });
+
+        importRows = [];
+        document.getElementById('importPreviewArea').innerHTML = '';
+        document.getElementById('importConfirmBtn').style.display = 'none';
+        document.getElementById('importXlsxFile').value = '';
+        refreshFirestoreStats();
+    }
+
+    // ── Firestore stats ───────────────────────────────────
+    async function refreshFirestoreStats() {
+        try {
+            const [g,l,t,e] = await Promise.all([
+                db.collection(COL_GRADES).get(),
+                db.collection(COL_LOGS).get(),
+                db.collection(COL_TEACHERS).get(),
+                db.collection(COL_EDITORS).get()
+            ]);
+            document.getElementById('fsStatRecords').textContent  = g.size;
+            document.getElementById('fsStatLogs').textContent     = l.size;
+            document.getElementById('fsStatTeachers').textContent = t.size;
+            document.getElementById('fsStatEditors').textContent  = getStoredEditors().length;
+        } catch(e) {
+            ['fsStatRecords','fsStatLogs','fsStatTeachers','fsStatEditors'].forEach(id => document.getElementById(id).textContent='—');
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  EDITOR NAME STORAGE (localStorage)
+    // ═══════════════════════════════════════════════════════
     const EDITOR_STORAGE_KEY = 'ktw_editor_names';
 
     function getStoredEditors() {
-        try {
-            return JSON.parse(localStorage.getItem(EDITOR_STORAGE_KEY) || '[]');
-        } catch { return []; }
+        try { return JSON.parse(localStorage.getItem(EDITOR_STORAGE_KEY)||'[]'); } catch { return []; }
     }
 
     function saveEditorName(name) {
-        if (!name || name.length < 2) return;
-        const list = getStoredEditors();
-        if (!list.includes(name)) {
-            list.unshift(name); // ใส่ไว้ต้นสุด (ล่าสุดก่อน)
-            if (list.length > 20) list.pop(); // เก็บไม่เกิน 20 ชื่อ
-            localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(list));
-        }
+        if (!name || name.length<2) return;
+        const list = getStoredEditors().filter(n=>n!==name);
+        list.unshift(name);
+        if (list.length>30) list.pop();
+        localStorage.setItem(EDITOR_STORAGE_KEY, JSON.stringify(list));
     }
 
     function refreshEditorDatalist() {
         const dl = document.getElementById('editorSuggestions');
         if (!dl) return;
-        const list = getStoredEditors();
-        dl.innerHTML = list.map(n => `<option value="${n}">`).join('');
+        dl.innerHTML = getStoredEditors().map(n=>`<option value="${n}">`).join('');
     }
 
-    // ─── Utils ────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════
+    //  UTILS
+    // ═══════════════════════════════════════════════════════
     function fileToBase64(file) {
-        return new Promise((res,rej) => {
+        return new Promise((res,rej)=>{
             const r = new FileReader();
             r.readAsDataURL(file);
-            r.onload  = () => res(r.result.split(',')[1]);
-            r.onerror = e  => rej(e);
+            r.onload  = ()=>res(r.result.split(',')[1]);
+            r.onerror = e=>rej(e);
         });
+    }
+    // ═══════════════════════════════════════════════════════
+    //  QR MODAL
+    // ═══════════════════════════════════════════════════════
+    function openQrModal() {
+        const url = location.href.split('#')[0]; // URL หลัก ไม่เอา hash
+        document.getElementById('qrUrlLabel').textContent = url;
+
+        const canvas = document.getElementById('qrCanvas');
+        QRCode.toCanvas(canvas, url, {
+            width: 200,
+            margin: 2,
+            color: { dark: '#1e1b4b', light: '#ffffff' }
+        }, err => { if (err) console.error('QR error:', err); });
+
+        document.getElementById('qrModal').classList.add('show');
+    }
+
+    function closeQrModal() {
+        document.getElementById('qrModal').classList.remove('show');
+    }
+
+    async function copyPageLink() {
+        const url = location.href.split('#')[0];
+        try {
+            await navigator.clipboard.writeText(url);
+            Swal.fire({
+                icon: 'success', title: 'คัดลอกแล้ว!',
+                text: url,
+                timer: 2000, timerProgressBar: true,
+                showConfirmButton: false, toast: true, position: 'top-end'
+            });
+        } catch {
+            // fallback สำหรับ browser ที่ไม่รองรับ clipboard API
+            const ta = document.createElement('textarea');
+            ta.value = url;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            Swal.fire({ icon:'success', title:'คัดลอกแล้ว!', timer:1800, timerProgressBar:true, showConfirmButton:false, toast:true, position:'top-end' });
+        }
     }
     </script>
 </body>
