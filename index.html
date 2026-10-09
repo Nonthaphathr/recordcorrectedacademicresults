@@ -105,6 +105,11 @@
         .btn-secondary { background:#f1f5f9; color:#475569; border:1.5px solid #e2e8f0; }
         .btn-secondary:hover { background:#e2e8f0; }
         .btn-sm { padding:7px 14px; font-size:.82rem; border-radius:8px; }
+        /* ── Quick grade edit ── */
+        .qg-chip { min-width:64px; padding:12px 10px; border-radius:12px; border:2px solid #e0e7ff; background:#fff; font-size:1.15rem; font-weight:700; color:#3730a3; cursor:pointer; transition:all .15s; }
+        .qg-chip:hover { border-color:#818cf8; background:#eef2ff; transform:translateY(-2px); }
+        .qg-chip.active { background:linear-gradient(135deg,#10b981,#059669); border-color:#059669; color:#fff; box-shadow:0 6px 18px rgba(16,185,129,.35); }
+        .qg-chip.old { opacity:.35; cursor:not-allowed; }
         .btn-primary:hover { box-shadow:0 8px 24px rgba(79,70,229,.4); transform:translateY(-1px); }
         .btn-success:hover { box-shadow:0 8px 24px rgba(16,185,129,.4); transform:translateY(-1px); }
         .btn-warning:hover { box-shadow:0 8px 24px rgba(245,158,11,.4); transform:translateY(-1px); }
@@ -561,6 +566,35 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     บันทึกการแก้ไข
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ QUICK EDIT MODAL (งานวัดผล แก้เกรดด่วน ไม่ต้องใช้รหัสผ่าน) ══ -->
+    <div id="quickModal" class="modal-overlay" onclick="if(event.target===this)closeQuickEdit()">
+        <div class="modal-box" style="max-width:520px">
+            <div class="modal-header"><h3>⚡ แก้เกรดด่วน (งานวัดผล)</h3></div>
+            <div class="modal-body">
+                <div class="bg-gray-50 p-3 rounded-xl mb-4">
+                    <p id="qeStudent" class="font-semibold text-gray-800"></p>
+                    <p id="qeSubject" class="text-sm text-gray-500 mt-0.5"></p>
+                    <p class="text-sm mt-2">ผลการเรียนเดิม: <span id="qeOld" class="text-xl font-bold text-red-500"></span></p>
+                </div>
+                <label class="form-label">คลิกเลือกผลการเรียนใหม่ <span class="text-red-500">*</span></label>
+                <div id="qeChips" class="flex flex-wrap gap-2 mb-5"></div>
+                <div class="mb-4">
+                    <label class="form-label">ผู้แก้ไข</label>
+                    <input type="text" id="qeEditor" class="input-field" autocomplete="off" list="editorSuggestions" placeholder="งานวัดผล">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">แนบหลักฐาน <span class="text-gray-400 font-normal">(ไม่บังคับ)</span></label>
+                    <input type="file" id="qeFile" accept=".jpg,.jpeg,.png,.pdf" class="input-field">
+                    <p class="text-xs text-gray-400 mt-1">JPG, PNG, PDF ไม่เกิน 5MB</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeQuickEdit()" class="btn btn-secondary">ยกเลิก</button>
+                <button onclick="saveQuick()" id="qeSaveBtn" class="btn btn-success" disabled>บันทึกทันที</button>
             </div>
         </div>
     </div>
@@ -1023,6 +1057,7 @@
                 <td class="px-3 py-3"><span class="badge ${gradeBadge}">${grade}</span></td>
                 <td class="px-3 py-3">${row.New_Result?`<span class="badge badge-success">${row.New_Result}</span>`:'<span class="text-gray-300 text-xs">—</span>'}</td>
                 <td class="px-3 py-3 text-center no-print">
+                    <button onclick="openQuickEdit(${start+idx})" class="btn btn-sm btn-warning mr-1" title="แก้เกรดด่วน (งานวัดผล) ไม่ต้องใช้รหัสผ่าน">⚡ แก้ด่วน</button>
                     <button onclick="editRecord(${start+idx})" class="btn btn-sm btn-primary">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>แก้ไข
                     </button>
@@ -1078,6 +1113,101 @@
     }
 
     function closeEditModal() { document.getElementById('editModal').classList.remove('show'); currentEditRow = null; }
+
+    // ═══════════════════════════════════════════════════════
+    //  QUICK EDIT  (งานวัดผล: คลิกเลือกเกรด ไม่ต้องใช้รหัสผ่าน, แนบหลักฐานไม่บังคับ)
+    // ═══════════════════════════════════════════════════════
+    let quickRow = null, quickGrade = '', quickSaving = false;
+    const QUICK_GRADES = ['0','1','1.5','2','2.5','3','3.5','4','ร','มส'];
+
+    function openQuickEdit(index) {
+        quickRow = index; quickGrade = '';
+        const r = filteredData[index];
+        document.getElementById('qeStudent').textContent = `${r.คำนำหน้า||''} ${r.ชื่อ||''} ${r.สกุล||''}`.trim() + (r.ชั้นปี ? `  (${r.ชั้นปี})` : '');
+        document.getElementById('qeSubject').textContent = `${r.รหัสวิชา||''} ${r.ชื่อวิชา||''} • ภาคเรียน ${r['ภาคเรียน/ปีการศึกษา']||''}`;
+        document.getElementById('qeOld').textContent = r.ผลการเรียน||'';
+        document.getElementById('qeChips').innerHTML = QUICK_GRADES.map(g =>
+            `<button type="button" class="qg-chip ${g===String(r.ผลการเรียน)?'old':''}" ${g===String(r.ผลการเรียน)?'disabled':''} onclick="pickQuickGrade('${g}',this)">${g}</button>`).join('');
+        document.getElementById('qeEditor').value = (getStoredEditors()[0]) || 'งานวัดผล';
+        document.getElementById('qeFile').value = '';
+        document.getElementById('qeSaveBtn').disabled = true;
+        document.getElementById('qeSaveBtn').textContent = 'บันทึกทันที';
+        refreshEditorDatalist();
+        document.getElementById('quickModal').classList.add('show');
+    }
+
+    function closeQuickEdit() { document.getElementById('quickModal').classList.remove('show'); quickRow = null; }
+
+    function pickQuickGrade(g, el) {
+        quickGrade = g;
+        document.querySelectorAll('#qeChips .qg-chip').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        const btn = document.getElementById('qeSaveBtn');
+        btn.disabled = false; btn.textContent = `บันทึกเป็น "${g}"`;
+    }
+
+    async function saveQuick() {
+        if (quickSaving || quickRow === null || !quickGrade) return;
+        const editor = document.getElementById('qeEditor').value.trim() || 'งานวัดผล';
+        const imageFile = document.getElementById('qeFile').files[0];
+        if (imageFile && imageFile.size > 5*1024*1024) {
+            Swal.fire({icon:'warning',title:'ไฟล์ใหญ่เกิน 5MB',confirmButtonColor:'#f59e0b'}); return;
+        }
+        quickSaving = true;
+        const btn = document.getElementById('qeSaveBtn');
+        btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+        try {
+            const record = filteredData[quickRow];
+            const newResult = quickGrade;
+            const studentName = `${record.คำนำหน้า||''} ${record.ชื่อ||''} ${record.สกุล||''}`.trim();
+            const now = new Date();
+            const editDate = now.toLocaleDateString('th-TH');
+            const editTime = now.toLocaleTimeString('th-TH');
+
+            let imageUrl = '';
+            if (imageFile) {
+                try {
+                    const res = await fetch(CONFIG.APP_SCRIPT_URL, { method:'POST', body: JSON.stringify({
+                        action: 'updateRecord', rowIndex: record.rowIndex || 0,
+                        studentName, subjectCode: record.รหัสวิชา||'', subjectName: record.ชื่อวิชา||'',
+                        oldResult: record.ผลการเรียน||'', newResult, editor, year: record.ชั้นปี||'',
+                        semester: record['ภาคเรียน/ปีการศึกษา']||'', class: record.ชั้น||'',
+                        imageData: { base64Data: await fileToBase64(imageFile), fileName: imageFile.name, mimeType: imageFile.type }
+                    })});
+                    imageUrl = (await res.json()).imageUrl || '';
+                } catch(e) { console.warn('GAS image upload failed:', e); }
+            }
+
+            await db.collection(COL_LOGS).add({
+                studentName, subjectCode: record.รหัสวิชา||'', subjectName: record.ชื่อวิชา||'',
+                oldResult: record.ผลการเรียน||'', newResult, editor,
+                year: record.ชั้นปี||'', semester: record['ภาคเรียน/ปีการศึกษา']||'',
+                class: record.ชั้น||'', editDate, editTime, imageUrl, quickEdit: true,
+                editedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                gradeDocId: record._docId || null
+            });
+            if (record._docId) {
+                await db.collection(COL_GRADES).doc(record._docId).update({
+                    New_Result: newResult, Correction_Status: 'แก้ไขแล้ว',
+                    Editor: editor, EditDate: editDate, EditTime: editTime
+                });
+            }
+            saveEditorName(editor);
+
+            const upd = o => { o.New_Result=newResult; o.Correction_Status='แก้ไขแล้ว'; o.Editor=editor; o.EditDate=editDate; o.EditTime=editTime; };
+            const oi = allData.findIndex(r=>r._docId===record._docId || r.rowIndex===record.rowIndex);
+            if (oi!==-1) upd(allData[oi]);
+            upd(record);
+
+            closeQuickEdit(); displayData(); updateStats();
+            Swal.fire({ toast:true, position:'top-end', icon:'success', showConfirmButton:false, timer:2200,
+                title:`${studentName} • ${record.รหัสวิชา||''} → ${newResult}` });
+        } catch(err) {
+            console.error(err);
+            Swal.fire({ icon:'error', title:'เกิดข้อผิดพลาด', html:`<b>${err.message}</b>`, confirmButtonColor:'#ef4444' });
+            btn.disabled = false; btn.textContent = `บันทึกเป็น "${quickGrade}"`;
+        } finally { quickSaving = false; }
+    }
 
     // ═══════════════════════════════════════════════════════
     //  SAVE EDIT  (Firestore log + GAS for image)
