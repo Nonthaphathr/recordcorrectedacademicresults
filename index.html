@@ -1219,7 +1219,7 @@
             html:`อัปเดต <b>${syncPlan.update.length}</b> · เพิ่มใหม่ <b>${syncPlan.add.length}</b>`,
             showCancelButton:true, confirmButtonText:'ยืนยัน', cancelButtonText:'ยกเลิก', confirmButtonColor:'#10b981' });
         if (!ok.isConfirmed) return;
-        const ops = [];
+        const ops = [], addOps = [];
         syncPlan.update.forEach(u => ops.push(b => b.update(db.collection(COL_GRADES).doc(u.doc._docId), u.patch)));
         syncPlan.add.forEach(x => {
             const full = String(x['ชื่อ-สกุล']).trim();
@@ -1236,23 +1236,32 @@
                 LS_Status: String(x['หมายเหตุ']||'').trim(),
                 importedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            ops.push(b => b.set(db.collection(COL_GRADES).doc(), data));
+            addOps.push(b => b.set(db.collection(COL_GRADES).doc(), data));
         });
         const btn = document.getElementById('syncConfirmBtn');
         btn.disabled = true; btn.textContent = 'กำลังซิงก์...';
-        try {
-            for (let i = 0; i < ops.length; i += 400) {
-                const b = db.batch();
-                ops.slice(i, i+400).forEach(f => f(b));
-                await b.commit();
+        // แยกทำทีละส่วน (อัปเดต / เพิ่มใหม่) เพื่อบอกได้ว่าส่วนไหนถูก Firestore rules ปฏิเสธ
+        const run = async list => {
+            let ok = 0, fail = 0, err = '';
+            for (let i = 0; i < list.length; i += 200) {
+                const part = list.slice(i, i+200);
+                try { const bt = db.batch(); part.forEach(f => f(bt)); await bt.commit(); ok += part.length; }
+                catch(e) { fail += part.length; err = err || e.message; console.error(e); }
             }
-            await Swal.fire({ icon:'success', title:'ซิงก์สำเร็จ', html:`อัปเดต <b>${syncPlan.update.length}</b> · เพิ่ม <b>${syncPlan.add.length}</b> รายการ`, confirmButtonColor:'#10b981' });
-            location.reload();
-        } catch(err) {
-            console.error(err);
-            Swal.fire({ icon:'error', title:'ซิงก์ไม่สำเร็จ', text:err.message, confirmButtonColor:'#ef4444' });
-            btn.disabled = false; btn.textContent = 'ซิงก์ข้อมูล';
-        }
+            return { ok, fail, err };
+        };
+        const rAdd = await run(addOps);
+        const rUpd = await run(ops);
+        const hasFail = rAdd.fail || rUpd.fail;
+        await Swal.fire({
+            icon: hasFail ? 'warning' : 'success', title: hasFail ? 'ซิงก์ได้บางส่วน' : 'ซิงก์สำเร็จ',
+            html: `เพิ่มใหม่: สำเร็จ <b>${rAdd.ok}</b> · ไม่สำเร็จ <b>${rAdd.fail}</b>${rAdd.err?`<br><small style="color:#b91c1c">${rAdd.err}</small>`:''}<br>`
+                + `อัปเดตชั้นปี/หมายเหตุ: สำเร็จ <b>${rUpd.ok}</b> · ไม่สำเร็จ <b>${rUpd.fail}</b>${rUpd.err?`<br><small style="color:#b91c1c">${rUpd.err}</small>`:''}`
+                + (hasFail ? '<br><br><small>ส่วนที่ไม่สำเร็จเกิดจาก Firestore Rules ไม่อนุญาตให้เขียนฟิลด์นั้น</small>' : ''),
+            confirmButtonColor: '#10b981'
+        });
+        if (rAdd.ok || rUpd.ok) { location.reload(); return; }
+        btn.disabled = false; btn.textContent = 'ซิงก์ข้อมูล';
     }
 
     // ═══════════════════════════════════════════════════════
