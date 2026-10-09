@@ -110,6 +110,33 @@
         .qg-chip:hover { border-color:#818cf8; background:#eef2ff; transform:translateY(-2px); }
         .qg-chip.active { background:linear-gradient(135deg,#10b981,#059669); border-color:#059669; color:#fff; box-shadow:0 6px 18px rgba(16,185,129,.35); }
         .qg-chip.old { opacity:.35; cursor:not-allowed; }
+        /* ── ตารางแบบโปร่ง อ่านง่าย ── */
+        .data-table.roomy thead th { padding:16px 18px; font-size:.8rem; }
+        .data-table.roomy tbody td { padding:16px 18px; font-size:.88rem; vertical-align:middle; }
+        .data-table.roomy tbody tr td:first-child { box-shadow:inset 4px 0 0 #fbbf24; }
+        .data-table.roomy tbody tr.edited-row td:first-child { box-shadow:inset 4px 0 0 #10b981; }
+        .pill { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; font-size:.76rem; font-weight:600; white-space:nowrap; }
+        .pill::before { content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
+        .pill-pending { background:#fffbeb; color:#b45309; }
+        .pill-done { background:#ecfdf5; color:#047857; }
+        .stu-name { font-weight:600; color:#1e1b4b; line-height:1.35; }
+        .chip-class { display:inline-block; margin-top:4px; padding:2px 9px; border-radius:7px; background:#eef2ff; color:#4338ca; font-size:.72rem; font-weight:600; }
+        .chip-term { display:inline-block; padding:4px 11px; border-radius:8px; background:#f1f5f9; color:#475569; font-size:.8rem; font-weight:600; white-space:nowrap; }
+        .subj-line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .code-chip { font-family:ui-monospace,monospace; font-size:.74rem; background:#eef2ff; color:#4338ca; padding:2px 8px; border-radius:6px; }
+        .subj-name { font-weight:500; color:#334155; }
+        .subj-meta { margin-top:5px; font-size:.74rem; color:#94a3b8; }
+        .grade-flow { display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }
+        .grade-flow .arrow { color:#cbd5e1; font-size:.9rem; }
+        .grade-flow .none { color:#cbd5e1; font-weight:600; }
+        .ls-select { font-size:.78rem; padding:7px 28px 7px 10px; border-radius:10px; width:170px; max-width:100%; cursor:pointer; }
+        .act-row { display:flex; align-items:center; gap:8px; justify-content:flex-end; white-space:nowrap; }
+        .icon-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:36px; padding:0 14px; border-radius:10px; border:none; font-size:.8rem; font-weight:600; cursor:pointer; transition:all .15s; }
+        .icon-btn.quick { background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 3px 10px rgba(245,158,11,.3); }
+        .icon-btn.quick:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(245,158,11,.4); }
+        .icon-btn.edit { width:36px; padding:0; background:#eef2ff; color:#4f46e5; }
+        .icon-btn.edit:hover { background:#e0e7ff; }
+        .log-link { display:block; margin-top:6px; font-size:.72rem; color:#6366f1; text-decoration:underline; cursor:pointer; background:none; border:none; padding:0; }
         .btn-primary:hover { box-shadow:0 8px 24px rgba(79,70,229,.4); transform:translateY(-1px); }
         .btn-success:hover { box-shadow:0 8px 24px rgba(16,185,129,.4); transform:translateY(-1px); }
         .btn-warning:hover { box-shadow:0 8px 24px rgba(245,158,11,.4); transform:translateY(-1px); }
@@ -394,17 +421,16 @@
                     </div>
                 </div>
                 <div class="table-wrapper">
-                    <table class="data-table">
+                    <table class="data-table roomy">
                         <thead>
                             <tr>
-                                <th>สถานะ</th><th>ชั้นปี</th><th>ภาคเรียน/ปีการศึกษา</th>
-                                <th>ชื่อ-สกุล</th><th>รหัสวิชา</th><th>ชื่อวิชา</th>
-                                <th>ชั้น</th><th>ครูผู้สอน</th><th>ผลเดิม</th><th>ผลใหม่</th><th>หมายเหตุ</th>
-                                <th class="no-print">การดำเนินการ</th>
+                                <th>สถานะ</th><th>นักเรียน</th><th>ภาคเรียน</th>
+                                <th>รายวิชา</th><th style="text-align:center">ผลการเรียน</th><th>หมายเหตุ (LS)</th>
+                                <th class="no-print" style="text-align:right">ดำเนินการ</th>
                             </tr>
                         </thead>
                         <tbody id="dataTable">
-                            <tr><td colspan="11" class="px-4 py-16 text-center"><div class="flex flex-col items-center gap-3 text-gray-400"><div class="spinner"></div><span>กำลังโหลดข้อมูล...</span></div></td></tr>
+                            <tr><td colspan="7" class="px-4 py-16 text-center"><div class="flex flex-col items-center gap-3 text-gray-400"><div class="spinner"></div><span>กำลังโหลดข้อมูล...</span></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -511,6 +537,34 @@
                         <button onclick="confirmSync()" id="syncConfirmBtn" class="btn btn-success" style="display:none">ซิงก์ข้อมูล</button>
                     </div>
                     <div id="syncPreviewArea"></div>
+                </div>
+            </div>
+
+            <!-- Section 2.6: เลื่อนชั้นนักเรียน -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <h3 class="font-semibold text-gray-700">🎓 เลื่อนชั้นนักเรียน (เปลี่ยนชั้นปีทั้งระบบพร้อมกัน)</h3>
+                </div>
+                <div class="settings-section-body">
+                    <div class="info-box mb-4">
+                        <p class="text-sm text-blue-700">ใช้ตอนขึ้นปีการศึกษาใหม่ เช่น ม.1/1 → ม.2/1 ระบบจะแก้เฉพาะฟิลด์ <b>ชั้นปี</b> ของทุกรายการ ไม่แตะผลการเรียนหรือประวัติการแก้ไข
+                        และจะดาวน์โหลดไฟล์สำรองก่อนเลื่อนทุกครั้ง เพื่อย้อนกลับได้</p>
+                    </div>
+                    <label class="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                        <input type="checkbox" id="promoGrad" checked> ม.6 → เปลี่ยนเป็น "จบการศึกษา"
+                    </label>
+                    <div class="flex gap-3 mb-4 flex-wrap">
+                        <button onclick="previewPromotion()" class="btn btn-info">ดูตัวอย่างการเลื่อนชั้น</button>
+                        <button onclick="confirmPromotion()" id="promoConfirmBtn" class="btn btn-success" style="display:none">เลื่อนชั้นทั้งหมด</button>
+                    </div>
+                    <div id="promoPreviewArea"></div>
+                    <div class="mt-5 pt-4" style="border-top:1px dashed #e0e7ff">
+                        <p class="text-sm text-gray-500 mb-2">↩️ ย้อนกลับการเลื่อนชั้น (เลือกไฟล์สำรอง <code>สำรองชั้นปี_….json</code>)</p>
+                        <div class="flex gap-3 flex-wrap">
+                            <input type="file" id="promoUndoFile" accept=".json" class="input-field" style="max-width:360px">
+                            <button onclick="undoPromotion()" class="btn btn-secondary">ย้อนกลับ</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1044,7 +1098,7 @@
         const start = (currentPage-1)*CONFIG.RECORDS_PER_PAGE;
         const page  = filteredData.slice(start, start+CONFIG.RECORDS_PER_PAGE);
         if (!page.length) {
-            tb.innerHTML = `<tr><td colspan="12"><div class="empty-state"><p class="text-lg font-medium">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</p><p class="text-sm mt-1">ลองเปลี่ยนตัวกรองหรือล้างค่าการค้นหา</p></div></td></tr>`;
+            tb.innerHTML = `<tr><td colspan="7"><div class="empty-state"><p class="text-lg font-medium">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</p><p class="text-sm mt-1">ลองเปลี่ยนตัวกรองหรือล้างค่าการค้นหา</p></div></td></tr>`;
             updatePagination(); return;
         }
         const qName    = document.getElementById('searchName').value;
@@ -1055,40 +1109,48 @@
             const grade = row.ผลการเรียน;
             let gradeBadge = 'badge-danger';
             if (grade==='ร') gradeBadge='badge-warning'; if (grade==='มส') gradeBadge='badge-purple';
-            const fullName   = `${row.คำนำหน้า||''} ${row.ชื่อ||''} ${row.สกุล||''}`.trim();
-            const teacher    = teacherAssignments[row.รหัสวิชา||''] || '';
+            const fullName = `${row.คำนำหน้า||''} ${row.ชื่อ||''} ${row.สกุล||''}`.trim();
+            const teacher  = teacherAssignments[row.รหัสวิชา||''] || '';
+            const ls = row.LS_Status || '';
+            const lsBorder = ls==='ติดในระบบ LS' ? '#fca5a5' : ls ? '#6ee7b7' : '#e0e7ff';
+            const lsBg     = ls==='ติดในระบบ LS' ? '#fef2f2' : ls ? '#ecfdf5' : '#fff';
+            const lsColor  = ls==='ติดในระบบ LS' ? '#b91c1c' : ls ? '#047857' : '#475569';
             return `
             <tr class="${isEdited?'edited-row':''}" style="animation-delay:${Math.min(idx*30,300)}ms">
-                <td class="px-3 py-3">
+                <td>
                     ${isEdited
-                        ? `<span class="status-dot done"></span><span class="text-xs text-emerald-600 font-medium">แก้ไขแล้ว</span>
-                           <button onclick="viewLog(${start+idx})" class="ml-2 text-blue-500 hover:text-blue-700 text-xs underline no-print">📋 ประวัติ</button>`
-                        : `<span class="status-dot pending"></span><span class="text-xs text-amber-600">รอดำเนินการ</span>`}
+                        ? `<span class="pill pill-done">แก้ไขแล้ว</span><button onclick="viewLog(${start+idx})" class="log-link no-print">ดูประวัติ</button>`
+                        : `<span class="pill pill-pending">รอดำเนินการ</span>`}
                 </td>
-                <td class="px-3 py-3 text-sm">${row.ชั้นปี||''}</td>
-                <td class="px-3 py-3 text-sm">${row['ภาคเรียน/ปีการศึกษา']||''}</td>
-                <td class="px-3 py-3 text-sm font-medium">${highlight(fullName,qName)}</td>
-                <td class="px-3 py-3"><span class="text-xs font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">${highlight(row.รหัสวิชา||'',qSubj)}</span></td>
-                <td class="px-3 py-3 text-sm">${row.ชื่อวิชา||''}</td>
-                <td class="px-3 py-3 text-sm">${row.ชั้น||''}</td>
-                <td class="px-3 py-3 text-sm">${teacher
-                    ? `<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span class="truncate max-w-[120px]" title="${teacher}">${highlight(teacher,qTeacher)}</span></span>`
-                    : '<span class="text-gray-300 text-xs">—</span>'}</td>
-                <td class="px-3 py-3"><span class="badge ${gradeBadge}">${grade}</span></td>
-                <td class="px-3 py-3">${row.New_Result?`<span class="badge badge-success">${row.New_Result}</span>`:'<span class="text-gray-300 text-xs">—</span>'}</td>
-                <td class="px-3 py-3">
-                    <select onchange="setLsStatus(${start+idx},this.value)" title="สถานะในระบบ LocalSchool"
-                        style="font-size:.75rem;padding:5px 6px;border-radius:8px;max-width:160px;border:1px solid ${row.LS_Status==='ติดในระบบ LS'?'#fca5a5':row.LS_Status?'#6ee7b7':'#e0e7ff'};background:${row.LS_Status==='ติดในระบบ LS'?'#fef2f2':row.LS_Status?'#ecfdf5':'#fff'}">
-                        <option value="" ${!row.LS_Status?'selected':''}>— ไม่ระบุ —</option>
-                        <option value="ติดในระบบ LS" ${row.LS_Status==='ติดในระบบ LS'?'selected':''}>ติดในระบบ LS</option>
-                        <option value="แก้ให้มีเกรดแล้วในระบบ LS" ${row.LS_Status==='แก้ให้มีเกรดแล้วในระบบ LS'?'selected':''}>แก้ให้มีเกรดแล้วในระบบ LS</option>
+                <td>
+                    <div class="stu-name">${highlight(fullName,qName)}</div>
+                    <span class="chip-class" title="ชั้นปีปัจจุบัน">${row.ชั้นปี||'—'}</span>
+                </td>
+                <td><span class="chip-term">${row['ภาคเรียน/ปีการศึกษา']||''}</span></td>
+                <td>
+                    <div class="subj-line"><span class="code-chip">${highlight(row.รหัสวิชา||'',qSubj)}</span><span class="subj-name">${row.ชื่อวิชา||''}</span></div>
+                    <div class="subj-meta">เรียนชั้น ${row.ชั้น||'—'}${teacher ? ` · ครู${highlight(teacher,qTeacher)}` : ''}</div>
+                </td>
+                <td style="text-align:center">
+                    <div class="grade-flow">
+                        <span class="badge ${gradeBadge}">${grade}</span>
+                        <span class="arrow">→</span>
+                        ${row.New_Result ? `<span class="badge badge-success">${row.New_Result}</span>` : '<span class="none">—</span>'}
+                    </div>
+                </td>
+                <td>
+                    <select class="ls-select" onchange="setLsStatus(${start+idx},this.value)" title="สถานะในระบบ LocalSchool"
+                        style="border:1px solid ${lsBorder};background:${lsBg};color:${lsColor}">
+                        <option value="" ${!ls?'selected':''}>— ไม่ระบุ —</option>
+                        <option value="ติดในระบบ LS" ${ls==='ติดในระบบ LS'?'selected':''}>ติดในระบบ LS</option>
+                        <option value="แก้ให้มีเกรดแล้วในระบบ LS" ${ls==='แก้ให้มีเกรดแล้วในระบบ LS'?'selected':''}>แก้ให้มีเกรดแล้วในระบบ LS</option>
                     </select>
                 </td>
-                <td class="px-3 py-3 text-center no-print">
-                    <button onclick="openQuickEdit(${start+idx})" class="btn btn-sm btn-warning mr-1" title="แก้เกรดด่วน (งานวัดผล) ไม่ต้องใช้รหัสผ่าน">⚡ แก้ด่วน</button>
-                    <button onclick="editRecord(${start+idx})" class="btn btn-sm btn-primary">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/></svg>แก้ไข
-                    </button>
+                <td class="no-print">
+                    <div class="act-row">
+                        <button onclick="openQuickEdit(${start+idx})" class="icon-btn quick" title="แก้เกรดด่วน (ไม่ต้องใช้รหัสผ่าน)">⚡ แก้ด่วน</button>
+                        <button onclick="editRecord(${start+idx})" class="icon-btn edit" title="แก้ไข (ใช้รหัสผ่านฝ่ายวิชาการ)">✏️</button>
+                    </div>
                 </td>
             </tr>`;
         }).join('');
@@ -1118,7 +1180,7 @@
 
     function showShimmer() {
         document.getElementById('dataTable').innerHTML = Array.from({length:5},(_,i)=>`
-            <tr style="animation-delay:${i*80}ms">${Array.from({length:12},()=>'<td class="px-3 py-3"><div class="shimmer h-4 rounded w-full"></div></td>').join('')}</tr>`).join('');
+            <tr style="animation-delay:${i*80}ms">${Array.from({length:7},()=>'<td class="px-3 py-3"><div class="shimmer h-4 rounded w-full"></div></td>').join('')}</tr>`).join('');
     }
 
     // ═══════════════════════════════════════════════════════
@@ -1262,6 +1324,102 @@
         });
         if (rAdd.ok || rUpd.ok) { location.reload(); return; }
         btn.disabled = false; btn.textContent = 'ซิงก์ข้อมูล';
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  เลื่อนชั้นนักเรียน (เปลี่ยนเฉพาะฟิลด์ ชั้นปี)
+    // ═══════════════════════════════════════════════════════
+    let promoPlan = [];
+
+    function nextClass(c, grad) {
+        const m = String(c||'').trim().match(/^ม\.?\s*([1-6])(?:\s*\/\s*(\d+))?$/);
+        if (!m) return null;
+        const lv = +m[1], room = m[2];
+        if (lv === 6) return grad ? 'จบการศึกษา' : null;
+        return `ม.${lv+1}${room ? '/'+room : ''}`;
+    }
+
+    function previewPromotion() {
+        const grad = document.getElementById('promoGrad').checked;
+        const groups = {};
+        promoPlan = [];
+        allData.forEach(r => {
+            const from = String(r.ชั้นปี||'').trim();
+            const to = nextClass(from, grad);
+            if (!to || !r._docId) return;
+            promoPlan.push({ id: r._docId, from, to });
+            const g = groups[from] || (groups[from] = { to, docs: 0, stu: new Set() });
+            g.docs++; g.stu.add(`${r.คำนำหน้า||''}${r.ชื่อ||''}${r.สกุล||''}`.replace(/\s+/g,''));
+        });
+        const keys = Object.keys(groups).sort();
+        const area = document.getElementById('promoPreviewArea');
+        if (!keys.length) { area.innerHTML = '<p class="text-sm text-gray-400">ไม่มีรายการที่เลื่อนชั้นได้</p>'; document.getElementById('promoConfirmBtn').style.display='none'; return; }
+        area.innerHTML = `
+            <div class="table-wrapper rounded-xl border border-indigo-100 overflow-hidden">
+                <table class="data-table" style="font-size:.85rem">
+                    <thead><tr><th>ชั้นปัจจุบัน</th><th>เลื่อนเป็น</th><th>นักเรียน (คน)</th><th>รายการ</th></tr></thead>
+                    <tbody>${keys.map(k => `<tr><td><b>${k}</b></td><td>→ <b style="color:#059669">${groups[k].to}</b></td><td>${groups[k].stu.size}</td><td>${groups[k].docs}</td></tr>`).join('')}</tbody>
+                </table>
+            </div>
+            <p class="text-sm text-gray-500 mt-3">รวม <b>${promoPlan.length}</b> รายการ</p>`;
+        document.getElementById('promoConfirmBtn').style.display = '';
+    }
+
+    async function confirmPromotion() {
+        if (!promoPlan.length) return;
+        const ask = await Swal.fire({
+            icon: 'warning', title: `เลื่อนชั้น ${promoPlan.length} รายการ?`,
+            html: 'การเลื่อนชั้นทำครั้งเดียวต่อปีการศึกษา<br>พิมพ์คำว่า <b>เลื่อนชั้น</b> เพื่อยืนยัน',
+            input: 'text', inputPlaceholder: 'เลื่อนชั้น', showCancelButton: true,
+            confirmButtonText: 'ยืนยัน', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#10b981',
+            inputValidator: v => v.trim() !== 'เลื่อนชั้น' && 'พิมพ์คำว่า เลื่อนชั้น ให้ถูกต้อง'
+        });
+        if (!ask.isConfirmed) return;
+
+        // 1) ดาวน์โหลดไฟล์สำรองก่อน
+        const stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+        const backup = JSON.stringify({ at: new Date().toISOString(), items: promoPlan.map(x => ({ id: x.id, ชั้นปี: x.from })) });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([backup], { type:'application/json' }));
+        a.download = `สำรองชั้นปี_${stamp}.json`; document.body.appendChild(a); a.click(); a.remove();
+
+        // 2) เลื่อนชั้น
+        const res = await applyClassUpdates(promoPlan.map(x => ({ id: x.id, cls: x.to })));
+        await Swal.fire({
+            icon: res.fail ? 'warning' : 'success', title: res.fail ? 'เลื่อนชั้นได้บางส่วน' : 'เลื่อนชั้นสำเร็จ',
+            html: `สำเร็จ <b>${res.ok}</b> · ไม่สำเร็จ <b>${res.fail}</b>${res.err ? `<br><small style="color:#b91c1c">${res.err}</small>` : ''}`,
+            confirmButtonColor: '#10b981'
+        });
+        if (res.ok) location.reload();
+    }
+
+    async function undoPromotion() {
+        const file = document.getElementById('promoUndoFile').files[0];
+        if (!file) { Swal.fire({icon:'warning',title:'เลือกไฟล์สำรองก่อน',toast:true,position:'top-end',timer:1800,showConfirmButton:false}); return; }
+        try {
+            const data = JSON.parse(await file.text());
+            const items = (data.items||[]).filter(x => x.id && x.ชั้นปี);
+            const ok = await Swal.fire({ icon:'question', title:`ย้อนกลับ ${items.length} รายการ?`, showCancelButton:true,
+                confirmButtonText:'ยืนยัน', cancelButtonText:'ยกเลิก', confirmButtonColor:'#10b981' });
+            if (!ok.isConfirmed) return;
+            const res = await applyClassUpdates(items.map(x => ({ id: x.id, cls: x.ชั้นปี })));
+            await Swal.fire({ icon: res.fail?'warning':'success', title: res.fail?'ย้อนกลับได้บางส่วน':'ย้อนกลับสำเร็จ',
+                html:`สำเร็จ <b>${res.ok}</b> · ไม่สำเร็จ <b>${res.fail}</b>${res.err?`<br><small style="color:#b91c1c">${res.err}</small>`:''}`, confirmButtonColor:'#10b981' });
+            if (res.ok) location.reload();
+        } catch(e) { Swal.fire({icon:'error',title:'อ่านไฟล์สำรองไม่ได้',text:e.message,confirmButtonColor:'#ef4444'}); }
+    }
+
+    async function applyClassUpdates(list) {
+        let ok = 0, fail = 0, err = '';
+        for (let i = 0; i < list.length; i += 200) {
+            const part = list.slice(i, i+200);
+            try {
+                const b = db.batch();
+                part.forEach(x => b.update(db.collection(COL_GRADES).doc(x.id), { ชั้นปี: x.cls }));
+                await b.commit(); ok += part.length;
+            } catch(e) { fail += part.length; err = err || e.message; console.error(e); }
+        }
+        return { ok, fail, err };
     }
 
     // ═══════════════════════════════════════════════════════
