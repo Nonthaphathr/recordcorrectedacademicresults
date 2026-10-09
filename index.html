@@ -399,7 +399,7 @@
                             <tr>
                                 <th>สถานะ</th><th>ชั้นปี</th><th>ภาคเรียน/ปีการศึกษา</th>
                                 <th>ชื่อ-สกุล</th><th>รหัสวิชา</th><th>ชื่อวิชา</th>
-                                <th>ชั้น</th><th>ครูผู้สอน</th><th>ผลเดิม</th><th>ผลใหม่</th>
+                                <th>ชั้น</th><th>ครูผู้สอน</th><th>ผลเดิม</th><th>ผลใหม่</th><th>หมายเหตุ</th>
                                 <th class="no-print">การดำเนินการ</th>
                             </tr>
                         </thead>
@@ -492,6 +492,25 @@
                         <button onclick="confirmImport()" id="importConfirmBtn" class="btn btn-success" style="display:none">นำเข้าข้อมูล (<span id="importCount">0</span> รายการ)</button>
                     </div>
                     <div id="importPreviewArea"></div>
+                </div>
+            </div>
+
+            <!-- Section 2.5: Sync จากไฟล์ (ชั้นปีปัจจุบัน + หมายเหตุ) -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <h3 class="font-semibold text-gray-700">🔄 ซิงก์ชั้นปีปัจจุบัน / หมายเหตุ LS จากไฟล์ .xlsx (ไม่เพิ่มซ้ำ)</h3>
+                </div>
+                <div class="settings-section-body">
+                    <div class="info-box mb-4">
+                        <p class="text-sm text-blue-700">ใช้ไฟล์ที่ export จากระบบนี้ (คอลัมน์ <code>ชั้นปี, ภาคเรียน/ปีการศึกษา, ชื่อ-สกุล, รหัสวิชา, หมายเหตุ</code>) —
+                        รายการที่มีอยู่แล้วจะ<b>อัปเดตชั้นปีและหมายเหตุ</b> รายการที่ยังไม่มีจะ<b>เพิ่มใหม่</b> ไม่สร้างซ้ำ</p>
+                    </div>
+                    <div class="flex gap-3 mb-4 flex-wrap">
+                        <input type="file" id="syncXlsxFile" accept=".xlsx,.xls" class="input-field" style="max-width:360px">
+                        <button onclick="previewSync()" class="btn btn-info">ตรวจสอบไฟล์</button>
+                        <button onclick="confirmSync()" id="syncConfirmBtn" class="btn btn-success" style="display:none">ซิงก์ข้อมูล</button>
+                    </div>
+                    <div id="syncPreviewArea"></div>
                 </div>
             </div>
 
@@ -884,6 +903,7 @@
             EditDate:          r.EditDate          || r['วันที่แก้ไข']        || '',
             EditTime:          r.EditTime          || r['เวลาที่แก้ไข']       || '',
             Log_Link:          r.Log_Link          || r['Log Link']           || '',
+            LS_Status:         r.LS_Status         || r['หมายเหตุ']           || '',
         };
     }
 
@@ -1024,7 +1044,7 @@
         const start = (currentPage-1)*CONFIG.RECORDS_PER_PAGE;
         const page  = filteredData.slice(start, start+CONFIG.RECORDS_PER_PAGE);
         if (!page.length) {
-            tb.innerHTML = `<tr><td colspan="11"><div class="empty-state"><p class="text-lg font-medium">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</p><p class="text-sm mt-1">ลองเปลี่ยนตัวกรองหรือล้างค่าการค้นหา</p></div></td></tr>`;
+            tb.innerHTML = `<tr><td colspan="12"><div class="empty-state"><p class="text-lg font-medium">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</p><p class="text-sm mt-1">ลองเปลี่ยนตัวกรองหรือล้างค่าการค้นหา</p></div></td></tr>`;
             updatePagination(); return;
         }
         const qName    = document.getElementById('searchName').value;
@@ -1056,6 +1076,14 @@
                     : '<span class="text-gray-300 text-xs">—</span>'}</td>
                 <td class="px-3 py-3"><span class="badge ${gradeBadge}">${grade}</span></td>
                 <td class="px-3 py-3">${row.New_Result?`<span class="badge badge-success">${row.New_Result}</span>`:'<span class="text-gray-300 text-xs">—</span>'}</td>
+                <td class="px-3 py-3">
+                    <select onchange="setLsStatus(${start+idx},this.value)" title="สถานะในระบบ LocalSchool"
+                        style="font-size:.75rem;padding:5px 6px;border-radius:8px;max-width:160px;border:1px solid ${row.LS_Status==='ติดในระบบ LS'?'#fca5a5':row.LS_Status?'#6ee7b7':'#e0e7ff'};background:${row.LS_Status==='ติดในระบบ LS'?'#fef2f2':row.LS_Status?'#ecfdf5':'#fff'}">
+                        <option value="" ${!row.LS_Status?'selected':''}>— ไม่ระบุ —</option>
+                        <option value="ติดในระบบ LS" ${row.LS_Status==='ติดในระบบ LS'?'selected':''}>ติดในระบบ LS</option>
+                        <option value="แก้ให้มีเกรดแล้วในระบบ LS" ${row.LS_Status==='แก้ให้มีเกรดแล้วในระบบ LS'?'selected':''}>แก้ให้มีเกรดแล้วในระบบ LS</option>
+                    </select>
+                </td>
                 <td class="px-3 py-3 text-center no-print">
                     <button onclick="openQuickEdit(${start+idx})" class="btn btn-sm btn-warning mr-1" title="แก้เกรดด่วน (งานวัดผล) ไม่ต้องใช้รหัสผ่าน">⚡ แก้ด่วน</button>
                     <button onclick="editRecord(${start+idx})" class="btn btn-sm btn-primary">
@@ -1090,7 +1118,7 @@
 
     function showShimmer() {
         document.getElementById('dataTable').innerHTML = Array.from({length:5},(_,i)=>`
-            <tr style="animation-delay:${i*80}ms">${Array.from({length:11},()=>'<td class="px-3 py-3"><div class="shimmer h-4 rounded w-full"></div></td>').join('')}</tr>`).join('');
+            <tr style="animation-delay:${i*80}ms">${Array.from({length:12},()=>'<td class="px-3 py-3"><div class="shimmer h-4 rounded w-full"></div></td>').join('')}</tr>`).join('');
     }
 
     // ═══════════════════════════════════════════════════════
@@ -1113,6 +1141,119 @@
     }
 
     function closeEditModal() { document.getElementById('editModal').classList.remove('show'); currentEditRow = null; }
+
+    // ═══════════════════════════════════════════════════════
+    //  หมายเหตุ: สถานะในระบบ LocalSchool (ติดในระบบ LS / แก้ให้มีเกรดแล้วในระบบ LS)
+    // ═══════════════════════════════════════════════════════
+    async function setLsStatus(index, val) {
+        const record = filteredData[index];
+        if (!record) return;
+        try {
+            if (record._docId) {
+                await db.collection(COL_GRADES).doc(record._docId).update({
+                    LS_Status: val, LS_StatusAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+            record.LS_Status = val;
+            const oi = allData.findIndex(r=>r._docId===record._docId || r.rowIndex===record.rowIndex);
+            if (oi!==-1) allData[oi].LS_Status = val;
+            displayData();
+            Swal.fire({ toast:true, position:'top-end', icon:'success', showConfirmButton:false, timer:1500, title: val || 'ล้างหมายเหตุแล้ว' });
+        } catch(err) {
+            console.error(err);
+            Swal.fire({ icon:'error', title:'บันทึกหมายเหตุไม่สำเร็จ', text:err.message, confirmButtonColor:'#ef4444' });
+            displayData();
+        }
+    }
+
+    // ── ซิงก์ชั้นปี/หมายเหตุจากไฟล์ ───────────────────────────
+    let syncPlan = { update: [], add: [] };
+    const _nm = s => String(s||'').replace(/\s+/g,'');
+    const _PREFIXES = ['เด็กชาย','เด็กหญิง','นางสาว','นาย','นาง'];
+
+    function previewSync() {
+        const file = document.getElementById('syncXlsxFile').files[0];
+        if (!file) { Swal.fire({icon:'warning',title:'เลือกไฟล์ก่อน',toast:true,position:'top-end',timer:1500,showConfirmButton:false}); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const wb = XLSX.read(e.target.result, {type:'binary'});
+                const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:''});
+                const exist = {};
+                allData.forEach(r => { exist[_nm(`${r.คำนำหน้า||''}${r.ชื่อ||''}${r.สกุล||''}`)+'|'+_nm(r.รหัสวิชา)+'|'+_nm(r['ภาคเรียน/ปีการศึกษา'])] = r; });
+                syncPlan = { update: [], add: [] };
+                let same = 0;
+                raw.forEach(x => {
+                    const full = String(x['ชื่อ-สกุล']||'').trim();
+                    const code = String(x['รหัสวิชา']||'').trim();
+                    const term = String(x['ภาคเรียน/ปีการศึกษา']||'').trim();
+                    if (!full || !code || !term) return;
+                    const cls = String(x['ชั้นปี']||'').trim();
+                    const note = String(x['หมายเหตุ']||'').trim();
+                    const hit = exist[_nm(full)+'|'+_nm(code)+'|'+_nm(term)];
+                    if (hit) {
+                        const patch = {};
+                        if (cls && cls !== (hit.ชั้นปี||'')) patch.ชั้นปี = cls;
+                        if (note !== (hit.LS_Status||'') && note) patch.LS_Status = note;
+                        if (Object.keys(patch).length) syncPlan.update.push({ doc: hit, patch }); else same++;
+                    } else {
+                        syncPlan.add.push(x);
+                    }
+                });
+                document.getElementById('syncConfirmBtn').style.display = (syncPlan.update.length||syncPlan.add.length) ? '' : 'none';
+                document.getElementById('syncPreviewArea').innerHTML = `
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div class="bg-indigo-50 rounded-xl p-4"><p class="text-2xl font-bold text-indigo-600">${syncPlan.update.length}</p><p class="text-xs text-gray-500">อัปเดตชั้นปี/หมายเหตุ</p></div>
+                        <div class="bg-emerald-50 rounded-xl p-4"><p class="text-2xl font-bold text-emerald-600">${syncPlan.add.length}</p><p class="text-xs text-gray-500">เพิ่มรายการใหม่</p></div>
+                        <div class="bg-gray-50 rounded-xl p-4"><p class="text-2xl font-bold text-gray-500">${same}</p><p class="text-xs text-gray-500">ตรงกันแล้ว</p></div>
+                    </div>`;
+            } catch(err) { Swal.fire({icon:'error',title:'อ่านไฟล์ไม่ได้',text:err.message,confirmButtonColor:'#ef4444'}); }
+        };
+        reader.readAsBinaryString(file);
+    }
+
+    async function confirmSync() {
+        const total = syncPlan.update.length + syncPlan.add.length;
+        if (!total) return;
+        const ok = await Swal.fire({ icon:'question', title:`ซิงก์ ${total} รายการ?`,
+            html:`อัปเดต <b>${syncPlan.update.length}</b> · เพิ่มใหม่ <b>${syncPlan.add.length}</b>`,
+            showCancelButton:true, confirmButtonText:'ยืนยัน', cancelButtonText:'ยกเลิก', confirmButtonColor:'#10b981' });
+        if (!ok.isConfirmed) return;
+        const ops = [];
+        syncPlan.update.forEach(u => ops.push(b => b.update(db.collection(COL_GRADES).doc(u.doc._docId), u.patch)));
+        syncPlan.add.forEach(x => {
+            const full = String(x['ชื่อ-สกุล']).trim();
+            const pre = _PREFIXES.find(p => full.startsWith(p)) || '';
+            const rest = full.slice(pre.length).trim().split(/\s+/);
+            const done = String(x['สถานะ']||'') === 'แก้ไขแล้ว';
+            const data = {
+                ชั้นปี: String(x['ชั้นปี']||''), คำนำหน้า: pre, ชื่อ: rest[0]||'', สกุล: rest.slice(1).join(' '),
+                รหัสวิชา: String(x['รหัสวิชา']||'').trim(), ชื่อวิชา: String(x['ชื่อวิชา']||'').trim(),
+                'ภาคเรียน/ปีการศึกษา': String(x['ภาคเรียน/ปีการศึกษา']||'').trim(), ชั้น: String(x['ชั้น']||''),
+                คะแนน: '', ผลการเรียน: String(x['ผลการเรียนเดิม']||'').trim(),
+                New_Result: done ? String(x['ผลการเรียนใหม่']||'') : '', Correction_Status: done ? 'แก้ไขแล้ว' : '',
+                Log_Link:'', Editor: done ? String(x['ผู้แก้ไข']||'') : '', EditDate: done ? String(x['วันที่แก้ไข']||'') : '', EditTime: done ? String(x['เวลา']||'') : '',
+                LS_Status: String(x['หมายเหตุ']||'').trim(),
+                importedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            ops.push(b => b.set(db.collection(COL_GRADES).doc(), data));
+        });
+        const btn = document.getElementById('syncConfirmBtn');
+        btn.disabled = true; btn.textContent = 'กำลังซิงก์...';
+        try {
+            for (let i = 0; i < ops.length; i += 400) {
+                const b = db.batch();
+                ops.slice(i, i+400).forEach(f => f(b));
+                await b.commit();
+            }
+            await Swal.fire({ icon:'success', title:'ซิงก์สำเร็จ', html:`อัปเดต <b>${syncPlan.update.length}</b> · เพิ่ม <b>${syncPlan.add.length}</b> รายการ`, confirmButtonColor:'#10b981' });
+            location.reload();
+        } catch(err) {
+            console.error(err);
+            Swal.fire({ icon:'error', title:'ซิงก์ไม่สำเร็จ', text:err.message, confirmButtonColor:'#ef4444' });
+            btn.disabled = false; btn.textContent = 'ซิงก์ข้อมูล';
+        }
+    }
 
     // ═══════════════════════════════════════════════════════
     //  QUICK EDIT  (งานวัดผล: คลิกเลือกเกรด ไม่ต้องใช้รหัสผ่าน, แนบหลักฐานไม่บังคับ)
@@ -1368,7 +1509,7 @@
         if (!filteredData.length) { Swal.fire({icon:'info',title:'ไม่มีข้อมูล',confirmButtonColor:'#4f46e5'}); return; }
         Swal.fire({title:'Export Excel',html:`จะ Export <b>${filteredData.length}</b> รายการ`,icon:'question',showCancelButton:true,confirmButtonText:'Export',cancelButtonText:'ยกเลิก',confirmButtonColor:'#10b981'}).then(r=>{
             if (!r.isConfirmed) return;
-            const headers = ['สถานะ','ชั้นปี','ภาคเรียน/ปีการศึกษา','ชื่อ-สกุล','รหัสวิชา','ชื่อวิชา','ชั้น','ครูผู้สอน','ผลการเรียนเดิม','ผลการเรียนใหม่','ผู้แก้ไข','วันที่แก้ไข','เวลา'];
+            const headers = ['สถานะ','ชั้นปี','ภาคเรียน/ปีการศึกษา','ชื่อ-สกุล','รหัสวิชา','ชื่อวิชา','ชั้น','ครูผู้สอน','ผลการเรียนเดิม','ผลการเรียนใหม่','ผู้แก้ไข','วันที่แก้ไข','เวลา','หมายเหตุ'];
             const rows = filteredData.map(r=>[
                 r.Correction_Status==='แก้ไขแล้ว'?'แก้ไขแล้ว':'รอดำเนินการ',
                 r.ชั้นปี||'', r['ภาคเรียน/ปีการศึกษา']||'',
@@ -1376,10 +1517,10 @@
                 r.รหัสวิชา||'', r.ชื่อวิชา||'', r.ชั้น||'',
                 teacherAssignments[r.รหัสวิชา||'']||'',
                 r.ผลการเรียน||'', r.New_Result||'',
-                r.Editor||'', r.EditDate||'', r.EditTime||''
+                r.Editor||'', r.EditDate||'', r.EditTime||'', r.LS_Status||''
             ]);
             const ws = XLSX.utils.aoa_to_sheet([headers,...rows]);
-            ws['!cols'] = [12,10,18,24,12,22,8,20,14,14,22,14,12].map(w=>({wch:w}));
+            ws['!cols'] = [12,10,18,24,12,22,8,20,14,14,22,14,12,26].map(w=>({wch:w}));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'ผลการเรียน');
             const now = new Date();
@@ -1399,7 +1540,8 @@
             <td>${teacherAssignments[r.รหัสวิชา||'']||'—'}</td>
             <td style="color:#b91c1c;font-weight:600">${r.ผลการเรียน||''}</td>
             <td style="color:#065f46;font-weight:600">${r.New_Result||'—'}</td>
-            <td>${r.Editor||'—'}</td></tr>`).join('');
+            <td>${r.Editor||'—'}</td>
+            <td>${r.LS_Status||'—'}</td></tr>`).join('');
         const win = window.open('','_blank');
         win.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์</title>
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
@@ -1409,7 +1551,7 @@
             <table><thead><tr>
                 <th>สถานะ</th><th>ชั้นปี</th><th>ภาคเรียน</th><th>ชื่อ-สกุล</th>
                 <th>รหัสวิชา</th><th>ชื่อวิชา</th><th>ชั้น</th><th>ครูผู้สอน</th>
-                <th>ผลเดิม</th><th>ผลใหม่</th><th>ผู้แก้ไข</th>
+                <th>ผลเดิม</th><th>ผลใหม่</th><th>ผู้แก้ไข</th><th>หมายเหตุ</th>
             </tr></thead>
             <tbody>${rows}</tbody></table>
             <script>window.onload=()=>window.print()<\/script></body></html>`);
