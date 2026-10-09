@@ -129,7 +129,10 @@
         .grade-flow { display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }
         .grade-flow .arrow { color:#cbd5e1; font-size:.9rem; }
         .grade-flow .none { color:#cbd5e1; font-weight:600; }
-        .ls-select { font-size:.78rem; padding:7px 28px 7px 10px; border-radius:10px; width:170px; max-width:100%; cursor:pointer; }
+        .ls-select { font-size:.72rem; padding:7px 22px 7px 8px; border-radius:10px; width:100%; min-width:215px; cursor:pointer; text-overflow:clip; }
+        .data-table.roomy tbody tr.ls-fixed-row, .data-table.roomy tbody tr.ls-fixed-row.edited-row { background:#e0f2fe; }
+        .data-table.roomy tbody tr.ls-fixed-row:hover { background:#bae6fd; }
+        .data-table.roomy tbody tr.ls-fixed-row td:first-child, .data-table.roomy tbody tr.ls-fixed-row.edited-row td:first-child { box-shadow:inset 4px 0 0 #2563eb; }
         .act-row { display:flex; align-items:center; gap:8px; justify-content:flex-end; white-space:nowrap; }
         .icon-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:36px; padding:0 14px; border-radius:10px; border:none; font-size:.8rem; font-weight:600; cursor:pointer; transition:all .15s; }
         .icon-btn.quick { background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; box-shadow:0 3px 10px rgba(245,158,11,.3); }
@@ -387,7 +390,7 @@
                     <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
                     <h2 class="font-semibold text-gray-700">ตัวกรองและค้นหา</h2>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                     <div><label class="form-label">ค้นหาชื่อ-สกุล</label><input type="text" id="searchName" placeholder="ชื่อ หรือ สกุล" class="input-field" oninput="searchData()"></div>
                     <div><label class="form-label">รหัสวิชา</label><input type="text" id="searchSubject" placeholder="รหัสวิชา" class="input-field" oninput="searchData()"></div>
                     <div><label class="form-label">ชั้นปีปัจจุบัน</label><select id="filterYear" class="input-field" onchange="searchData()"><option value="">ทุกชั้นปี</option></select></div>
@@ -397,6 +400,7 @@
                     <div><label class="form-label">สถานะผลการเรียน</label><select id="filterGradeStatus" class="input-field" onchange="searchData()"><option value="">ทุกสถานะ</option><option value="0">0</option><option value="ร">ร</option><option value="มส">มส</option></select></div>
                     <div><label class="form-label">สถานะการแก้ไข</label><select id="filterStatus" class="input-field" onchange="searchData()"><option value="">ทั้งหมด</option><option value="แก้ไขแล้ว">แก้ไขแล้ว</option><option value="ยังไม่แก้ไข">ยังไม่แก้ไข</option></select></div>
                     <div><label class="form-label">ครูผู้สอน</label><select id="filterTeacher" class="input-field" onchange="searchData()"><option value="">ทุกครูผู้สอน</option></select></div>
+                    <div><label class="form-label">หมายเหตุ (สถานะ LS)</label><select id="filterLs" class="input-field" onchange="searchData()"><option value="">ทั้งหมด</option><option value="ติดในระบบ LS">ติดในระบบ LS</option><option value="แก้ให้มีเกรดแล้วในระบบ LS">แก้ให้มีเกรดแล้วในระบบ LS</option><option value="__none">ยังไม่ระบุ</option></select></div>
                 </div>
                 <div class="toolbar">
                     <button onclick="searchData()" class="btn btn-primary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 0 5 11a6 6 0 0 0 12 0z"/></svg>ค้นหา</button>
@@ -843,6 +847,7 @@
             filterGradeStatus: document.getElementById('filterGradeStatus').value,
             filterStatus:      document.getElementById('filterStatus').value,
             filterTeacher:     document.getElementById('filterTeacher').value,
+            filterLs:          document.getElementById('filterLs').value,
             currentPage
         }));
     }
@@ -860,6 +865,7 @@
             document.getElementById('filterGradeStatus').value = s.filterGradeStatus || '';
             document.getElementById('filterStatus').value      = s.filterStatus      || '';
             document.getElementById('filterTeacher').value     = s.filterTeacher     || '';
+            document.getElementById('filterLs').value          = s.filterLs          || '';
             currentPage = s.currentPage || 1;
             return true;
         } catch { return false; }
@@ -1058,7 +1064,7 @@
 
     function resetFilters() {
         ['searchName','searchSubject'].forEach(id => document.getElementById(id).value='');
-        ['filterYear','filterSemester','filterGradeStatus','filterStatus','filterTeacher'].forEach(id => document.getElementById(id).value='');
+        ['filterYear','filterSemester','filterGradeStatus','filterStatus','filterTeacher','filterLs'].forEach(id => document.getElementById(id).value='');
         searchData();
     }
 
@@ -1070,6 +1076,7 @@
         const grade   = document.getElementById('filterGradeStatus').value;
         const status  = document.getElementById('filterStatus').value;
         const teacher = document.getElementById('filterTeacher').value;
+        const lsf     = document.getElementById('filterLs').value;
         filteredData = allData.filter(r => {
             const g = String(r.ผลการเรียน||'').trim();
             if (!['0','ร','มส'].includes(g)) return false;
@@ -1080,6 +1087,8 @@
             if (sem     && r['ภาคเรียน/ปีการศึกษา'] !== sem) return false;
             if (grade   && g !== grade) return false;
             if (teacher && (teacherAssignments[r.รหัสวิชา||'']||'') !== teacher) return false;
+            if (lsf === '__none' && r.LS_Status) return false;
+            if (lsf && lsf !== '__none' && (r.LS_Status||'') !== lsf) return false;
             if (status === 'แก้ไขแล้ว'  && r.Correction_Status !== 'แก้ไขแล้ว') return false;
             if (status === 'ยังไม่แก้ไข' && r.Correction_Status === 'แก้ไขแล้ว') return false;
             return true;
@@ -1112,11 +1121,11 @@
             const fullName = `${row.คำนำหน้า||''} ${row.ชื่อ||''} ${row.สกุล||''}`.trim();
             const teacher  = teacherAssignments[row.รหัสวิชา||''] || '';
             const ls = row.LS_Status || '';
-            const lsBorder = ls==='ติดในระบบ LS' ? '#fca5a5' : ls ? '#6ee7b7' : '#e0e7ff';
-            const lsBg     = ls==='ติดในระบบ LS' ? '#fef2f2' : ls ? '#ecfdf5' : '#fff';
-            const lsColor  = ls==='ติดในระบบ LS' ? '#b91c1c' : ls ? '#047857' : '#475569';
+            const lsBorder = ls==='ติดในระบบ LS' ? '#fca5a5' : ls ? '#60a5fa' : '#e0e7ff';
+            const lsBg     = ls==='ติดในระบบ LS' ? '#fef2f2' : ls ? '#eff6ff' : '#fff';
+            const lsColor  = ls==='ติดในระบบ LS' ? '#b91c1c' : ls ? '#1d4ed8' : '#475569';
             return `
-            <tr class="${isEdited?'edited-row':''}" style="animation-delay:${Math.min(idx*30,300)}ms">
+            <tr class="${isEdited?'edited-row':''} ${ls==='แก้ให้มีเกรดแล้วในระบบ LS'?'ls-fixed-row':''}" style="animation-delay:${Math.min(idx*30,300)}ms">
                 <td>
                     ${isEdited
                         ? `<span class="pill pill-done">แก้ไขแล้ว</span><button onclick="viewLog(${start+idx})" class="log-link no-print">ดูประวัติ</button>`
