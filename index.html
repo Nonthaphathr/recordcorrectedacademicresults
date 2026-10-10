@@ -572,6 +572,24 @@
                 </div>
             </div>
 
+            <!-- Section 2.7: ลบคนที่แก้ไขผลการเรียนแล้ว -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <h3 class="font-semibold text-gray-700">🗑️ ลบคนที่แก้ไขผลการเรียนแล้ว</h3>
+                </div>
+                <div class="settings-section-body">
+                    <div class="info-box mb-4">
+                        <p class="text-sm text-blue-700">ลบคนที่แก้ไขผลการเรียนแล้วและลงบนระบบ Local School แล้วออกจากระบบนี้<br>
+                        <span class="text-xs text-blue-500">เงื่อนไข: ลบเฉพาะรายการวิชาที่มีสถานะ "แก้ไขแล้ว" และหมายเหตุ "แก้ให้มีเกรดแล้วในระบบ LS" · วิชาอื่นของนักเรียนคนเดิมที่ยังไม่เข้าเงื่อนไขจะไม่ถูกลบ · ระบบจะดาวน์โหลดไฟล์สำรองก่อนลบทุกครั้ง · ประวัติการแก้ไขยังคงอยู่</span></p>
+                    </div>
+                    <div class="flex gap-3 mb-4 flex-wrap">
+                        <button onclick="previewCleanup()" class="btn btn-info">ดูรายชื่อที่จะลบ</button>
+                        <button onclick="confirmCleanup()" id="cleanupConfirmBtn" class="btn btn-danger" style="display:none">ลบออกจากระบบ</button>
+                    </div>
+                    <div id="cleanupPreviewArea"></div>
+                </div>
+            </div>
+
             <!-- Section 3: Data management -->
             <div class="settings-section mb-6">
                 <div class="settings-section-header">
@@ -768,6 +786,9 @@
     // ═══════════════════════════════════════════════════════
     //  HASH-BASED NAVIGATION (SPA)
     // ═══════════════════════════════════════════════════════
+    let _currentPage = null;
+    let _needReload = false;   // true = ข้อมูลเปลี่ยนจากหน้าอื่น ต้องโหลดใหม่ตอนกลับหน้าหลัก
+    let _silentLoad = false;
     let _settingsUnlocked = false; // ล็อกใหม่ทุกครั้งที่ออกจากหน้า settings
 
     async function navigate(page) {
@@ -796,6 +817,9 @@
         // รีเซ็ต unlock เมื่อออกจากหน้า settings
         if (page !== 'settings') _settingsUnlocked = false;
 
+        const prev = _currentPage;
+        _currentPage = page;
+
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
         document.getElementById('page-' + page).classList.add('active');
@@ -803,12 +827,19 @@
         location.hash = page;
         if (page === 'teachers') renderTeacherPage();
         if (page === 'settings') renderSettingsPage();
-    }
 
+        // กลับมาหน้าหลักจากหน้าอื่น → โหลด/วาดข้อมูลใหม่
+        if (page === 'home' && prev && prev !== 'home') {
+            if (_needReload || !allData.length) { _needReload = false; loadData(true); }
+            else { searchData(true); updateStats(); }
+        }
+    }
     window.addEventListener('hashchange', () => {
         const hash = location.hash.replace('#','') || 'home';
         const valid = ['home','teachers','settings'];
-        navigate(valid.includes(hash) ? hash : 'home');
+        const target = valid.includes(hash) ? hash : 'home';
+        if (target === _currentPage) return; // กัน navigate ซ้ำ
+        navigate(target);
     });
 
     // ═══════════════════════════════════════════════════════
@@ -874,7 +905,8 @@
     // ═══════════════════════════════════════════════════════
     //  LOAD DATA (Firestore first, fallback GAS)
     // ═══════════════════════════════════════════════════════
-    async function loadData() {
+    async function loadData(silent = false) {
+        _silentLoad = silent === true;
         showShimmer();
         try {
             // Try Firestore
@@ -947,10 +979,15 @@
     }
 
     function setupAfterLoad() {
+        const ids = ['searchName','searchSubject','filterYear','filterSemester','filterGradeStatus','filterStatus','filterTeacher','filterLs'];
+        const keep = {}; ids.forEach(id => keep[id] = document.getElementById(id).value);
         populateFilters();
         const hasState = restoreFilterState();
-        if (hasState) { searchData(true); } else { filteredData = filterFailedGrades(allData); displayData(); }
+        if (hasState) { searchData(true); }
+        else if (_silentLoad) { ids.forEach(id => document.getElementById(id).value = keep[id]); searchData(true); }
+        else { filteredData = filterFailedGrades(allData); displayData(); }
         updateStats();
+        if (_silentLoad) return;
         Swal.fire({ icon:'success', title:'โหลดข้อมูลสำเร็จ', html:`พบผลการเรียนที่ไม่ผ่าน <b>${filteredData.length}</b> รายการ`, timer:2500, timerProgressBar:true, showConfirmButton:false, toast:true, position:'top-end' });
     }
 
@@ -1845,6 +1882,7 @@
                 await db.collection(COL_TEACHERS).add({ subjectCode: code, subjectName: name, teacherName: val, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
             }
             teacherAssignments[code] = val;
+            _needReload = true;
             const s = document.getElementById('tsaved-'+code);
             if (s) { s.style.display=''; setTimeout(()=>s.style.display='none',2500); }
             // Re-render group cards to update progress
@@ -2011,12 +2049,96 @@
         });
 
         importRows = [];
+        _needReload = true;
         document.getElementById('importPreviewArea').innerHTML = '';
         document.getElementById('importConfirmBtn').style.display = 'none';
         document.getElementById('importXlsxFile').value = '';
         refreshFirestoreStats();
     }
 
+    // ── ลบรายการวิชาที่แก้ไขแล้ว + ลง LS แล้ว ───────────────────
+    let cleanupPlan = []; // รายการผลการเรียนที่จะลบ (ทีละรายการวิชา)
+    const LS_DONE = 'แก้ให้มีเกรดแล้วในระบบ LS';
+
+    function previewCleanup() {
+        const base = filterFailedGrades(allData);
+        cleanupPlan = base.filter(r => r.Correction_Status === 'แก้ไขแล้ว' && r.LS_Status === LS_DONE && r._docId);
+        const kept = base.length - cleanupPlan.length;
+        const stuCount = new Set(cleanupPlan.map(r => _nm(`${r.คำนำหน้า||''}${r.ชื่อ||''}${r.สกุล||''}`))).size;
+        const area = document.getElementById('cleanupPreviewArea');
+        const btn = document.getElementById('cleanupConfirmBtn');
+        if (!cleanupPlan.length) {
+            area.innerHTML = '<p class="text-sm text-gray-400">ไม่มีรายการที่เข้าเงื่อนไข (ต้องมีสถานะ แก้ไขแล้ว และหมายเหตุ แก้ให้มีเกรดแล้วในระบบ LS)</p>';
+            btn.style.display = 'none'; return;
+        }
+        area.innerHTML = `
+            <div class="grid grid-cols-3 gap-3 text-center mb-3">
+                <div class="bg-red-50 rounded-xl p-4"><p class="text-2xl font-bold text-red-600">${cleanupPlan.length}</p><p class="text-xs text-gray-500">รายการวิชาที่จะลบ</p></div>
+                <div class="bg-amber-50 rounded-xl p-4"><p class="text-2xl font-bold text-amber-600">${stuCount}</p><p class="text-xs text-gray-500">นักเรียนที่เกี่ยวข้อง (คน)</p></div>
+                <div class="bg-gray-50 rounded-xl p-4"><p class="text-2xl font-bold text-gray-500">${kept}</p><p class="text-xs text-gray-500">รายการที่ยังไม่เข้าเงื่อนไข (คงไว้)</p></div>
+            </div>
+            <div class="table-wrapper rounded-xl border border-indigo-100 overflow-hidden" style="max-height:300px;overflow-y:auto">
+                <table class="data-table" style="font-size:.85rem">
+                    <thead><tr><th>ชื่อ-สกุล</th><th>ชั้นปี</th><th>ภาคเรียน</th><th>วิชา</th><th>ผลการเรียน</th></tr></thead>
+                    <tbody>${cleanupPlan.map(r => `<tr>
+                        <td>${`${r.คำนำหน้า||''} ${r.ชื่อ||''} ${r.สกุล||''}`.trim()}</td>
+                        <td>${r.ชั้นปี||'—'}</td>
+                        <td>${r['ภาคเรียน/ปีการศึกษา']||''}</td>
+                        <td>${r.รหัสวิชา||''} ${r.ชื่อวิชา||''}</td>
+                        <td>${r.ผลการเรียน||''} → ${r.New_Result||'—'}</td></tr>`).join('')}</tbody>
+                </table>
+            </div>`;
+        btn.style.display = '';
+    }
+
+    async function confirmCleanup() {
+        if (!cleanupPlan.length) return;
+        const docs = cleanupPlan.slice();
+        const ask = await Swal.fire({
+            icon: 'warning', title: `ลบ ${docs.length} รายการวิชา?`,
+            html: 'ลบรายการเหล่านี้ออกจากระบบนี้ถาวร (มีไฟล์สำรองให้ดาวน์โหลดก่อน)<br>พิมพ์คำว่า <b>ลบ</b> เพื่อยืนยัน',
+            input: 'text', inputPlaceholder: 'ลบ', showCancelButton: true,
+            confirmButtonText: 'ลบเลย', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#ef4444',
+            inputValidator: v => v.trim() !== 'ลบ' && 'พิมพ์คำว่า ลบ ให้ถูกต้อง'
+        });
+        if (!ask.isConfirmed) return;
+
+        // 1) สำรองข้อมูลก่อนลบ
+        const stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+        const clean = docs.map(({ _logData, ...r }) => r);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify({ at: new Date().toISOString(), items: clean })], { type:'application/json' }));
+        a.download = `สำรองก่อนลบ_${stamp}.json`; document.body.appendChild(a); a.click(); a.remove();
+
+        // 2) ลบเป็นชุด
+        const btn = document.getElementById('cleanupConfirmBtn');
+        btn.disabled = true; btn.textContent = 'กำลังลบ...';
+        let ok = 0, fail = 0, err = '';
+        const deleted = new Set();
+        for (let i = 0; i < docs.length; i += 400) {
+            const part = docs.slice(i, i + 400);
+            try {
+                const b = db.batch();
+                part.forEach(r => b.delete(db.collection(COL_GRADES).doc(r._docId)));
+                await b.commit(); ok += part.length; part.forEach(r => deleted.add(r._docId));
+            } catch(e) { fail += part.length; err = err || e.message; console.error(e); }
+        }
+        btn.disabled = false; btn.textContent = 'ลบออกจากระบบ';
+
+        allData = allData.filter(r => !deleted.has(r._docId));
+        _needReload = true;
+        cleanupPlan = [];
+        document.getElementById('cleanupPreviewArea').innerHTML = '';
+        btn.style.display = 'none';
+        refreshFirestoreStats();
+
+        await Swal.fire({
+            icon: fail ? 'warning' : 'success', title: fail ? 'ลบได้บางส่วน' : 'ลบสำเร็จ',
+            html: `สำเร็จ <b>${ok}</b> · ไม่สำเร็จ <b>${fail}</b>${err ? `<br><small style="color:#b91c1c">${err}</small>` : ''}`
+                + (fail ? '<br><small>ส่วนที่ไม่สำเร็จอาจเกิดจาก Firestore Rules ไม่อนุญาตให้ลบ</small>' : ''),
+            confirmButtonColor: '#10b981'
+        });
+    }
     // ── Firestore stats ───────────────────────────────────
     async function refreshFirestoreStats() {
         try {
