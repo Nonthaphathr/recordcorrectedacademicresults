@@ -408,6 +408,7 @@
                     <button onclick="loadData()" class="btn btn-info">รีเฟรช</button>
                     <div class="flex-1"></div>
                     <button onclick="exportExcel()" class="btn btn-success" data-tooltip="Export Excel">Export Excel</button>
+                    <button onclick="openPrintForm()" class="btn btn-info" data-tooltip="พิมพ์แบบฟอร์มคำร้อง วก.กทว.101/102">🖨️ แบบฟอร์มคำร้อง</button>
                     <button onclick="printData()" class="btn btn-warning" data-tooltip="พิมพ์">พิมพ์</button>
                 </div>
             </div>
@@ -461,6 +462,14 @@
                 </div>
             </div>
 
+            <!-- Library toolbar -->
+            <div class="glass p-4 mb-5 flex flex-wrap items-center gap-3">
+                <p id="teacherLibSummary" class="text-sm text-gray-600 flex-1 min-w-[220px]"></p>
+                <input type="file" id="teacherFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleTeacherFile(event)">
+                <button onclick="document.getElementById('teacherFileInput').click()" class="btn btn-primary btn-sm">📥 นำเข้าครูผู้สอน (.xlsx)</button>
+                <button onclick="exportTeacherLibrary()" class="btn btn-success btn-sm">📤 ส่งออกคลัง (.xlsx)</button>
+            </div>
+
             <!-- Group cards grid -->
             <div id="teacherGroupsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
                 <div class="col-span-full text-center py-12 text-gray-400">
@@ -471,9 +480,16 @@
 
             <!-- Selected group detail -->
             <div id="teacherGroupDetail" class="glass p-6" style="display:none">
-                <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center justify-between mb-3">
                     <h2 class="text-lg font-semibold text-gray-800" id="detailGroupTitle"></h2>
                     <button onclick="closeGroupDetail()" class="btn btn-sm btn-secondary">ปิด</button>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 mb-4 text-sm">
+                    <input type="text" id="tgSearch" class="teacher-input" style="min-width:200px" placeholder="ค้นหารหัส/ชื่อวิชา/ครู..." oninput="renderGroupSubjects()">
+                    <select id="tgSem" class="teacher-input" style="min-width:0" onchange="renderGroupSubjects()"><option value="">ทุกภาคเรียน</option><option value="1">เทอม 1</option><option value="2">เทอม 2</option></select>
+                    <label class="flex items-center gap-1"><input type="checkbox" id="tgOnlyEmpty" onchange="renderGroupSubjects()"> เฉพาะที่ยังไม่ระบุครู</label>
+                    <label class="flex items-center gap-1"><input type="checkbox" id="tgOnlyFail" onchange="renderGroupSubjects()"> เฉพาะวิชาที่มีผู้ติด</label>
+                    <span id="tgCount" class="text-gray-400 ml-auto"></span>
                 </div>
                 <div id="detailSubjectList"></div>
             </div>
@@ -590,6 +606,27 @@
                 </div>
             </div>
 
+            <!-- Section: ผู้ลงนามในแบบฟอร์ม -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <span style="font-size:1.1rem">✍️</span>
+                    <h3 class="font-semibold text-gray-700">ผู้ลงนามในแบบฟอร์มคำร้อง (วก.กทว.101 / 102)</h3>
+                </div>
+                <div class="settings-section-body">
+                    <p class="text-sm text-gray-500 mb-4">ชื่อที่จะพิมพ์ใต้ช่องลงนามในเอกสาร — ค่าเริ่มต้นคือผู้ลงนามปัจจุบัน แก้ไขได้ที่นี่เมื่อมีการเปลี่ยนตัวบุคคล</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                        <label class="text-sm text-gray-600">เจ้าหน้าที่ทะเบียนวัดผล<input type="text" id="fo-registrar" class="teacher-input w-full" style="width:100%"></label>
+                        <label class="text-sm text-gray-600">หัวหน้ากลุ่มบริหารงานวิชาการ<input type="text" id="fo-academicHead" class="teacher-input w-full" style="width:100%"></label>
+                        <label class="text-sm text-gray-600">รองผู้อำนวยการโรงเรียน<input type="text" id="fo-deputy" class="teacher-input w-full" style="width:100%"></label>
+                        <label class="text-sm text-gray-600">ผู้อำนวยการโรงเรียน<input type="text" id="fo-director" class="teacher-input w-full" style="width:100%"></label>
+                    </div>
+                    <div class="flex gap-3 flex-wrap">
+                        <button onclick="saveFormOfficials()" class="btn btn-primary">บันทึกผู้ลงนาม</button>
+                        <button onclick="resetFormOfficials()" class="btn btn-secondary">คืนค่าเริ่มต้น (ยังไม่บันทึกจนกดบันทึก)</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Section 3: Data management -->
             <div class="settings-section mb-6">
                 <div class="settings-section-header">
@@ -645,9 +682,9 @@
                     <p class="text-xs text-gray-400 mt-1">💡 ระบบจะจำชื่อที่เคยกรอกไว้ให้อัตโนมัติ</p>
                 </div>
                 <div class="mb-5">
-                    <label class="form-label">รหัสผ่านฝ่ายวิชาการ <span class="text-red-500">*</span></label>
+                    <label class="form-label">รหัสผ่านกลุ่มบริหารงานวิชาการ <span class="text-red-500">*</span></label>
                     <input type="password" id="editPassword" placeholder="กรอกรหัส 4 หลัก" maxlength="4" class="input-field">
-                    <p class="text-xs text-red-400 mt-1">🔒 เฉพาะครูฝ่ายวิชาการเท่านั้น</p>
+                    <p class="text-xs text-red-400 mt-1">🔒 เฉพาะครูกลุ่มบริหารงานวิชาการเท่านั้น</p>
                 </div>
                 <div class="mb-2">
                     <label class="form-label">อัปโหลดภาพใบคำร้อง <span class="text-gray-400 font-normal">(ไม่บังคับ)</span></label>
@@ -695,6 +732,45 @@
     </div>
 
     <!-- ══ LOG MODAL ══ -->
+    <div id="printFormModal" class="modal-overlay" onclick="if(event.target===this)closePrintForm()">
+        <div class="modal-box" style="max-width:760px">
+            <div class="modal-header"><h3>🖨️ พิมพ์แบบฟอร์มคำร้อง</h3></div>
+            <div class="modal-body">
+                <div class="flex gap-2 mb-4">
+                    <button id="pfTab101" onclick="pfSetMode('101')" class="btn btn-sm btn-primary">วก.กทว.101 คำร้องขอสอบแก้ตัว (รายคน)</button>
+                    <button id="pfTab102" onclick="pfSetMode('102')" class="btn btn-sm btn-secondary">วก.กทว.102 แจ้งผลการสอบแก้ตัว (รายวิชา)</button>
+                </div>
+                <div id="pfBody101">
+                    <input type="text" id="pfStuSearch" class="teacher-input" style="width:100%" placeholder="ค้นหาชื่อนักเรียน..." oninput="pfRenderStudentList()">
+                    <select id="pfStuSelect" size="6" class="teacher-input mt-2" style="width:100%" onchange="pfPickStudent(this.value)"></select>
+                    <p id="pfStuCount" class="text-xs text-gray-400 mt-1 mb-3"></p>
+                    <div class="flex flex-wrap gap-3 mb-3 text-sm">
+                        <label class="text-gray-600">ชั้น ม. <input type="text" id="pfLevel" class="teacher-input" style="width:80px;min-width:0" placeholder="เช่น 2/1"></label>
+                        <label class="text-gray-600">เลขที่ <input type="text" id="pfStudentNo" class="teacher-input" style="width:80px;min-width:0"></label>
+                        <label class="text-gray-600">สอบแก้ตัวครั้งที่ <input type="text" id="pfTimes" class="teacher-input" style="width:80px;min-width:0" value="1"></label>
+                    </div>
+                    <p class="text-sm font-medium text-gray-700 mb-1">เลือกวิชาที่ติด</p>
+                    <div id="pfSubjects"></div>
+                </div>
+                <div id="pfBody102" style="display:none">
+                    <input type="text" id="pfSubSearch" class="teacher-input" style="width:100%" placeholder="ค้นหารหัส/ชื่อวิชา..." oninput="pfRenderSubjectList()">
+                    <select id="pfSubSelect" size="6" class="teacher-input mt-2" style="width:100%" onchange="pfPickSubject(this.value)"></select>
+                    <p id="pfSubCount" class="text-xs text-gray-400 mt-1 mb-3"></p>
+                    <div class="flex flex-wrap gap-3 mb-3 text-sm">
+                        <label class="text-gray-600">ครูผู้สอน <input type="text" id="pfTeacher2" class="teacher-input" style="width:240px;min-width:0"></label>
+                        <label class="text-gray-600">สอบแก้ตัวครั้งที่ <input type="text" id="pfTimes2" class="teacher-input" style="width:80px;min-width:0" value="1"></label>
+                    </div>
+                    <p class="text-sm font-medium text-gray-700 mb-1">เลือกนักเรียน</p>
+                    <div id="pfStudents"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closePrintForm()" class="btn btn-secondary">ปิด</button>
+                <button id="pfGenBtn" onclick="pfGenerate()" class="btn btn-primary">⬇️ สร้างเอกสาร (.docx)</button>
+            </div>
+        </div>
+    </div>
+
     <div id="logModal" class="modal-overlay">
         <div class="modal-box" style="max-width:720px">
             <div class="modal-header"><h3>📋 ประวัติการแก้ไข</h3></div>
@@ -770,6 +846,7 @@
         { id: 'health',  label: 'สุขศึกษาและพลศึกษา',   icon: '⚽', color: '#06b6d4', bg: '#e0f2fe', prefixes: ['พ'] },
         { id: 'arts',    label: 'ศิลปะ',                 icon: '🎨', color: '#8b5cf6', bg: '#ede9fe', prefixes: ['ศ'] },
         { id: 'career',  label: 'การงานอาชีพ',           icon: '🔧', color: '#f97316', bg: '#ffedd5', prefixes: ['ง'] },
+        { id: 'activity', label: 'กิจกรรมพัฒนาผู้เรียน', icon: '🎯', color: '#14b8a6', bg: '#ccfbf1', prefixes: ['ACT'] },
         { id: 'english', label: 'ภาษาต่างประเทศ',        icon: '🌐', color: '#ec4899', bg: '#fce7f3', prefixes: ['อ', 'จ', 'จีน', 'ฝ'] },
     ];
 
@@ -930,11 +1007,7 @@
             if (result.success && result.data && result.data.length > 0) {
                 allData = result.data.map(normalizeRow);
                 // Still load teacher assignments from Firestore for display
-                try {
-                    const tSnap = await db.collection(COL_TEACHERS).get();
-                    teacherAssignments = {};
-                    tSnap.docs.forEach(doc => { teacherAssignments[doc.data().subjectCode] = doc.data().teacherName; });
-                } catch(e) { console.warn('Teacher load (GAS path) failed:', e); }
+                try { await loadTeacherData(); } catch(e) { console.warn('Teacher load (GAS path) failed:', e); }
                 setupAfterLoad();
                 return;
             }
@@ -947,11 +1020,7 @@
 
     async function mergeFirestoreLogs() {
         // Load teacher assignments so displayData and filter dropdown can use them
-        try {
-            const tSnap = await db.collection(COL_TEACHERS).get();
-            teacherAssignments = {};
-            tSnap.docs.forEach(doc => { teacherAssignments[doc.data().subjectCode] = doc.data().teacherName; });
-        } catch(e) { console.warn('mergeFirestoreLogs/teachers error:', e); }
+        try { await loadTeacherData(); } catch(e) { console.warn('mergeFirestoreLogs/teachers error:', e); }
 
         // Merge correction status from logs into allData for display
         try {
@@ -1095,7 +1164,7 @@
         document.getElementById('filterSemester').innerHTML = '<option value="">ทุกภาคเรียน</option>' + sems.map(s=>`<option value="${s}">${s}</option>`).join('');
         // Teacher dropdown — built from teacherAssignments that have subjects in current data
         const codes = [...new Set(base.map(r=>r.รหัสวิชา||'').filter(Boolean))];
-        const teachers = [...new Set(codes.map(c=>teacherAssignments[c]||'').filter(Boolean))].sort();
+        const teachers = [...new Set(codes.flatMap(c=>teacherNames(c)))].sort((a,b)=>a.localeCompare(b,'th'));
         document.getElementById('filterTeacher').innerHTML = '<option value="">ทุกครูผู้สอน</option>' + teachers.map(t=>`<option value="${t}">${t}</option>`).join('');
     }
 
@@ -1123,7 +1192,7 @@
             if (year    && r.ชั้นปี !== year) return false;
             if (sem     && r['ภาคเรียน/ปีการศึกษา'] !== sem) return false;
             if (grade   && g !== grade) return false;
-            if (teacher && (teacherAssignments[r.รหัสวิชา||'']||'') !== teacher) return false;
+            if (teacher && !teacherNames(r.รหัสวิชา||'').includes(teacher)) return false;
             if (lsf === '__none' && r.LS_Status) return false;
             if (lsf && lsf !== '__none' && (r.LS_Status||'') !== lsf) return false;
             if (status === 'แก้ไขแล้ว'  && r.Correction_Status !== 'แก้ไขแล้ว') return false;
@@ -1195,7 +1264,8 @@
                 <td class="no-print">
                     <div class="act-row">
                         <button onclick="openQuickEdit(${start+idx})" class="icon-btn quick" title="แก้เกรดด่วน (ไม่ต้องใช้รหัสผ่าน)">⚡ แก้ด่วน</button>
-                        <button onclick="editRecord(${start+idx})" class="icon-btn edit" title="แก้ไข (ใช้รหัสผ่านฝ่ายวิชาการ)">✏️</button>
+                        <button onclick="openPrintFormForRow(${start+idx})" class="icon-btn quick" title="พิมพ์แบบฟอร์มคำร้อง (วก.กทว.101)">🖨️</button>
+                        <button onclick="editRecord(${start+idx})" class="icon-btn edit" title="แก้ไข (ใช้รหัสผ่านกลุ่มบริหารงานวิชาการ)">✏️</button>
                     </div>
                 </td>
             </tr>`;
@@ -1772,46 +1842,58 @@
     }
 
     // ═══════════════════════════════════════════════════════
-    //  TEACHER PAGE
+    //  TEACHER PAGE — คลังรายวิชาและครูผู้สอน (ทุกวิชา)
     // ═══════════════════════════════════════════════════════
-    let teacherAssignments = {}; // subjectCode → teacherName
+    let teacherAssignments = {}; // subjectCode → teacherName (หลายคนคั่นด้วย , )
+    let teacherLibrary = {};     // subjectCode → เอกสารเต็มใน Firestore (ชื่อวิชา ประเภท ชั้น ภาคเรียน หน่วยกิต ครู …)
+    let _tSubjects = [];         // รายวิชาทั้งหมดที่แสดงในหน้านี้ (คลัง + วิชาที่มีนักเรียนติด)
+    let _currentGroupId = null;
+    let _groupSubjects = {};
 
-    async function renderTeacherPage() {
-        const grid = document.getElementById('teacherGroupsGrid');
-        grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><div class="spinner mx-auto mb-3"></div><p>กำลังโหลด...</p></div>`;
+    const teacherNames = code => String(teacherAssignments[code] || '').split(/\s*[,;]\s*/).filter(Boolean);
+    const _splitTeachers = s => String(s || '').split(/\s*[,;\n]\s*/).map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const _esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const _typeRank = t => ({ 'วิชาพื้นฐาน': 0, 'วิชาเพิ่มเติม': 1, 'กิจกรรม': 2 }[t] ?? 3);
 
-        // Load teacher assignments from Firestore
-        try {
-            const snap = await db.collection(COL_TEACHERS).get();
-            teacherAssignments = {};
-            snap.docs.forEach(doc => { teacherAssignments[doc.data().subjectCode] = doc.data().teacherName; });
-        } catch(e) { console.warn('Could not load teacher assignments:', e); }
+    async function loadTeacherData() {
+        const snap = await db.collection(COL_TEACHERS).get();
+        teacherAssignments = {}; teacherLibrary = {};
+        snap.docs.forEach(doc => {
+            const d = doc.data(); if (!d.subjectCode) return;
+            teacherAssignments[d.subjectCode] = d.teacherName || '';
+            teacherLibrary[d.subjectCode] = { ...d, _docId: doc.id };
+        });
+    }
 
-        // Collect unique subjects from allData
-        const subjectMap = {}; // code → { code, name, group }
+    function collectTeacherSubjects() {
+        const map = {};
+        Object.values(teacherLibrary).forEach(l => {
+            map[l.subjectCode] = { code: l.subjectCode, name: l.subjectName || l.subjectCode, type: l.subjectType || '', level: l.level || '', sem: l.semester || '' };
+        });
         filterFailedGrades(allData).forEach(r => {
-            const code = r.รหัสวิชา||'';
-            if (code && !subjectMap[code]) subjectMap[code] = { code, name: r.ชื่อวิชา||code, group: getGroupForSubject(code) };
+            const c = r.รหัสวิชา || ''; if (!c) return;
+            if (!map[c]) map[c] = { code: c, name: r.ชื่อวิชา || c, type: '', level: '', sem: '' };
+            map[c].failCount = (map[c].failCount || 0) + 1;
         });
+        return Object.values(map).map(s => ({ ...s, group: getGroupForSubject(s.code) }));
+    }
 
-        // Group subjects
-        const grouped = {};
-        Object.values(subjectMap).forEach(s => {
-            const gid = s.group.id;
-            if (!grouped[gid]) grouped[gid] = { group: s.group, subjects: [] };
-            grouped[gid].subjects.push(s);
-        });
-
-        if (!Object.keys(grouped).length) {
-            grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><p class="text-lg font-medium">ยังไม่มีข้อมูลวิชา</p><p class="text-sm mt-1">กรุณาโหลดข้อมูลผลการเรียนก่อน</p></div>`;
+    function drawTeacherCards() {
+        const grid = document.getElementById('teacherGroupsGrid');
+        const withTeacher = _tSubjects.filter(s => teacherAssignments[s.code]).length;
+        const failing = _tSubjects.filter(s => s.failCount).length;
+        const sum = document.getElementById('teacherLibSummary');
+        if (sum) sum.innerHTML = `คลังรายวิชา <b>${_tSubjects.length}</b> วิชา · ระบุครูแล้ว <b>${withTeacher}</b> · ยังไม่ระบุ <b>${_tSubjects.length - withTeacher}</b> · วิชาที่มีนักเรียนติดตอนนี้ <b>${failing}</b>`;
+        if (!_tSubjects.length) {
+            grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><p class="text-lg font-medium">ยังไม่มีข้อมูลวิชา</p><p class="text-sm mt-1">กดปุ่ม "นำเข้าครูผู้สอน (.xlsx)" ด้านบน หรือโหลดข้อมูลผลการเรียนก่อน</p></div>`;
             return;
         }
-
+        const grouped = {};
+        _tSubjects.forEach(s => { (grouped[s.group.id] = grouped[s.group.id] || []).push(s); });
         grid.innerHTML = SUBJECT_GROUPS.map(sg => {
-            const g = grouped[sg.id];
-            if (!g) return ''; // ไม่มีวิชาในกลุ่มนี้
-            const count = g.subjects.length;
-            const assigned = g.subjects.filter(s => teacherAssignments[s.code]).length;
+            const subs = grouped[sg.id]; if (!subs) return '';
+            const count = subs.length, assigned = subs.filter(s => teacherAssignments[s.code]).length;
+            const pct = count ? Math.round(assigned / count * 100) : 0;
             return `
             <div class="subject-group-card" onclick="openGroupDetail('${sg.id}')">
                 <div class="group-header">
@@ -1827,69 +1909,732 @@
                 </div>
                 <div class="px-4 pb-3">
                     <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                        <div class="h-full rounded-full transition-all" style="width:${count?Math.round(assigned/count*100):0}%;background:${sg.color}"></div>
+                        <div class="h-full rounded-full transition-all" style="width:${pct}%;background:${sg.color}"></div>
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">ระบุครูผู้สอนแล้ว ${count?Math.round(assigned/count*100):0}%</p>
+                    <p class="text-xs text-gray-400 mt-1">ระบุครูผู้สอนแล้ว ${pct}%</p>
                 </div>
             </div>`;
         }).join('');
     }
 
-    let _currentGroupId = null;
-    let _groupedSubjects = {};
-
-    function openGroupDetail(groupId) {
-        _currentGroupId = groupId;
-        const sg = SUBJECT_GROUPS.find(g=>g.id===groupId);
-        if (!sg) return;
-        const subjectMap = {};
-        filterFailedGrades(allData).forEach(r => {
-            const code = r.รหัสวิชา||'';
-            if (code && getGroupForSubject(code).id===groupId && !subjectMap[code]) {
-                subjectMap[code] = { code, name: r.ชื่อวิชา||code };
-            }
-        });
-        const subjects = Object.values(subjectMap).sort((a,b)=>a.code.localeCompare(b.code));
-        document.getElementById('detailGroupTitle').innerHTML = `<span style="color:${sg.color}">${sg.icon} ${sg.label}</span> — ระบุครูผู้สอน`;
-        document.getElementById('detailSubjectList').innerHTML = subjects.map(s => `
-            <div class="subject-item">
-                <div class="flex-1 min-w-0">
-                    <p class="font-medium text-sm text-gray-800">${s.code}</p>
-                    <p class="text-xs text-gray-500 truncate">${s.name}</p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <input type="text" class="teacher-input" id="tinput-${s.code}"
-                        placeholder="ชื่อครูผู้สอน..." value="${teacherAssignments[s.code]||''}"
-                        list="teacherSuggest">
-                    <button class="save-teacher-btn" onclick="saveTeacher('${s.code}','${s.name.replace(/'/g,"\\'")}')">บันทึก</button>
-                    <span class="teacher-saved" id="tsaved-${s.code}" style="display:none">✓ บันทึกแล้ว</span>
-                </div>
-            </div>`).join('') + `<datalist id="teacherSuggest">${getStoredEditors().map(n=>`<option value="${n}">`).join('')}</datalist>`;
-        document.getElementById('teacherGroupDetail').style.display = '';
-        document.getElementById('teacherGroupDetail').scrollIntoView({behavior:'smooth',block:'start'});
+    async function renderTeacherPage() {
+        const grid = document.getElementById('teacherGroupsGrid');
+        grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><div class="spinner mx-auto mb-3"></div><p>กำลังโหลด...</p></div>`;
+        try { await loadTeacherData(); } catch (e) { console.warn('Could not load teacher assignments:', e); }
+        _tSubjects = collectTeacherSubjects();
+        drawTeacherCards();
+        const det = document.getElementById('teacherGroupDetail');
+        if (_currentGroupId && det && det.style.display !== 'none') renderGroupSubjects();
     }
 
-    function closeGroupDetail() { document.getElementById('teacherGroupDetail').style.display='none'; }
+    function openGroupDetail(groupId) {
+        const sg = SUBJECT_GROUPS.find(g => g.id === groupId); if (!sg) return;
+        _currentGroupId = groupId;
+        document.getElementById('detailGroupTitle').innerHTML = `<span style="color:${sg.color}">${sg.icon} ${sg.label}</span> — ระบุครูผู้สอน`;
+        document.getElementById('tgSearch').value = '';
+        document.getElementById('tgSem').value = '';
+        document.getElementById('tgOnlyEmpty').checked = false;
+        document.getElementById('tgOnlyFail').checked = false;
+        renderGroupSubjects();
+        document.getElementById('teacherGroupDetail').style.display = '';
+        document.getElementById('teacherGroupDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
-    async function saveTeacher(code, name) {
-        const val = (document.getElementById('tinput-'+code)||{}).value || '';
+    function renderGroupSubjects() {
+        const q = (document.getElementById('tgSearch').value || '').trim().toLowerCase();
+        const sem = document.getElementById('tgSem').value;
+        const onlyEmpty = document.getElementById('tgOnlyEmpty').checked;
+        const onlyFail = document.getElementById('tgOnlyFail').checked;
+        const list = _tSubjects
+            .filter(s => s.group.id === _currentGroupId)
+            .filter(s => !sem || String(s.sem) === sem)
+            .filter(s => !onlyEmpty || !teacherAssignments[s.code])
+            .filter(s => !onlyFail || s.failCount)
+            .filter(s => !q || (s.code + ' ' + s.name + ' ' + (teacherAssignments[s.code] || '')).toLowerCase().includes(q))
+            .sort((a, b) => (a.sem || 9) - (b.sem || 9) || _typeRank(a.type) - _typeRank(b.type) || a.code.localeCompare(b.code, 'th'));
+        _groupSubjects = {}; list.forEach(s => { _groupSubjects[s.code] = s; });
+        const chip = (t, cls = 'bg-gray-100 text-gray-600') => `<span class="text-xs px-2 py-0.5 rounded-full ${cls} ml-1">${_esc(t)}</span>`;
+        const names = [...new Set([
+            ...Object.values(teacherLibrary).flatMap(l => (Array.isArray(l.teachers) && l.teachers.length) ? l.teachers : _splitTeachers(l.teacherName)),
+            ...getStoredEditors()
+        ])].sort((a, b) => a.localeCompare(b, 'th'));
+        document.getElementById('tgCount').textContent = `แสดง ${list.length} วิชา`;
+        document.getElementById('detailSubjectList').innerHTML = (list.length ? list.map(s => {
+            const lib = teacherLibrary[s.code] || {};
+            const guess = ['สูง', 'กลาง', 'ต่ำ'].includes(lib.teacherConfidence);
+            const by = lib.creditByCurriculum || {};
+            const credit = by['2569'] ?? by['2568'] ?? by['*'] ?? '';
+            return `
+            <div class="subject-item">
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm text-gray-800">${_esc(s.code)}
+                        ${s.type ? chip(s.type) : ''}${s.level ? chip(s.level) : ''}${s.sem ? chip('เทอม ' + s.sem) : ''}${credit !== '' ? chip(credit + ' นก.') : ''}${s.failCount ? chip('มีผู้ติด ' + s.failCount, 'bg-red-50 text-red-600') : ''}
+                    </p>
+                    <p class="text-xs text-gray-500 truncate">${_esc(s.name)}</p>
+                    ${guess ? `<p class="text-xs mt-0.5" style="color:#b45309" title="${_esc(lib.teacherSource || '')}">⚠️ เดาจากเทอม 1 (ความมั่นใจ${_esc(lib.teacherConfidence)}) — ตรวจแล้วกดบันทึกเพื่อยืนยัน</p>` : ''}
+                </div>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <input type="text" class="teacher-input" id="tinput-${_esc(s.code)}"
+                        placeholder="ชื่อครูผู้สอน (หลายคนคั่นด้วย , )" value="${_esc(teacherAssignments[s.code] || '')}" list="teacherSuggest">
+                    <button class="save-teacher-btn" data-code="${_esc(s.code)}" onclick="saveTeacher(this.dataset.code)">บันทึก</button>
+                    <span class="teacher-saved" id="tsaved-${_esc(s.code)}" style="display:none">✓ บันทึกแล้ว</span>
+                </div>
+            </div>`;
+        }).join('') : `<p class="text-sm text-gray-400 text-center py-6">ไม่พบรายวิชาตามเงื่อนไข</p>`)
+            + `<datalist id="teacherSuggest">${names.map(n => `<option value="${_esc(n)}">`).join('')}</datalist>`;
+    }
+
+    function closeGroupDetail() { document.getElementById('teacherGroupDetail').style.display = 'none'; }
+
+    async function saveTeacher(code) {
+        const s = _groupSubjects[code] || _tSubjects.find(x => x.code === code) || {};
+        const name = s.name || code;
+        const input = document.getElementById('tinput-' + code);
+        const list = _splitTeachers(input ? input.value : '');
+        const joined = list.join(', ');
         try {
-            // Upsert: query existing doc or create new
-            const snap = await db.collection(COL_TEACHERS).where('subjectCode','==',code).limit(1).get();
-            if (!snap.empty) {
-                await db.collection(COL_TEACHERS).doc(snap.docs[0].id).update({ teacherName: val, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-            } else {
-                await db.collection(COL_TEACHERS).add({ subjectCode: code, subjectName: name, teacherName: val, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-            }
-            teacherAssignments[code] = val;
+            const ts = firebase.firestore.FieldValue.serverTimestamp();
+            const payload = { teacherName: joined, teachers: list, teacherSource: 'กรอกเอง', teacherConfidence: list.length ? 'ข้อมูลจริง' : '', updatedAt: ts };
+            const snap = await db.collection(COL_TEACHERS).where('subjectCode', '==', code).limit(1).get();
+            if (!snap.empty) await db.collection(COL_TEACHERS).doc(snap.docs[0].id).update(payload);
+            else await db.collection(COL_TEACHERS).add({ subjectCode: code, subjectName: name, ...payload });
+            teacherAssignments[code] = joined;
+            teacherLibrary[code] = { ...(teacherLibrary[code] || { subjectCode: code, subjectName: name }), teacherName: joined, teachers: list, teacherSource: 'กรอกเอง', teacherConfidence: list.length ? 'ข้อมูลจริง' : '' };
             _needReload = true;
-            const s = document.getElementById('tsaved-'+code);
-            if (s) { s.style.display=''; setTimeout(()=>s.style.display='none',2500); }
-            // Re-render group cards to update progress
-            renderTeacherPage();
-        } catch(e) {
-            Swal.fire({icon:'error',title:'บันทึกไม่สำเร็จ',text:e.message,confirmButtonColor:'#ef4444'});
+            const f = document.getElementById('tsaved-' + code);
+            if (f) { f.style.display = ''; setTimeout(() => f.style.display = 'none', 2500); }
+            drawTeacherCards();
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' });
         }
+    }
+
+    // ── นำเข้าครูผู้สอน (.xlsx) ───────────────────────────
+    // หัวตาราง: รหัสวิชา | ชื่อวิชา | ประเภท | ชั้น | ภาคเรียน | แผนการเรียน | หน่วยกิต (หลักสูตร 2568) | หน่วยกิต (หลักสูตร 2569)
+    //          | ครูผู้สอนคนที่ 1..5 | ที่มาของข้อมูลครู | ความมั่นใจ | Q-Info Course ID   (ต้องมีอย่างน้อย รหัสวิชา)
+    function parseTeacherWorkbook(wb) {
+        let rows = null, sheetName = '';
+        for (const n of wb.SheetNames) {
+            const r = XLSX.utils.sheet_to_json(wb.Sheets[n], { defval: '' });
+            if (r.length && Object.keys(r[0]).some(k => String(k).trim() === 'รหัสวิชา')) { rows = r; sheetName = n; break; }
+        }
+        if (!rows) throw new Error('ไม่พบคอลัมน์ "รหัสวิชา" ในไฟล์ — ต้องมีหัวตาราง เช่น รหัสวิชา, ชื่อวิชา, ครูผู้สอนคนที่ 1');
+        const items = new Map(); let skipped = 0, dup = 0;
+        rows.forEach(r => {
+            const g = {}; Object.keys(r).forEach(k => { g[String(k).replace(/\s+/g, ' ').trim()] = r[k]; });
+            const code = String(g['รหัสวิชา'] ?? '').replace(/\s+/g, '');
+            if (!code) { skipped++; return; }
+            const teachers = [];
+            Object.keys(g).filter(k => /^ครูผู้สอน/.test(k)).sort().forEach(k => _splitTeachers(g[k]).forEach(t => { if (!teachers.includes(t)) teachers.push(t); }));
+            const creditBy = {};
+            Object.keys(g).forEach(k => {
+                if (!/^หน่วยกิต/.test(k)) return;
+                const v = g[k]; if (v === '' || v === null || isNaN(Number(v))) return;
+                const m = k.match(/(\d{4})/); creditBy[m ? m[1] : '*'] = Number(v);
+            });
+            const t = s => String(s ?? '').replace(/\s+/g, ' ').trim();
+            if (items.has(code)) dup++;
+            items.set(code, {
+                code, name: t(g['ชื่อวิชา'] ?? g['รายวิชา']), type: t(g['ประเภท']), level: t(g['ชั้น']), semester: Number(g['ภาคเรียน']) || '',
+                plan: t(g['แผนการเรียน']), teachers, creditBy, source: t(g['ที่มาของข้อมูลครู']) || 'นำเข้าจากไฟล์ .xlsx',
+                conf: t(g['ความมั่นใจ']), cid: t(g['Q-Info Course ID'])
+            });
+        });
+        return { items: [...items.values()], sheetName, skipped, dup };
+    }
+
+    function planTeacherImport(items) {
+        const st = { total: items.length, add: 0, update: 0, same: 0, noTeacher: 0, guess: 0, conflicts: [] };
+        items.forEach(it => {
+            const joined = it.teachers.join(', ');
+            if (!it.teachers.length) st.noTeacher++;
+            if (['สูง', 'กลาง', 'ต่ำ'].includes(it.conf)) st.guess++;
+            const ex = teacherLibrary[it.code];
+            if (!ex) { st.add++; return; }
+            const exT = String(ex.teacherName || '');
+            if (exT && joined && exT !== joined) st.conflicts.push({ code: it.code, name: it.name || ex.subjectName || '', from: exT, to: joined });
+            if (exT === joined && (ex.subjectName || '') === it.name) st.same++; else st.update++;
+        });
+        return st;
+    }
+
+    function handleTeacherFile(ev) {
+        const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
+        if (!f) return;
+        const rd = new FileReader();
+        rd.onload = async e => {
+            try {
+                if (!Object.keys(teacherLibrary).length) { try { await loadTeacherData(); } catch (er) { /* ใช้ข้อมูลในหน้า */ } }
+                const wb = XLSX.read(e.target.result, { type: 'array' });
+                const { items, sheetName, skipped, dup } = parseTeacherWorkbook(wb);
+                if (!items.length) throw new Error('ไม่พบแถวข้อมูลที่มีรหัสวิชา');
+                const st = planTeacherImport(items);
+                const conflictRows = st.conflicts.slice(0, 6).map(c => `<tr><td style="padding:2px 6px">${_esc(c.code)}</td><td style="padding:2px 6px">${_esc(c.from)}</td><td style="padding:2px 6px">→ ${_esc(c.to)}</td></tr>`).join('');
+                const r = await Swal.fire({
+                    icon: 'question', title: `นำเข้า ${st.total} รายวิชา?`, width: 640,
+                    html: `
+                    <div style="text-align:left;font-size:.92rem">
+                        <p style="color:#6b7280;margin-bottom:8px">ไฟล์: ${_esc(f.name)} (ชีต ${_esc(sheetName)})${skipped ? ` · ข้าม ${skipped} แถวที่ไม่มีรหัสวิชา` : ''}${dup ? ` · รหัสซ้ำ ${dup} แถว (ใช้แถวล่าสุด)` : ''}</p>
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-bottom:10px">
+                            <div style="background:#ecfdf5;border-radius:10px;padding:8px"><b style="font-size:1.3rem;color:#059669">${st.add}</b><br><span style="font-size:.75rem">วิชาใหม่</span></div>
+                            <div style="background:#eff6ff;border-radius:10px;padding:8px"><b style="font-size:1.3rem;color:#2563eb">${st.update}</b><br><span style="font-size:.75rem">อัปเดต</span></div>
+                            <div style="background:#f3f4f6;border-radius:10px;padding:8px"><b style="font-size:1.3rem;color:#6b7280">${st.same}</b><br><span style="font-size:.75rem">เหมือนเดิม</span></div>
+                            <div style="background:#fef3c7;border-radius:10px;padding:8px"><b style="font-size:1.3rem;color:#b45309">${st.noTeacher}</b><br><span style="font-size:.75rem">ยังไม่มีครู</span></div>
+                        </div>
+                        ${st.guess ? `<p style="color:#b45309;font-size:.82rem;margin-bottom:6px">⚠️ มี ${st.guess} วิชาที่เป็นครูที่ "เดา" (พื้นเหลืองในไฟล์) — นำเข้าได้ แล้วตรวจ/กดบันทึกยืนยันในหน้านี้ภายหลัง</p>` : ''}
+                        ${st.conflicts.length ? `<p style="margin:6px 0 4px"><b>ครูต่างจากที่ระบุไว้เดิม ${st.conflicts.length} วิชา</b> (แสดง ${Math.min(6, st.conflicts.length)} รายการแรก)</p>
+                            <table style="font-size:.78rem;width:100%;border-collapse:collapse">${conflictRows}</table>` : ''}
+                        <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:.88rem">
+                            <input type="checkbox" id="tiOverwrite" ${st.conflicts.length ? '' : 'checked'}> เขียนทับครูที่เคยระบุไว้ (ถ้าไม่ติ๊ก จะคงชื่อครูเดิม และเติมเฉพาะวิชาที่ยังว่าง)
+                        </label>
+                        <p style="color:#9ca3af;font-size:.75rem;margin-top:6px">ระบบไม่ลบชื่อครูเดิมทิ้ง ถ้าในไฟล์ช่องครูว่าง</p>
+                    </div>`,
+                    showCancelButton: true, confirmButtonText: 'นำเข้า', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5',
+                    preConfirm: () => ({ overwrite: !!document.getElementById('tiOverwrite').checked })
+                });
+                if (!r.isConfirmed) return;
+                await runTeacherImport(items, r.value.overwrite);
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'นำเข้าไม่สำเร็จ', text: err.message, confirmButtonColor: '#ef4444' });
+            }
+        };
+        rd.readAsArrayBuffer(f);
+    }
+
+    async function runTeacherImport(items, overwrite) {
+        Swal.fire({ title: 'กำลังนำเข้า...', html: `<div id="tiProg">0 / ${items.length}</div>`, allowOutsideClick: false, showConfirmButton: false, didOpen: () => Swal.showLoading() });
+        let ok = 0, fail = 0, err = '';
+        try {
+            const snap = await db.collection(COL_TEACHERS).get();
+            const idByCode = {}; snap.docs.forEach(d => { const c = d.data().subjectCode; if (c && !idByCode[c]) idByCode[c] = d.id; });
+            const ts = firebase.firestore.FieldValue.serverTimestamp();
+            for (let i = 0; i < items.length; i += 400) {
+                const part = items.slice(i, i + 400);
+                try {
+                    const b = db.batch();
+                    part.forEach(it => {
+                        const id = idByCode[it.code];
+                        const ref = id ? db.collection(COL_TEACHERS).doc(id) : db.collection(COL_TEACHERS).doc();
+                        const ex = teacherLibrary[it.code];
+                        const keepOld = !!(ex && ex.teacherName && (!overwrite || !it.teachers.length));
+                        const teachers = keepOld ? ((Array.isArray(ex.teachers) && ex.teachers.length) ? ex.teachers : _splitTeachers(ex.teacherName)) : it.teachers;
+                        const data = {
+                            subjectCode: it.code, subjectName: it.name || (ex && ex.subjectName) || it.code,
+                            teacherName: teachers.join(', '), teachers,
+                            subjectType: it.type, level: it.level, semester: it.semester, plan: it.plan,
+                            creditByCurriculum: it.creditBy,
+                            teacherSource: keepOld ? ((ex && ex.teacherSource) || 'กรอกเอง') : it.source,
+                            teacherConfidence: keepOld ? ((ex && ex.teacherConfidence) || '') : it.conf,
+                            qinfoCourseId: it.cid, updatedAt: ts
+                        };
+                        b.set(ref, data, { merge: true });
+                    });
+                    await b.commit(); ok += part.length;
+                } catch (e) { fail += part.length; err = err || e.message; console.error(e); }
+                const p = document.getElementById('tiProg'); if (p) p.textContent = `${Math.min(i + 400, items.length)} / ${items.length}`;
+            }
+        } catch (e) { fail = items.length - ok; err = e.message; }
+        _needReload = true;
+        await renderTeacherPage();
+        Swal.fire({
+            icon: fail ? 'warning' : 'success', title: fail ? 'นำเข้าได้บางส่วน' : 'นำเข้าสำเร็จ',
+            html: `สำเร็จ <b>${ok}</b> รายวิชา${fail ? ` · ไม่สำเร็จ <b>${fail}</b><br><small style="color:#b91c1c">${_esc(err)}</small>` : ''}`,
+            confirmButtonColor: '#10b981'
+        });
+    }
+
+    function exportTeacherLibrary() {
+        const H = ['รหัสวิชา', 'ชื่อวิชา', 'ประเภท', 'ชั้น', 'ภาคเรียน', 'แผนการเรียน', 'หน่วยกิต (หลักสูตร 2568)', 'หน่วยกิต (หลักสูตร 2569)',
+                   'ครูผู้สอนคนที่ 1', 'ครูผู้สอนคนที่ 2', 'ครูผู้สอนคนที่ 3', 'ครูผู้สอนคนที่ 4', 'ครูผู้สอนคนที่ 5', 'ที่มาของข้อมูลครู', 'ความมั่นใจ', 'Q-Info Course ID'];
+        const rows = Object.values(teacherLibrary)
+            .sort((a, b) => (a.semester || 9) - (b.semester || 9) || _typeRank(a.subjectType) - _typeRank(b.subjectType) || String(a.subjectCode).localeCompare(String(b.subjectCode), 'th'))
+            .map(l => {
+                const t = ((Array.isArray(l.teachers) && l.teachers.length) ? l.teachers : _splitTeachers(l.teacherName)).concat(['', '', '', '', '']).slice(0, 5);
+                const by = l.creditByCurriculum || {};
+                return [l.subjectCode, l.subjectName || '', l.subjectType || '', l.level || '', l.semester || '', l.plan || '', by['2568'] ?? '', by['2569'] ?? '', ...t, l.teacherSource || '', l.teacherConfidence || '', l.qinfoCourseId || ''];
+            });
+        const out = rows.length ? rows : [['ท21101', 'ภาษาไทย 1', 'วิชาพื้นฐาน', 'ม.1', 1, 'แผนทั่วไป', 1.5, 1.5, 'ชื่อ นามสกุล (ตัวอย่าง — ลบแถวนี้ก่อนนำเข้า)', '', '', '', '', '', '', '']];
+        const ws = XLSX.utils.aoa_to_sheet([H, ...out]);
+        ws['!cols'] = [11, 44, 13, 7, 9, 15, 13, 13, 22, 22, 22, 22, 22, 46, 11, 13].map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'ครูผู้สอน');
+        const d = new Date();
+        XLSX.writeFile(wb, `คลังรายวิชาครูผู้สอน_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.xlsx`);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  FORM BUILDER — วก.กทว.101 (คำร้องขอสอบแก้ตัว) / วก.กทว.102 (แจ้งผลการสอบแก้ตัว)
+    //  สร้างเป็น .docx ด้วย docx-js + ใส่ <w:cs/> ให้ทุก run ที่มีอักษรไทย (กฎ thai-docx-export)
+    //  → Word ตัดคำไทยถูก ไม่ขึ้นเส้นแดง บรรทัดไม่กระโดด
+    // ═══════════════════════════════════════════════════════
+    // ค่าเริ่มต้นของผู้ลงนาม — เปลี่ยนได้ที่ ตั้งค่า → "ผู้ลงนามในแบบฟอร์ม" (เก็บในเครื่อง + Firestore app_settings/form_officials)
+    const FORM_OFFICIALS_DEFAULT = Object.freeze({
+        registrar:    'นางสาวยุพา ทองคำ',        // เจ้าหน้าที่ทะเบียนวัดผล
+        academicHead: 'นางสาวสุพัฒตา ศรีเมือง',  // หัวหน้ากลุ่มบริหารงานวิชาการ
+        deputy:       'นางสุคันทร บาอินทร์',      // รองผู้อำนวยการโรงเรียน
+        director:     'นางสุนิสา ใจใหญ่'          // ผู้อำนวยการโรงเรียน
+    });
+    const FORM_OFFICIALS_LABELS = {
+        registrar: 'เจ้าหน้าที่ทะเบียนวัดผล', academicHead: 'หัวหน้ากลุ่มบริหารงานวิชาการ',
+        deputy: 'รองผู้อำนวยการโรงเรียน', director: 'ผู้อำนวยการโรงเรียน'
+    };
+    const FORM_OFFICIALS_KEY = 'ktw_form_officials';
+    const COL_APP_SETTINGS = 'app_settings';
+    let FORM_OFFICIALS = { ...FORM_OFFICIALS_DEFAULT };
+
+    function _applyFormOfficials(obj) {
+        Object.keys(FORM_OFFICIALS_DEFAULT).forEach(k => {
+            const v = String((obj && obj[k]) ?? '').replace(/\s+/g, ' ').trim();
+            FORM_OFFICIALS[k] = v || FORM_OFFICIALS_DEFAULT[k];
+        });
+    }
+    function loadFormOfficialsLocal() {
+        try { _applyFormOfficials(JSON.parse(localStorage.getItem(FORM_OFFICIALS_KEY) || 'null')); } catch (e) { /* ใช้ค่าเริ่มต้น */ }
+    }
+    async function loadFormOfficialsRemote() {
+        try {
+            const snap = await db.collection(COL_APP_SETTINGS).doc('form_officials').get();
+            if (snap.exists) { _applyFormOfficials(snap.data()); try { localStorage.setItem(FORM_OFFICIALS_KEY, JSON.stringify(FORM_OFFICIALS)); } catch (e) {} }
+        } catch (e) { console.warn('form_officials remote load skipped:', e.message); }
+    }
+    loadFormOfficialsLocal();
+
+    function renderFormOfficialsSettings() {
+        Object.keys(FORM_OFFICIALS_DEFAULT).forEach(k => {
+            const el = document.getElementById('fo-' + k);
+            if (el) { el.value = FORM_OFFICIALS[k]; el.placeholder = FORM_OFFICIALS_DEFAULT[k]; }
+        });
+    }
+    async function saveFormOfficials() {
+        const obj = {};
+        Object.keys(FORM_OFFICIALS_DEFAULT).forEach(k => { obj[k] = (document.getElementById('fo-' + k) || {}).value || ''; });
+        _applyFormOfficials(obj);
+        try { localStorage.setItem(FORM_OFFICIALS_KEY, JSON.stringify(FORM_OFFICIALS)); } catch (e) {}
+        let remote = true;
+        try { await db.collection(COL_APP_SETTINGS).doc('form_officials').set({ ...FORM_OFFICIALS, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+        catch (e) { remote = false; console.warn('form_officials remote save failed:', e.message); }
+        renderFormOfficialsSettings();
+        Swal.fire({ icon: 'success', title: 'บันทึกผู้ลงนามแล้ว', text: remote ? 'ใช้กับแบบฟอร์ม 101/102 ทุกเครื่องที่เปิดระบบนี้' : 'บันทึกในเครื่องนี้แล้ว (บันทึกขึ้น Firestore ไม่ได้ — ตรวจสอบ Firestore Rules ของ app_settings)', timer: remote ? 2200 : 4500, showConfirmButton: false, toast: true, position: 'top-end' });
+    }
+    function resetFormOfficials() {
+        Object.keys(FORM_OFFICIALS_DEFAULT).forEach(k => { const el = document.getElementById('fo-' + k); if (el) el.value = FORM_OFFICIALS_DEFAULT[k]; });
+    }
+    const FORM_SCHOOL = 'โรงเรียนกระดุมทองวิทยา';
+    const FORM_TH = 'TH SarabunPSK';
+    const FORM_LOGO_B64 = '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';
+
+    let _formLibsPromise = null;
+    function _formLoadScript(src) {
+        return new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = src; s.onload = res;
+            s.onerror = () => rej(new Error('โหลดไลบรารีไม่สำเร็จ (ตรวจสอบอินเทอร์เน็ต): ' + src));
+            document.head.appendChild(s);
+        });
+    }
+    function formLoadLibs() {
+        if (window.docx && window.JSZip) return Promise.resolve();
+        if (!_formLibsPromise) {
+            _formLibsPromise = Promise.all([
+                window.docx  ? null : _formLoadScript('https://cdn.jsdelivr.net/npm/docx@9.0.2/build/index.iife.js'),
+                window.JSZip ? null : _formLoadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js')
+            ]).catch(e => { _formLibsPromise = null; throw e; });
+        }
+        return _formLibsPromise;
+    }
+
+    // ★ ใส่ <w:cs/> ให้ทุก run ที่มีอักษรไทย (สิ่งที่ Word ทำเองตอนพิมพ์)
+    async function formAddThaiCs(blobOrBuffer) {
+        const zip = await JSZip.loadAsync(blobOrBuffer);
+        const THAI = /[฀-๿]/;
+        for (const name of Object.keys(zip.files).filter(n => /^word\/(document|header\d*|footer\d*|footnotes|endnotes)\.xml$/.test(n))) {
+            let xml = await zip.file(name).async('string');
+            xml = xml.replace(/<w:r(?:\s[^>]*)?>[\s\S]*?<\/w:r>/g, r => {
+                if (!THAI.test(r.replace(/<[^>]+>/g, '')) || /<w:cs\b/.test(r)) return r;
+                const rprEnd = r.indexOf('</w:rPr>');
+                if (rprEnd < 0) {
+                    if (r.includes('<w:rPr/>')) return r.replace('<w:rPr/>', '<w:rPr><w:cs/></w:rPr>');
+                    return r.replace(/^(<w:r(?:\s[^>]*)?>)/, '$1<w:rPr><w:cs/></w:rPr>');
+                }
+                // ลำดับตาม schema: ... rtl, cs, em, lang, eastAsianLayout, specVanish, oMath, rPrChange
+                const m = r.slice(0, rprEnd).match(/<w:(em|lang|eastAsianLayout|specVanish|oMath|rPrChange)\b/);
+                const at = m ? m.index : rprEnd;
+                return r.slice(0, at) + '<w:cs/>' + r.slice(at);
+            });
+            zip.file(name, xml);
+        }
+        return zip.generateAsync({
+            type: (typeof Blob !== 'undefined' && blobOrBuffer instanceof Blob) ? 'blob' : 'nodebuffer',
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        });
+    }
+
+    function formKit() {
+        const D = window.docx, PT = 16;
+        const FONT = { ascii: FORM_TH, hAnsi: FORM_TH, cs: FORM_TH, eastAsia: FORM_TH };
+        const RUN_DEF = { font: FONT, size: PT * 2, sizeComplexScript: PT * 2, language: { value: 'th-TH', eastAsia: 'th-TH', bidirectional: 'th-TH' } };
+        const cl = s => String(s ?? '').replace(/ /g, ' ').replace(/‌/g, '').replace(/\s*[\r\n]+\s*/g, ' ').replace(/ {2,}/g, ' ');
+        const T = (text, o = {}) => new D.TextRun({ text: cl(text), ...o, ...(o.size ? { sizeComplexScript: o.size } : {}) });
+        const DOT = { type: D.UnderlineType.DOTTED };
+        const dots = n => T('.'.repeat(n));
+        const val = (v, n = 20) => { const s = cl(v).trim(); return s ? T(' ' + s + ' ', { underline: DOT }) : dots(n); };
+        const P = (children, o = {}) => new D.Paragraph({ children: Array.isArray(children) ? children : [children], ...o });
+        const A = D.AlignmentType;
+        const SYM = { font: { ascii: 'Segoe UI Symbol', hAnsi: 'Segoe UI Symbol', cs: 'Segoe UI Symbol', eastAsia: 'Segoe UI Symbol' } };
+        const box = () => T('☐', SYM);                       // ☐
+        const B1 = { style: D.BorderStyle.SINGLE, size: 4, color: '000000' };
+        const B0 = { style: D.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+        const BALL = { top: B1, bottom: B1, left: B1, right: B1 };
+        const BNONE = { top: B0, bottom: B0, left: B0, right: B0 };
+        function cell(content, w, o = {}) {
+            const items = Array.isArray(content) ? content : [content];
+            const paras = items.map(c => (typeof c === 'string')
+                ? P([T(c, o.run || {})], { alignment: o.align || A.LEFT, keepNext: !!o.keepNext })
+                : c);
+            return new D.TableCell({
+                children: paras, width: { size: w, type: D.WidthType.DXA },
+                verticalAlign: o.v || D.VerticalAlign.CENTER, columnSpan: o.span, rowSpan: o.rowSpan,
+                borders: o.borders || BALL, margins: { top: 40, bottom: 40, left: 90, right: 90 }
+            });
+        }
+        const row = (cells, o = {}) => new D.TableRow({ children: cells, cantSplit: true, height: o.h ? { value: o.h, rule: D.HeightRule.ATLEAST } : undefined });
+        const table = (rows, widths) => new D.Table({
+            rows, columnWidths: widths, layout: D.TableLayoutType.FIXED,
+            width: { size: widths.reduce((a, b) => a + b, 0), type: D.WidthType.DXA },
+            borders: { top: B1, bottom: B1, left: B1, right: B1, insideHorizontal: B1, insideVertical: B1 }
+        });
+        const b64u8 = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
+        const logo = () => P([new D.ImageRun({ type: 'jpg', data: b64u8(FORM_LOGO_B64), transformation: { width: 66, height: 67 } })], { alignment: A.CENTER, spacing: { before: 0, after: 60 } });
+        const section = children => ({
+            properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 700, bottom: 700, left: 1134, right: 1134 } } },
+            children
+        });
+        const doc = (sections, title) => new D.Document({
+            creator: 'ระบบจัดการข้อมูลแก้ไขผลการเรียน ' + FORM_SCHOOL, title,
+            styles: { default: { document: { run: RUN_DEF, paragraph: { alignment: A.THAI_DISTRIBUTE, spacing: { before: 0, after: 0, line: 240, lineRule: 'auto' } } } } },
+            sections
+        });
+        return { D, A, T, P, val, dots, box, cell, row, table, logo, section, doc, BNONE, BALL, cl, DOT };
+    }
+
+    const _fmtCredit = v => (v === null || v === undefined || v === '') ? '' : String(v);
+
+    // ── วก.กทว.101 ───────────────────────────────────────
+    // d = { name, level, studentNo, term, year, times, subjects:[{code,name,credit,grade,teacher}] }
+    function form101Children(d, k) {
+        const { D, A, T, P, val, dots, box, cell, row, table, logo, BNONE } = k;
+        const subs = d.subjects || [];
+        const n = Math.max(3, subs.length);
+        const out = [];
+        out.push(P([T('วก.กทว. 101', { size: 28 })], { alignment: A.RIGHT }));
+        out.push(logo());
+        out.push(P([T('แบบคำร้องขอสอบแก้ตัว', { bold: true, size: 36 })], { alignment: A.CENTER }));
+        out.push(P([T('ครั้งที่ '), val(d.times, 10)], { alignment: A.CENTER, spacing: { after: 120 } }));
+        out.push(P([T('เรื่อง', { bold: true }), T('  ขออนุญาตสอบแก้ตัว')], { alignment: A.LEFT }));
+        out.push(P([T('เรียน', { bold: true }), T('  ผู้อำนวยการ' + FORM_SCHOOL)], { alignment: A.LEFT, spacing: { after: 120 } }));
+        out.push(P([
+            T('ข้าพเจ้า'), val(d.name, 38), T(' นักเรียนชั้นมัธยมศึกษาปีที่'), val(d.level, 8),
+            T(' เลขประจำตัว'), val(d.studentNo, 12), T(' มีความประสงค์จะขอสอบแก้ตัวใน ภาคเรียนที่'), val(d.term, 6),
+            T(' ปีการศึกษา'), val(d.year, 8), T(' ซึ่งมีรายวิชาที่ขอสอบ ดังนี้')
+        ], { indent: { firstLine: 1134 }, spacing: { after: 120 }, alignment: A.THAI_DISTRIBUTE }));
+
+        const W1 = [560, 3450, 920, 1250, 2358, 1100];                   // = 9638
+        const hc = (t, w, o = {}) => cell(t, w, { align: A.CENTER, run: { bold: true }, ...o });
+        const rows1 = [
+            row([hc('ที่', W1[0], { rowSpan: 2 }), hc('รหัสวิชา', W1[1], { rowSpan: 2 }), hc('หน่วยกิต', W1[2], { rowSpan: 2 }),
+                 hc('ผลการเรียนเดิม', W1[3], { rowSpan: 2 }), hc('ครูผู้สอน', W1[4] + W1[5], { span: 2 })]),
+            row([hc('ชื่อ - สกุล', W1[4]), hc('ลงชื่อ', W1[5])])
+        ];
+        for (let i = 0; i < n; i++) {
+            const s = subs[i];
+            rows1.push(row([
+                cell(String(i + 1), W1[0], { align: A.CENTER }),
+                cell(s ? [P([T(s.code + ' '), T(s.name || '')], { alignment: A.LEFT })] : '', W1[1]),
+                cell(s ? _fmtCredit(s.credit) : '', W1[2], { align: A.CENTER }),
+                cell(s ? String(s.grade || '') : '', W1[3], { align: A.CENTER }),
+                cell(s ? (s.teacher || '') : '', W1[4]),
+                cell('', W1[5])
+            ], { h: 440 }));
+        }
+        out.push(table(rows1, W1));
+
+        out.push(P([T('จึงเรียนมาเพื่อโปรดพิจารณา')], { indent: { firstLine: 1134 }, spacing: { before: 100, after: 60 }, alignment: A.LEFT }));
+        const sig = { indent: { left: 4600 }, alignment: A.CENTER };
+        out.push(P([T('ลงชื่อ'), dots(30), T('ผู้ยื่นคำร้อง')], { ...sig, spacing: { before: 120 } }));
+        out.push(P([T('('), val(d.name, 30), T(')')], sig));
+
+        const W2 = [620, 2900, 3818, 2300];                               // = 9638
+        const rows2 = [row([hc('ที่', W2[0], { keepNext: true }), hc('ครูผู้อนุญาตให้สอบ', W2[1], { keepNext: true }), hc('กิจกรรม/ภาระงานที่มอบหมาย', W2[2], { keepNext: true }), hc('ระยะเวลาสิ้นสุดส่งงาน', W2[3], { keepNext: true })])];
+        for (let i = 0; i < n; i++) { const kn = i < n - 1; rows2.push(row([cell(String(i + 1), W2[0], { align: A.CENTER, keepNext: kn }), cell('', W2[1], { keepNext: kn }), cell('', W2[2], { keepNext: kn }), cell('', W2[3], { keepNext: kn })], { h: 440 })); }
+        out.push(P([T('')], { spacing: { before: 120 }, keepNext: true }));
+        out.push(table(rows2, W2));
+
+        // ความเห็น — หน้า 2
+        out.push(P([T('ความเห็น', { bold: true, underline: k.DOT })], { alignment: A.LEFT, spacing: { before: 240, after: 120 }, keepNext: true }));
+        const WO = [3000, 6638];
+        const opinion = (role, opts, name, extra) => {
+            const lines = [
+                P([box(), T(' ' + opts[0]), T('        '), box(), T(' ' + opts[1])], { alignment: A.LEFT, spacing: { after: 100 } }),
+                P([T('ลงชื่อ'), dots(40)], { alignment: A.LEFT, spacing: { before: 120 } }),
+                P([T('(' + name + ')')], { alignment: A.LEFT, indent: { left: 700 } })
+            ];
+            if (extra) lines.push(P([T(extra)], { alignment: A.LEFT, indent: { left: 400 } }));
+            return row([cell([P([T(role, { bold: true })], { alignment: A.LEFT })], WO[0], { borders: BNONE, v: D.VerticalAlign.TOP }), cell(lines, WO[1], { borders: BNONE, v: D.VerticalAlign.TOP })], { h: 1700 });
+        };
+        const noB = { top: B0n(D), bottom: B0n(D), left: B0n(D), right: B0n(D), insideHorizontal: B0n(D), insideVertical: B0n(D) };
+        out.push(new D.Table({
+            columnWidths: WO, layout: D.TableLayoutType.FIXED, width: { size: 9638, type: D.WidthType.DXA }, borders: noB,
+            rows: [
+                opinion('เจ้าหน้าที่ทะเบียนวัดผล', ['เห็นควรอนุญาต', 'ไม่ควรอนุญาต'], FORM_OFFICIALS.registrar),
+                opinion('หัวหน้ากลุ่มบริหารงานวิชาการ', ['เห็นควรอนุญาต', 'ไม่ควรอนุญาต'], FORM_OFFICIALS.academicHead),
+                opinion('รองผู้อำนวยการโรงเรียน', ['เห็นควรอนุญาต', 'ไม่ควรอนุญาต'], FORM_OFFICIALS.deputy, 'รองผู้อำนวยการ' + FORM_SCHOOL),
+                opinion('ผู้อำนวยการโรงเรียน', ['อนุญาต', 'ไม่อนุญาต'], FORM_OFFICIALS.director, 'ผู้อำนวยการ' + FORM_SCHOOL)
+            ]
+        }));
+        return out;
+    }
+    function B0n(D) { return { style: D.BorderStyle.NONE, size: 0, color: 'FFFFFF' }; }
+
+    // ── วก.กทว.102 ───────────────────────────────────────
+    // d = { subjectName, subjectCode, term, year, times, teacher, students:[{name,level,grade}] }
+    function form102Children(d, k) {
+        const { D, A, T, P, val, dots, box, cell, row, table, BNONE } = k;
+        const st = d.students || [];
+        const n = Math.max(5, st.length);
+        const out = [];
+        out.push(P([T('วก.กทว. 102', { size: 28 })], { alignment: A.RIGHT }));
+        out.push(P([T('แบบแจ้งผลการสอบแก้ตัว', { bold: true, size: 36 })], { alignment: A.CENTER, spacing: { before: 200 } }));
+        out.push(P([T('ครั้งที่ '), val(d.times, 10)], { alignment: A.CENTER, spacing: { after: 160 } }));
+        out.push(P([T('เรื่อง', { bold: true }), T('  แจ้งผลการสอบแก้ตัว')], { alignment: A.LEFT }));
+        out.push(P([T('เรียน', { bold: true }), T('  ผู้อำนวยการ' + FORM_SCHOOL)], { alignment: A.LEFT, spacing: { after: 120 } }));
+        out.push(P([
+            T('ตามที่กลุ่มบริหารงานวิชาการได้จัดส่งรายชื่อนักเรียนให้สอบแก้ตัวในรายวิชา'), val(d.subjectName, 24),
+            T(' รหัสวิชา'), val(d.subjectCode, 10), T(' ของภาคเรียนที่'), val(d.term, 6), T(' ปีการศึกษา'), val(d.year, 8),
+            T(' นั้น บัดนี้การสอบแก้ตัวได้ดำเนินการเสร็จสิ้นแล้ว ปรากฏผลการสอบดังนี้')
+        ], { indent: { firstLine: 1134 }, spacing: { after: 140 }, alignment: A.THAI_DISTRIBUTE }));
+
+        const W = [560, 3100, 1500, 1350, 1350, 1778];                    // = 9638
+        const hc = (lines, w) => cell(lines.map(t => P([T(t, { bold: true })], { alignment: A.CENTER })), w, { align: A.CENTER });
+        const rows = [row([hc(['ที่'], W[0]), hc(['ชื่อ - สกุล'], W[1]), hc(['ชั้น ม.', '(ปัจจุบัน)'], W[2]),
+                           hc(['ผลการเรียน', 'เดิม'], W[3]), hc(['ผลการสอบ', 'แก้ตัว'], W[4]), hc(['หมายเหตุ'], W[5])], { h: 700 })];
+        for (let i = 0; i < n; i++) {
+            const s = st[i];
+            rows.push(row([cell(String(i + 1), W[0], { align: A.CENTER }), cell(s ? s.name : '', W[1]), cell(s ? String(s.level || '') : '', W[2], { align: A.CENTER }),
+                           cell(s ? String(s.grade || '') : '', W[3], { align: A.CENTER }), cell('', W[4]), cell('', W[5])], { h: 480 }));
+        }
+        out.push(table(rows, W));
+
+        out.push(P([T('จึงเรียนมาเพื่อโปรดพิจารณา')], { indent: { firstLine: 1134 }, spacing: { before: 160, after: 120 }, alignment: A.LEFT }));
+        const sig = { indent: { left: 4000 }, alignment: A.CENTER };
+        out.push(P([T('ลงชื่อ'), dots(32)], { ...sig, spacing: { before: 100 } }));
+        out.push(P([T('('), val(d.teacher, 30), T(') ครูประจำวิชา')], sig));
+        out.push(P([T('...../.........../.........')], sig));
+
+        const WO = [3200, 3000, 3438];
+        const noB = { top: B0n(D), bottom: B0n(D), left: B0n(D), right: B0n(D), insideHorizontal: B0n(D), insideVertical: B0n(D) };
+        const opRow = (role, opts, name) => row([
+            cell([P([T(role, { bold: true })], { alignment: A.LEFT })], WO[0], { borders: BNONE, v: D.VerticalAlign.TOP }),
+            cell([P([box(), T(' ' + opts[0])], { alignment: A.LEFT }), P([box(), T(' ' + opts[1])], { alignment: A.LEFT })], WO[1], { borders: BNONE, v: D.VerticalAlign.TOP }),
+            cell([P([T('ลงชื่อ'), dots(24)], { alignment: A.LEFT }), P([T('(' + name + ')')], { alignment: A.LEFT, indent: { left: 500 } }),
+                  P([T('...../.........../.........')], { alignment: A.LEFT, indent: { left: 500 } })], WO[2], { borders: BNONE, v: D.VerticalAlign.TOP })
+        ], { h: 1250 });
+        out.push(P([T('ความเห็นกลุ่มบริหารงานวิชาการ', { bold: true, underline: k.DOT })], { alignment: A.LEFT, spacing: { before: 240, after: 80 }, keepNext: true }));
+        out.push(new D.Table({
+            columnWidths: WO, layout: D.TableLayoutType.FIXED, width: { size: 9638, type: D.WidthType.DXA }, borders: noB,
+            rows: [opRow('หัวหน้ากลุ่มบริหารงานวิชาการ', ['เห็นควรอนุมัติ', 'ไม่ควรอนุมัติ'], FORM_OFFICIALS.academicHead),
+                   opRow('รองผู้อำนวยการโรงเรียน', ['เห็นควรอนุมัติ', 'ไม่ควรอนุมัติ'], FORM_OFFICIALS.deputy)]
+        }));
+        out.push(P([T('คำสั่ง', { bold: true, underline: k.DOT })], { alignment: A.LEFT, spacing: { before: 120, after: 80 }, keepNext: true }));
+        out.push(new D.Table({
+            columnWidths: WO, layout: D.TableLayoutType.FIXED, width: { size: 9638, type: D.WidthType.DXA }, borders: noB,
+            rows: [opRow('ผู้อำนวยการโรงเรียน', ['อนุมัติ', 'ไม่อนุมัติ'], FORM_OFFICIALS.director)]
+        }));
+        return out;
+    }
+
+    // สร้างเอกสาร: kind = '101' | '102', list = อาร์เรย์ข้อมูล (1 รายการ = 1 ชุดแบบฟอร์ม)
+    function formBuildDoc(kind, list) {
+        const k = formKit();
+        const sections = list.map(d => k.section(kind === '101' ? form101Children(d, k) : form102Children(d, k)));
+        return k.doc(sections, kind === '101' ? 'คำร้องขอสอบแก้ตัว วก.กทว.101' : 'แจ้งผลการสอบแก้ตัว วก.กทว.102');
+    }
+    async function formDownloadDocx(kind, list, fileName) {
+        await formLoadLibs();
+        const doc = formBuildDoc(kind, list);
+        const blob = await formAddThaiCs(await window.docx.Packer.toBlob(doc));
+        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: fileName.replace(/[\\/:*?"<>|]/g, '_') + '.docx' });
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    //  PRINT FORM UI — เลือกนักเรียน/วิชา แล้วสร้างแบบฟอร์ม 101 / 102
+    // ═══════════════════════════════════════════════════════
+    const pf = { mode: '101', rows: [], students: [], subjects: [], stu: null, sub: null };
+
+    function pfLevelOf(r) {                         // ชั้นปัจจุบัน → "2" หรือ "2/1"
+        const re = /^(?:ม\.?\s*)?([1-6])(?:\s*[\/\-]\s*(\d{1,2}))?$/;
+        for (const v of [r.ชั้นปี, r.ชั้น]) { const m = re.exec(String(v || '').trim()); if (m) return m[1] + (m[2] ? '/' + m[2] : ''); }
+        return '';
+    }
+    const _lvlFromCode = c => { const a = +String(c)[1], b = +String(c)[2]; return (a === 3 ? 3 : 0) + b; };   // ท21101→1, ท33101→6
+    function pfTermYear(r) {
+        const m = String(r['ภาคเรียน/ปีการศึกษา'] || '').match(/(\d)\s*\/\s*(\d{4})/);
+        return m ? { term: m[1], year: m[2] } : { term: '', year: '' };
+    }
+    function pfCredit(code, year) {                 // หน่วยกิตตามหลักสูตรของรุ่น (ปีที่เข้า ม.1 / ม.4)
+        const by = (teacherLibrary[code] || {}).creditByCurriculum; if (!by) return '';
+        const lv = _lvlFromCode(code), within = lv > 3 ? lv - 3 : lv;
+        const cohort = String(+year - (within - 1));
+        let v = by[cohort];
+        if (v === undefined || v === null || v === '') v = by['2569'] ?? by['2568'] ?? by['*'];
+        return v ?? '';
+    }
+    const pfStuName = r => `${r.คำนำหน้า || ''}${r.ชื่อ || ''} ${r.สกุล || ''}`.trim();
+    const pfStuKey = r => _nm(`${r.คำนำหน้า || ''}${r.ชื่อ || ''}${r.สกุล || ''}`);
+
+    function pfBuildIndex() {
+        const stu = new Map(), sub = new Map();
+        pf.rows.forEach(r => {
+            const sk = pfStuKey(r);
+            if (!stu.has(sk)) stu.set(sk, { key: sk, name: pfStuName(r), level: '', recs: [] });
+            const s = stu.get(sk); s.recs.push(r); if (!s.level) s.level = pfLevelOf(r);
+            const tk = (r.รหัสวิชา || '') + '|' + (r['ภาคเรียน/ปีการศึกษา'] || '');
+            if (!sub.has(tk)) sub.set(tk, { key: tk, code: r.รหัสวิชา || '', name: r.ชื่อวิชา || '', termRaw: r['ภาคเรียน/ปีการศึกษา'] || '', recs: [] });
+            sub.get(tk).recs.push(r);
+        });
+        pf.students = [...stu.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+        pf.subjects = [...sub.values()].sort((a, b) => a.code.localeCompare(b.code, 'th') || a.termRaw.localeCompare(b.termRaw));
+    }
+
+    async function openPrintForm(opts = {}) {
+        pf.rows = filterFailedGrades(allData);
+        if (!pf.rows.length) { Swal.fire({ icon: 'info', title: 'ยังไม่มีข้อมูลผลการเรียนที่ไม่ผ่าน', confirmButtonColor: '#4f46e5' }); return; }
+        loadFormOfficialsRemote();
+        if (!Object.keys(teacherLibrary).length) { try { await loadTeacherData(); } catch (e) { console.warn('teacher data (print form):', e); } }
+        pfBuildIndex();
+        pf.stu = null; pf.sub = null;
+        document.getElementById('pfStuSearch').value = ''; document.getElementById('pfSubSearch').value = '';
+        pfSetMode(opts.mode || '101');
+        document.getElementById('printFormModal').classList.add('show');
+        if (opts.row) {
+            const key = pfStuKey(opts.row);
+            document.getElementById('pfStuSelect').value = key;
+            pfPickStudent(key, opts.row);
+        }
+    }
+    function openPrintFormForRow(i) { const r = filteredData[i]; if (r) openPrintForm({ row: r }); }
+    function closePrintForm() { document.getElementById('printFormModal').classList.remove('show'); }
+
+    function pfSetMode(mode) {
+        pf.mode = mode;
+        document.getElementById('pfBody101').style.display = mode === '101' ? '' : 'none';
+        document.getElementById('pfBody102').style.display = mode === '102' ? '' : 'none';
+        document.getElementById('pfTab101').className = 'btn btn-sm ' + (mode === '101' ? 'btn-primary' : 'btn-secondary');
+        document.getElementById('pfTab102').className = 'btn btn-sm ' + (mode === '102' ? 'btn-primary' : 'btn-secondary');
+        if (mode === '101') pfRenderStudentList(); else pfRenderSubjectList();
+    }
+
+    function pfRenderStudentList() {
+        const q = _nm(document.getElementById('pfStuSearch').value).toLowerCase();
+        const list = pf.students.filter(s => !q || _nm(s.name).toLowerCase().includes(q));
+        const sel = document.getElementById('pfStuSelect');
+        sel.innerHTML = list.slice(0, 400).map(s => {
+            const pend = s.recs.filter(r => r.Correction_Status !== 'แก้ไขแล้ว').length;
+            return `<option value="${_esc(s.key)}">${_esc(s.name)}${s.level ? ' (ม.' + _esc(s.level) + ')' : ''} · ${s.recs.length} วิชา${pend ? '' : ' · แก้ไขแล้วทั้งหมด'}</option>`;
+        }).join('');
+        document.getElementById('pfStuCount').textContent = `พบ ${list.length} คน${list.length > 400 ? ' (แสดง 400 คนแรก พิมพ์ชื่อเพื่อค้นหา)' : ''}`;
+        if (pf.stu && list.some(s => s.key === pf.stu.key)) sel.value = pf.stu.key;
+    }
+
+    function pfPickStudent(key, preRow) {
+        const s = pf.students.find(x => x.key === key); pf.stu = s || null;
+        const box = document.getElementById('pfSubjects');
+        if (!s) { box.innerHTML = ''; return; }
+        document.getElementById('pfLevel').value = s.level;
+        document.getElementById('pfStudentNo').value = '';
+        box.innerHTML = s.recs.map((r, i) => {
+            const ty = pfTermYear(r);
+            const done = r.Correction_Status === 'แก้ไขแล้ว';
+            const checked = preRow ? (r === preRow) : !done;
+            const g = String(r.ผลการเรียน || '').trim();
+            const gb = g === 'ร' ? 'badge-warning' : g === 'มส' ? 'badge-purple' : 'badge-danger';
+            return `
+            <div class="flex items-center gap-3 flex-wrap py-2" style="border-top:1px solid #f1f5f9">
+                <input type="checkbox" id="pfChk-${i}" ${checked ? 'checked' : ''} style="width:18px;height:18px">
+                <div class="flex-1 min-w-[200px]">
+                    <p class="text-sm font-medium text-gray-800">${_esc(r.รหัสวิชา || '')} <span class="font-normal text-gray-600">${_esc(r.ชื่อวิชา || '')}</span></p>
+                    <p class="text-xs text-gray-500">ภาคเรียน ${_esc(r['ภาคเรียน/ปีการศึกษา'] || '—')} · <span class="badge ${gb}">${_esc(g)}</span>${done ? ' · <span style="color:#059669">แก้ไขแล้ว</span>' : ''}</p>
+                </div>
+                <label class="text-xs text-gray-500">หน่วยกิต <input type="text" id="pfCr-${i}" value="${_esc(pfCredit(r.รหัสวิชา || '', ty.year))}" class="teacher-input" style="width:64px;min-width:0;text-align:center"></label>
+                <label class="text-xs text-gray-500">ครูผู้สอน <input type="text" id="pfTc-${i}" value="${_esc(teacherAssignments[r.รหัสวิชา || ''] || '')}" class="teacher-input" style="width:190px;min-width:0"></label>
+            </div>`;
+        }).join('');
+    }
+
+    function pfRenderSubjectList() {
+        const q = (document.getElementById('pfSubSearch').value || '').trim().toLowerCase();
+        const list = pf.subjects.filter(s => !q || (s.code + ' ' + s.name).toLowerCase().includes(q));
+        document.getElementById('pfSubSelect').innerHTML = list.slice(0, 400).map(s =>
+            `<option value="${_esc(s.key)}">${_esc(s.code)} ${_esc(s.name)} · ${_esc(s.termRaw || '—')} · ${s.recs.length} คน</option>`).join('');
+        document.getElementById('pfSubCount').textContent = `พบ ${list.length} รายการ`;
+        if (pf.sub && list.some(s => s.key === pf.sub.key)) document.getElementById('pfSubSelect').value = pf.sub.key;
+    }
+
+    function pfPickSubject(key) {
+        const s = pf.subjects.find(x => x.key === key); pf.sub = s || null;
+        const box = document.getElementById('pfStudents');
+        if (!s) { box.innerHTML = ''; return; }
+        document.getElementById('pfTeacher2').value = teacherAssignments[s.code] || '';
+        box.innerHTML = s.recs.slice().sort((a, b) => pfStuName(a).localeCompare(pfStuName(b), 'th')).map((r, i) => {
+            const done = r.Correction_Status === 'แก้ไขแล้ว';
+            return `
+            <div class="flex items-center gap-3 flex-wrap py-2" style="border-top:1px solid #f1f5f9">
+                <input type="checkbox" id="pfSChk-${i}" ${done ? '' : 'checked'} style="width:18px;height:18px">
+                <div class="flex-1 min-w-[200px]"><p class="text-sm font-medium text-gray-800">${_esc(pfStuName(r))}</p>
+                    <p class="text-xs text-gray-500">ผลการเรียนเดิม <b>${_esc(r.ผลการเรียน || '')}</b>${done ? ' · <span style="color:#059669">แก้ไขแล้ว</span>' : ''}</p></div>
+                <label class="text-xs text-gray-500">ชั้น ม. <input type="text" id="pfSLv-${i}" value="${_esc(pfLevelOf(r))}" class="teacher-input" style="width:70px;min-width:0;text-align:center"></label>
+            </div>`;
+        }).join('');
+        pf.subSorted = s.recs.slice().sort((a, b) => pfStuName(a).localeCompare(pfStuName(b), 'th'));
+    }
+
+    async function pfGenerate() {
+        const btn = document.getElementById('pfGenBtn');
+        const warn = t => Swal.fire({ icon: 'warning', title: t, confirmButtonColor: '#4f46e5' });
+        try {
+            if (pf.mode === '101') {
+                if (!pf.stu) return warn('เลือกนักเรียนก่อน');
+                const v = id => (document.getElementById(id) || {}).value || '';
+                const picked = pf.stu.recs.map((r, i) => ({ r, i })).filter(x => document.getElementById('pfChk-' + x.i).checked);
+                if (!picked.length) return warn('เลือกวิชาที่ต้องการอย่างน้อย 1 วิชา');
+                const byTerm = new Map();
+                picked.forEach(({ r, i }) => {
+                    const ty = pfTermYear(r), k = ty.term + '/' + ty.year;
+                    if (!byTerm.has(k)) byTerm.set(k, { ty, subjects: [] });
+                    byTerm.get(k).subjects.push({ code: r.รหัสวิชา || '', name: r.ชื่อวิชา || '', credit: v('pfCr-' + i).trim(), grade: String(r.ผลการเรียน || '').trim(), teacher: v('pfTc-' + i).trim() });
+                });
+                const list = [...byTerm.values()].map(g => ({
+                    name: pfStuName(pf.stu.recs[0]), level: v('pfLevel').trim(), studentNo: v('pfStudentNo').trim(),
+                    term: g.ty.term, year: g.ty.year, times: v('pfTimes').trim(), subjects: g.subjects
+                }));
+                btn.disabled = true; btn.textContent = 'กำลังสร้างเอกสาร...';
+                await formDownloadDocx('101', list, `คำร้องขอสอบแก้ตัว วก.กทว.101 - ${pf.stu.name}`);
+            } else {
+                if (!pf.sub) return warn('เลือกรายวิชาก่อน');
+                const v = id => (document.getElementById(id) || {}).value || '';
+                const students = (pf.subSorted || []).map((r, i) => ({ r, i })).filter(x => document.getElementById('pfSChk-' + x.i).checked)
+                    .map(({ r, i }) => ({ name: pfStuName(r), level: v('pfSLv-' + i).trim(), grade: String(r.ผลการเรียน || '').trim() }));
+                if (!students.length) return warn('เลือกนักเรียนอย่างน้อย 1 คน');
+                const ty = pfTermYear(pf.sub.recs[0]);
+                btn.disabled = true; btn.textContent = 'กำลังสร้างเอกสาร...';
+                await formDownloadDocx('102', [{ subjectName: pf.sub.name, subjectCode: pf.sub.code, term: ty.term, year: ty.year, times: v('pfTimes2').trim(), teacher: v('pfTeacher2').trim(), students }],
+                    `แจ้งผลการสอบแก้ตัว วก.กทว.102 - ${pf.sub.code}`);
+            }
+        } catch (e) {
+            console.error(e);
+            Swal.fire({ icon: 'error', title: 'สร้างเอกสารไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' });
+        } finally { btn.disabled = false; btn.textContent = '⬇️ สร้างเอกสาร (.docx)'; }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -1897,6 +2642,8 @@
     // ═══════════════════════════════════════════════════════
     async function renderSettingsPage() {
         renderEditorTags();
+        renderFormOfficialsSettings();
+        loadFormOfficialsRemote().then(renderFormOfficialsSettings);
         refreshFirestoreStats();
     }
 
