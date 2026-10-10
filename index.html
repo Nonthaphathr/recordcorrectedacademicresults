@@ -183,6 +183,47 @@
         @keyframes fadeIn  { from{opacity:0;} to{opacity:1;} }
         @keyframes slideUp { from{opacity:0;transform:translateY(24px)scale(.97);} to{opacity:1;transform:translateY(0)scale(1);} }
 
+        /* ── คู่มือการพิมพ์คำร้อง (mockup animation) ── */
+        .gd-stage { position:relative; height:290px; border-radius:16px; background:linear-gradient(135deg,#eef2ff,#f5f3ff); border:1px solid #e0e7ff; overflow:hidden; }
+        .gd-scene { position:absolute; inset:0; padding:16px; opacity:0; pointer-events:none; transition:opacity .35s; }
+        .gd-scene.on { opacity:1; }
+        .gd-win { background:#fff; border-radius:12px; box-shadow:0 8px 24px rgba(79,70,229,.15); border:1px solid #e5e7eb; overflow:hidden; font-size:12px; }
+        .gd-bar { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; padding:6px 12px; font-weight:600; font-size:12px; }
+        .gd-btn { display:inline-block; padding:5px 10px; border-radius:8px; font-size:11px; color:#fff; font-weight:500; }
+        .gd-b-p { background:#4f46e5; } .gd-b-s { background:#10b981; } .gd-b-i { background:#0ea5e9; } .gd-b-w { background:#f59e0b; } .gd-b-g { background:#e5e7eb; color:#374151; }
+        .gd-row { display:flex; align-items:center; gap:8px; padding:5px 10px; border-top:1px solid #f1f5f9; }
+        .gd-chk { width:14px; height:14px; border:1.5px solid #9ca3af; border-radius:3px; flex:none; position:relative; }
+        .gd-chk::after { content:'✓'; position:absolute; inset:-3px 0 0 1px; font-size:12px; color:#fff; opacity:0; }
+        .gd-cursor { position:absolute; width:22px; height:22px; z-index:5; filter:drop-shadow(0 2px 3px rgba(0,0,0,.35)); left:-40px; top:0; }
+        .gd-cursor svg { width:22px; height:22px; }
+        .gd-input { border:1px solid #d1d5db; border-radius:6px; padding:3px 7px; min-width:60px; background:#fff; font-size:11px; display:inline-block; }
+        .gd-paper { background:#fff; width:190px; height:100%; margin:0 auto; border-radius:4px; box-shadow:0 6px 20px rgba(0,0,0,.18); padding:10px 12px; }
+        .gd-ln { height:5px; border-radius:3px; background:#d1d5db; margin:5px 0; transform-origin:left; transform:scaleX(0); }
+        .gd-tag { display:inline-block; background:#fef3c7; color:#92400e; border-radius:999px; padding:1px 8px; font-size:10px; }
+        @keyframes gdPress { 0%,100%{transform:scale(1);box-shadow:none} 50%{transform:scale(.93);box-shadow:0 0 0 6px rgba(79,70,229,.3)} }
+        @keyframes gdPop { from{opacity:0;transform:translateY(10px) scale(.96)} to{opacity:1;transform:none} }
+        @keyframes gdTick { to{background:#4f46e5;border-color:#4f46e5} }
+        @keyframes gdTickMark { to{opacity:1} }
+        @keyframes gdGrow { to{transform:scaleX(1)} }
+        @keyframes gdType { from{max-width:0} to{max-width:120px} }
+        @keyframes gdGlow { 0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0)} 50%{box-shadow:0 0 0 4px rgba(245,158,11,.5)} }
+        @keyframes gdBar { from{width:0} to{width:100%} }
+        @keyframes gdDrop { 0%{opacity:0;transform:translateY(-40px)} 70%{opacity:1;transform:translateY(4px)} 100%{opacity:1;transform:none} }
+        @keyframes gdC1 { 0%{left:-30px;top:200px} 55%{left:var(--cx);top:var(--cy)} 100%{left:var(--cx);top:var(--cy)} }
+        .gd-scene.on .gd-cursor { animation:gdC1 1.6s ease forwards; }
+        .gd-scene.on .gd-press { animation:gdPress .5s 1.6s ease; }
+        .gd-scene.on .gd-pop { animation:gdPop .5s ease both; }
+        .gd-scene.on .gd-tk .gd-chk { animation:gdTick .01s forwards; animation-delay:var(--d); }
+        .gd-scene.on .gd-tk .gd-chk::after { animation:gdTickMark .01s forwards; animation-delay:var(--d); }
+        .gd-scene.on .gd-ln { animation:gdGrow .5s forwards; animation-delay:var(--d); }
+        .gd-scene.on .gd-glow { animation:gdGlow 1s 1s ease 2; }
+        .gd-scene.on .gd-typing { overflow:hidden; white-space:nowrap; animation:gdType 1.2s .4s steps(8) both; display:inline-block; vertical-align:bottom; }
+        .gd-scene.on .gd-prog > i { animation:gdBar 1.4s .4s ease forwards; }
+        .gd-scene.on .gd-drop { animation:gdDrop .6s 1.8s ease both; }
+        .gd-prog { height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden; } .gd-prog > i { display:block; height:100%; width:0; background:linear-gradient(90deg,#4f46e5,#7c3aed); }
+        .gd-dot { width:9px; height:9px; border-radius:50%; background:#c7d2fe; border:0; cursor:pointer; transition:all .2s; } .gd-dot.on { width:26px; border-radius:6px; background:#4f46e5; }
+        .gd-tbar { height:3px; background:#e0e7ff; border-radius:2px; overflow:hidden; margin-top:10px; } .gd-tbar > i { display:block; height:100%; width:0; background:#7c3aed; }
+
         .spinner { display:inline-block; width:22px; height:22px; border:3px solid rgba(79,70,229,.2); border-top-color:#4f46e5; border-radius:50%; animation:spin 0.7s linear infinite; }
         @keyframes spin { to{transform:rotate(360deg);} }
 
@@ -323,6 +364,9 @@
                 <button onclick="navigate('settings')" class="nav-link" id="nav-settings">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     <span class="hidden sm:inline">ตั้งค่า</span>
+                </button>
+                <button onclick="openGuide()" class="nav-link" id="nav-guide" title="คู่มือพิมพ์แบบฟอร์มคำร้อง">
+                    <span>📘</span><span class="hidden sm:inline">คู่มือ</span>
                 </button>
                 <!-- QR button -->
                 <button onclick="openQrModal()" class="nav-link" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 4px 14px rgba(79,70,229,.3);margin-left:4px">
@@ -732,10 +776,127 @@
     </div>
 
     <!-- ══ LOG MODAL ══ -->
+    <!-- ══ GUIDE MODAL — คู่มือพิมพ์แบบฟอร์มคำร้อง ══ -->
+    <div id="guideModal" class="modal-overlay" onclick="if(event.target===this)closeGuide()">
+        <div class="modal-box" style="max-width:640px;display:flex;flex-direction:column;max-height:94vh;overflow:hidden">
+            <div class="modal-header" style="flex:none"><h3>📘 คู่มือ: พิมพ์แบบฟอร์มคำร้องขอสอบแก้ตัว (สำหรับครูวัดผล)</h3></div>
+            <div class="modal-body" style="overflow-y:auto;flex:1;padding:18px 24px">
+                <div class="gd-stage" id="gdStage">
+
+                    <!-- 1 -->
+                    <div class="gd-scene" data-t="1">
+                        <div class="gd-win" style="height:100%;position:relative">
+                            <div class="gd-bar">ระบบจัดการผลการเรียน — หน้าหลัก</div>
+                            <div style="padding:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                                <span class="gd-btn gd-b-p">ค้นหา</span><span class="gd-btn gd-b-g">ล้างตัวกรอง</span><span class="gd-btn gd-b-i">รีเฟรช</span>
+                                <span style="flex:1"></span>
+                                <span class="gd-btn gd-b-s">Export Excel</span>
+                                <span class="gd-btn gd-b-i gd-press gd-glow" id="gdTarget1">🖨️ แบบฟอร์มคำร้อง</span>
+                                <span class="gd-btn gd-b-w">พิมพ์</span>
+                            </div>
+                            <div class="gd-row" style="font-weight:600;background:#f8fafc"><span style="flex:2">ชื่อ-สกุล</span><span style="flex:2">วิชา</span><span style="flex:1">ผล</span><span style="width:70px;text-align:right">จัดการ</span></div>
+                            <div class="gd-row"><span style="flex:2">ด.ญ.ชลิตา ฝางคำ</span><span style="flex:2">พ22104 กรีฑา2</span><span style="flex:1">ร</span><span style="width:70px;text-align:right">⚡ ✏️ <b style="background:#e0f2fe;border-radius:4px;padding:0 3px">🖨️</b></span></div>
+                            <div class="gd-row"><span style="flex:2">ด.ญ.ชลิตา ฝางคำ</span><span style="flex:2">ค22102 คณิตศาสตร์4</span><span style="flex:1">มส</span><span style="width:70px;text-align:right">⚡ ✏️ 🖨️</span></div>
+                            <div class="gd-cursor" style="--cx:440px;--cy:62px"><svg viewBox="0 0 24 24"><path d="M3 2l7 18 2.5-7.5L20 10z" fill="#111" stroke="#fff" stroke-width="1.5"/></svg></div>
+                        </div>
+                    </div>
+
+                    <!-- 2 -->
+                    <div class="gd-scene" data-t="2">
+                        <div class="gd-win gd-pop" style="height:100%;position:relative">
+                            <div class="gd-bar">🖨️ พิมพ์แบบฟอร์มคำร้อง</div>
+                            <div style="padding:8px 12px">
+                                <span class="gd-btn gd-b-p">101 คำร้องขอสอบแก้ตัว (รายคน)</span> <span class="gd-btn gd-b-g">102 แจ้งผลการสอบแก้ตัว (รายวิชา)</span>
+                                <div style="margin-top:8px"><span class="gd-input" style="width:100%;display:block">🔍 <span class="gd-typing">ชลิตา</span></span></div>
+                                <div style="margin-top:6px;border:1px solid #d1d5db;border-radius:6px;overflow:hidden">
+                                    <div style="padding:4px 8px">ด.ญ.ชนิกา สมใจ (ม.2/1) · 1 วิชา</div>
+                                    <div class="gd-glow" style="padding:4px 8px;background:#4f46e5;color:#fff">ด.ญ.ชลิตา ฝางคำ (ม.3/1) · 4 วิชา</div>
+                                    <div style="padding:4px 8px">ด.ช.ชลธี ใจดี (ม.1/2) · 2 วิชา</div>
+                                </div>
+                            </div>
+                            <div class="gd-cursor" style="--cx:200px;--cy:140px"><svg viewBox="0 0 24 24"><path d="M3 2l7 18 2.5-7.5L20 10z" fill="#111" stroke="#fff" stroke-width="1.5"/></svg></div>
+                        </div>
+                    </div>
+
+                    <!-- 3 -->
+                    <div class="gd-scene" data-t="3">
+                        <div class="gd-win" style="height:100%;position:relative">
+                            <div class="gd-bar">🖨️ พิมพ์แบบฟอร์มคำร้อง — ด.ญ.ชลิตา ฝางคำ</div>
+                            <div style="padding:6px 12px;display:flex;gap:8px;flex-wrap:wrap">ชั้น ม. <span class="gd-input gd-glow">3/1</span> เลขที่ <span class="gd-input gd-glow">…</span> สอบแก้ตัวครั้งที่ <span class="gd-input">1</span></div>
+                            <div class="gd-tk">
+                                <div class="gd-row"><i class="gd-chk" style="--d:.5s"></i><span style="flex:2">พ22104 กรีฑา2</span><span class="gd-input">0.5</span><span class="gd-input" style="min-width:110px">นางสาวรัตนา สีฟ้า</span></div>
+                                <div class="gd-row"><i class="gd-chk" style="--d:1.1s"></i><span style="flex:2">อ22222 ภาษาอังกฤษเพิ่มเติม4</span><span class="gd-input">1.5</span><span class="gd-input" style="min-width:110px">นางสาวปริมปภาพร</span></div>
+                                <div class="gd-row"><i class="gd-chk" style="--d:1.7s"></i><span style="flex:2">ค22102 คณิตศาสตร์4</span><span class="gd-input">1.5</span><span class="gd-input" style="min-width:110px">นางสาวรัตนา สีฟ้า</span></div>
+                                <div class="gd-row" style="color:#9ca3af"><i class="gd-chk" style="--d:999s"></i><span style="flex:2">ท22101 ภาษาไทย4 <span class="gd-tag">แก้ไขแล้ว</span></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4 -->
+                    <div class="gd-scene" data-t="4">
+                        <div class="gd-win" style="height:100%;position:relative">
+                            <div class="gd-bar">🖨️ พิมพ์แบบฟอร์มคำร้อง</div>
+                            <div style="padding:14px 16px;color:#6b7280">… เลือกนักเรียนและวิชาเรียบร้อย …</div>
+                            <div style="position:absolute;left:0;right:0;bottom:0;background:#f8fafc;border-top:1px solid #e5e7eb;padding:8px 12px;display:flex;justify-content:flex-end;gap:8px">
+                                <span class="gd-btn gd-b-g">ปิด</span><span class="gd-btn gd-b-p gd-press">⬇️ สร้างเอกสาร (.docx)</span>
+                            </div>
+                            <div style="position:absolute;left:30px;right:30px;top:78px"><div class="gd-prog"><i></i></div><p style="font-size:11px;color:#6b7280;margin-top:4px">กำลังสร้างเอกสาร…</p></div>
+                            <div class="gd-drop" style="position:absolute;left:30px;top:130px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px 12px;color:#1d4ed8">📄 คำร้องขอสอบแก้ตัว วก.กทว.101 - ชลิตา ฝางคำ.docx</div>
+                            <div class="gd-cursor" style="--cx:500px;--cy:240px"><svg viewBox="0 0 24 24"><path d="M3 2l7 18 2.5-7.5L20 10z" fill="#111" stroke="#fff" stroke-width="1.5"/></svg></div>
+                        </div>
+                    </div>
+
+                    <!-- 5 -->
+                    <div class="gd-scene" data-t="5">
+                        <div style="display:flex;gap:14px;height:100%;align-items:stretch">
+                            <div class="gd-paper">
+                                <div style="text-align:center;font-weight:700;font-size:10px">แบบคำร้องขอสอบแก้ตัว</div>
+                                <div class="gd-ln" style="--d:.3s"></div><div class="gd-ln" style="--d:.5s;width:80%"></div>
+                                <div style="border:1px solid #9ca3af;margin:6px 0;padding:3px"><div class="gd-ln" style="--d:.8s"></div><div class="gd-ln" style="--d:1s"></div><div class="gd-ln" style="--d:1.2s"></div></div>
+                                <div class="gd-ln" style="--d:1.4s;width:60%;margin-left:auto"></div>
+                                <div style="border:1px solid #9ca3af;margin:6px 0;padding:3px"><div class="gd-ln" style="--d:1.7s"></div><div class="gd-ln" style="--d:1.9s"></div></div>
+                            </div>
+                            <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;font-size:12px">
+                                <div class="gd-pop" style="animation-delay:.4s">✅ ตรวจชื่อ ชั้น เลขที่ วิชา หน่วยกิต</div>
+                                <div class="gd-pop" style="animation-delay:1s">🖨️ พิมพ์ 2 หน้า (หน้า 2 คือช่องความเห็น)</div>
+                                <div class="gd-pop" style="animation-delay:1.6s">✍️ นักเรียนลงชื่อ → ครูผู้สอนลงชื่อ</div>
+                                <div class="gd-pop" style="animation-delay:2.2s">📌 ผ่านความเห็น: ทะเบียนวัดผล → หัวหน้ากลุ่มบริหารงานวิชาการ → รอง ผอ. → ผอ.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6 -->
+                    <div class="gd-scene" data-t="6">
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;height:100%">
+                            <div class="gd-win gd-pop" style="padding:10px;animation-delay:.1s"><div style="font-size:22px">📄</div><b>แบบ 102</b><p style="color:#6b7280;margin-top:4px">แจ้งผลการสอบแก้ตัว แบบรายวิชา: เลือกวิชา แล้วติ๊กนักเรียนทั้งห้องได้ในใบเดียว</p></div>
+                            <div class="gd-win gd-pop" style="padding:10px;animation-delay:.6s"><div style="font-size:22px">✍️</div><b>เปลี่ยนผู้ลงนาม</b><p style="color:#6b7280;margin-top:4px">ตั้งค่า → "ผู้ลงนามในแบบฟอร์ม" แก้ชื่อ ทะเบียน/หัวหน้า/รอง ผอ./ผอ. ได้เอง</p></div>
+                            <div class="gd-win gd-pop" style="padding:10px;animation-delay:1.1s"><div style="font-size:22px">👩‍🏫</div><b>ครูผู้สอน</b><p style="color:#6b7280;margin-top:4px">ชื่อครูดึงจากเมนู "ระบุผู้สอน" — นำเข้าไฟล์ .xlsx ได้ที่นั่น</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:14px;min-height:76px">
+                    <p class="font-semibold text-indigo-700" id="gdTitle" style="font-size:1rem"></p>
+                    <p class="text-sm text-gray-600 mt-1" id="gdText"></p>
+                </div>
+                <div class="gd-tbar"><i id="gdTimer"></i></div>
+                <div class="flex items-center justify-center gap-2 mt-3" id="gdDots"></div>
+            </div>
+            <div class="modal-footer" style="flex:none;justify-content:space-between;flex-wrap:wrap">
+                <div class="flex gap-2">
+                    <button onclick="guideGo(-1)" class="btn btn-secondary btn-sm">◀ ก่อนหน้า</button>
+                    <button onclick="guideTogglePlay()" id="gdPlayBtn" class="btn btn-secondary btn-sm">⏸ หยุด</button>
+                    <button onclick="guideGo(1)" class="btn btn-secondary btn-sm">ถัดไป ▶</button>
+                </div>
+                <button onclick="closeGuide()" class="btn btn-primary btn-sm">เข้าใจแล้ว ปิดคู่มือ</button>
+            </div>
+        </div>
+    </div>
+
     <div id="printFormModal" class="modal-overlay" onclick="if(event.target===this)closePrintForm()">
-        <div class="modal-box" style="max-width:760px">
-            <div class="modal-header"><h3>🖨️ พิมพ์แบบฟอร์มคำร้อง</h3></div>
-            <div class="modal-body">
+        <div class="modal-box" style="max-width:760px;display:flex;flex-direction:column;max-height:92vh;overflow:hidden">
+            <div class="modal-header" style="flex:none"><h3>🖨️ พิมพ์แบบฟอร์มคำร้อง</h3></div>
+            <div class="modal-body" style="overflow-y:auto;flex:1;min-height:0">
                 <div class="flex gap-2 mb-4">
                     <button id="pfTab101" onclick="pfSetMode('101')" class="btn btn-sm btn-primary">วก.กทว.101 คำร้องขอสอบแก้ตัว (รายคน)</button>
                     <button id="pfTab102" onclick="pfSetMode('102')" class="btn btn-sm btn-secondary">วก.กทว.102 แจ้งผลการสอบแก้ตัว (รายวิชา)</button>
@@ -764,7 +925,7 @@
                     <div id="pfStudents"></div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="flex:none;box-shadow:0 -6px 14px rgba(0,0,0,.06)">
                 <button onclick="closePrintForm()" class="btn btn-secondary">ปิด</button>
                 <button id="pfGenBtn" onclick="pfGenerate()" class="btn btn-primary">⬇️ สร้างเอกสาร (.docx)</button>
             </div>
@@ -941,6 +1102,7 @@
 
         // navigate จะ prompt รหัสถ้าเป็น settings
         navigate(startPage);
+        setTimeout(guideAutoOpen, 1200);   // คู่มือพิมพ์คำร้อง: เด้งครั้งแรกของวัน
     });
 
     // ═══════════════════════════════════════════════════════
@@ -2319,6 +2481,12 @@
     const _fmtCredit = v => (v === null || v === undefined || v === '') ? '' : String(v);
 
     // ── วก.กทว.101 ───────────────────────────────────────
+    // ชื่อครู: ถ้ายังไม่มีคำนำหน้า (นาย/นาง/นางสาว/ครู/อาจารย์) ให้เติม "ครู" นำหน้า; หลายคนคั่นด้วย ,
+    function formTeacherList(t) {
+        return String(t || '').split(/\s*[,;]\s*/).map(x => x.trim()).filter(Boolean)
+            .map(x => /^(ครู|อาจารย์|อ\.|นาย|นาง|นางสาว|ดร\.|ว่าที่)/.test(x) ? x : 'ครู' + x);
+    }
+    const formTeacherTitle = t => formTeacherList(t).join(', ');
     // d = { name, level, studentNo, term, year, times, subjects:[{code,name,credit,grade,teacher}] }
     function form101Children(d, k) {
         const { D, A, T, P, val, dots, box, cell, row, table, logo, BNONE } = k;
@@ -2351,7 +2519,7 @@
                 cell(s ? [P([T(s.code + ' '), T(s.name || '')], { alignment: A.LEFT })] : '', W1[1]),
                 cell(s ? _fmtCredit(s.credit) : '', W1[2], { align: A.CENTER }),
                 cell(s ? String(s.grade || '') : '', W1[3], { align: A.CENTER }),
-                cell(s ? (s.teacher || '') : '', W1[4]),
+                cell(s ? formTeacherTitle(s.teacher) : '', W1[4]),
                 cell('', W1[5])
             ], { h: 440 }));
         }
@@ -2364,7 +2532,9 @@
 
         const W2 = [620, 2900, 3818, 2300];                               // = 9638
         const rows2 = [row([hc('ที่', W2[0], { keepNext: true }), hc('ครูผู้อนุญาตให้สอบ', W2[1], { keepNext: true }), hc('กิจกรรม/ภาระงานที่มอบหมาย', W2[2], { keepNext: true }), hc('ระยะเวลาสิ้นสุดส่งงาน', W2[3], { keepNext: true })])];
-        for (let i = 0; i < n; i++) { const kn = i < n - 1; rows2.push(row([cell(String(i + 1), W2[0], { align: A.CENTER, keepNext: kn }), cell('', W2[1], { keepNext: kn }), cell('', W2[2], { keepNext: kn }), cell('', W2[3], { keepNext: kn })], { h: 440 })); }
+        const tList = [...new Set(subs.flatMap(s => formTeacherList(s.teacher)))];   // ครูผู้สอนของวิชาที่ติด (ไม่ซ้ำ) → ครูผู้อนุญาตให้สอบ
+        const n2 = Math.max(n, tList.length);
+        for (let i = 0; i < n2; i++) { const kn = i < n2 - 1; rows2.push(row([cell(String(i + 1), W2[0], { align: A.CENTER, keepNext: kn }), cell(tList[i] || '', W2[1], { keepNext: kn }), cell('', W2[2], { keepNext: kn }), cell('', W2[3], { keepNext: kn })], { h: 440 })); }
         out.push(P([T('')], { spacing: { before: 120 }, keepNext: true }));
         out.push(table(rows2, W2));
 
@@ -2635,6 +2805,61 @@
             console.error(e);
             Swal.fire({ icon: 'error', title: 'สร้างเอกสารไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' });
         } finally { btn.disabled = false; btn.textContent = '⬇️ สร้างเอกสาร (.docx)'; }
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    //  GUIDE — คู่มือพิมพ์แบบฟอร์มคำร้อง (เด้งครั้งแรกของวัน + ปุ่มบน navbar)
+    // ═══════════════════════════════════════════════════════
+    const GUIDE_DAY_KEY = 'ktw_guide_day';
+    const GUIDE_STEPS = [
+        { t: '① เปิดหน้าพิมพ์แบบฟอร์ม', d: 'ที่หน้าหลัก กดปุ่ม "🖨️ แบบฟอร์มคำร้อง" บนแถบเครื่องมือ หรือกดไอคอน 🖨️ ท้ายแถวของนักเรียนคนนั้น ระบบจะเลือกนักเรียนและวิชานั้นให้อัตโนมัติ' },
+        { t: '② เลือกนักเรียน', d: 'พิมพ์ชื่อเพื่อค้นหา แล้วคลิกชื่อนักเรียนในรายการ (ใช้แบบ 101 สำหรับคำร้องรายคน) ระบบแสดงจำนวนวิชาที่ติดและสถานะแก้ไขแล้วให้ทุกคน' },
+        { t: '③ ติ๊กวิชาที่ติด และตรวจข้อมูล', d: 'ระบบติ๊กวิชาที่ยังไม่แก้ไขไว้ให้ ปรับได้ตามต้องการ ตรวจหน่วยกิตและชื่อครูผู้สอน (แก้ได้) แล้วกรอก ชั้น / เลขที่ / สอบแก้ตัวครั้งที่ ถ้าติดต่างภาคเรียน ระบบแยกเป็นคนละฉบับให้เอง' },
+        { t: '④ กด "สร้างเอกสาร (.docx)"', d: 'ปุ่มสร้างเอกสารอยู่ที่ท้ายหน้าต่างและเห็นตลอดไม่ต้องเลื่อน เมื่อสร้างเสร็จไฟล์ Word จะดาวน์โหลดอัตโนมัติ ภาษาไทยไม่เพี้ยน ไม่ขึ้นเส้นแดง' },
+        { t: '⑤ เปิดใน Word → ตรวจ → พิมพ์ → ลงชื่อ', d: 'เปิดไฟล์ ตรวจความถูกต้อง สั่งพิมพ์ แล้วให้นักเรียนและครูผู้สอนลงชื่อ จากนั้นส่งต่อให้ผู้ลงความเห็นตามลำดับในหน้า 2 ของเอกสาร' },
+        { t: '⑥ เครื่องมือที่เกี่ยวข้อง', d: 'แบบ 102 แจ้งผลการสอบแก้ตัวแบบรายวิชา · เปลี่ยนชื่อผู้ลงนามได้ที่ ตั้งค่า → "ผู้ลงนามในแบบฟอร์ม" · ชื่อครูมาจากเมนู "ระบุผู้สอน" (นำเข้า .xlsx ได้) · เปิดคู่มือนี้ซ้ำได้จากปุ่ม "คู่มือ" บนแถบเมนู' }
+    ];
+    let _gd = { i: 0, play: true, timer: null, raf: null };
+    const GUIDE_MS = 7000;
+
+    function _guideToday() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    function guideAutoOpen() {
+        let seen = null;
+        try { seen = localStorage.getItem(GUIDE_DAY_KEY); } catch (e) {}
+        if (seen === _guideToday()) return;
+        openGuide();
+    }
+    function openGuide() {
+        try { localStorage.setItem(GUIDE_DAY_KEY, _guideToday()); } catch (e) {}
+        const dots = document.getElementById('gdDots');
+        dots.innerHTML = GUIDE_STEPS.map((_, i) => `<button class="gd-dot" onclick="guideShow(${i})" aria-label="ขั้นตอน ${i + 1}"></button>`).join('');
+        _gd.play = true; document.getElementById('gdPlayBtn').textContent = '⏸ หยุด';
+        document.getElementById('guideModal').classList.add('show');
+        guideShow(0);
+    }
+    function closeGuide() { document.getElementById('guideModal').classList.remove('show'); clearTimeout(_gd.timer); }
+    function guideShow(i) {
+        const n = GUIDE_STEPS.length; _gd.i = (i + n) % n;
+        document.querySelectorAll('#gdStage .gd-scene').forEach((el, k) => {
+            el.classList.remove('on');
+            if (k === _gd.i) { void el.offsetWidth; el.classList.add('on'); }        // รีสตาร์ท animation ทุกครั้ง
+        });
+        document.querySelectorAll('#gdDots .gd-dot').forEach((el, k) => el.classList.toggle('on', k === _gd.i));
+        document.getElementById('gdTitle').textContent = GUIDE_STEPS[_gd.i].t;
+        document.getElementById('gdText').textContent = GUIDE_STEPS[_gd.i].d;
+        const tb = document.getElementById('gdTimer'); tb.style.transition = 'none'; tb.style.width = '0';
+        clearTimeout(_gd.timer);
+        if (_gd.play) {
+            void tb.offsetWidth; tb.style.transition = `width ${GUIDE_MS}ms linear`; tb.style.width = '100%';
+            _gd.timer = setTimeout(() => guideShow(_gd.i + 1), GUIDE_MS);
+        }
+    }
+    function guideGo(d) { guideShow(_gd.i + d); }
+    function guideTogglePlay() {
+        _gd.play = !_gd.play;
+        document.getElementById('gdPlayBtn').textContent = _gd.play ? '⏸ หยุด' : '▶ เล่น';
+        guideShow(_gd.i);
     }
 
     // ═══════════════════════════════════════════════════════
