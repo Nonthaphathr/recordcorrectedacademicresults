@@ -1406,7 +1406,7 @@
                 <td><span class="chip-term">${row['ภาคเรียน/ปีการศึกษา']||''}</span></td>
                 <td>
                     <div class="subj-line"><span class="code-chip">${highlight(row.รหัสวิชา||'',qSubj)}</span><span class="subj-name">${row.ชื่อวิชา||''}</span></div>
-                    <div class="subj-meta">เรียนชั้น ${row.ชั้น||'—'}${teacher ? ` · ครู${highlight(teacher,qTeacher)}` : ''}</div>
+                    <div class="subj-meta">เรียนชั้น ${row.ชั้น||'—'}${teacher ? ` · ${highlight(teacher,qTeacher)}` : ''}</div>
                 </td>
                 <td style="text-align:center">
                     <div class="grade-flow">
@@ -2596,7 +2596,8 @@
         out.push(P([T('จึงเรียนมาเพื่อโปรดพิจารณา')], { indent: { firstLine: 1134 }, spacing: { before: 160, after: 120 }, alignment: A.LEFT }));
         const sig = { indent: { left: 4000 }, alignment: A.CENTER };
         out.push(P([T('ลงชื่อ'), dots(32)], { ...sig, spacing: { before: 100 } }));
-        out.push(P([T('('), val(d.teacher, 30), T(') ครูประจำวิชา')], sig));
+        out.push(P([T('('), val(d.teacher, 30), T(')')], sig));
+        out.push(P([T('ครูประจำวิชา')], sig));
         out.push(P([T('...../.........../.........')], sig));
 
         const WO = [3200, 3000, 3438];
