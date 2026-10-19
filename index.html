@@ -337,6 +337,12 @@
             .data-table thead tr { background:#4f46e5 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
             .data-table thead th { color:#fff !important; }
         }
+        /* ── โหมดหน้าตรวจสอบสำหรับครู (?page=check) ── */
+        body.check-mode .navbar { display:none !important; }
+        body.check-mode .container { padding-top:1.5rem; }
+        .ck-radio { text-align:left; display:flex !important; flex-direction:column; gap:8px; align-items:flex-start; font-size:.95rem; }
+        .ck-radio label { display:flex; gap:8px; align-items:center; cursor:pointer; }
+        @media print { .ck-noprint { display:none !important; } }
     </style>
 </head>
 <body>
@@ -453,6 +459,8 @@
                     <div class="flex-1"></div>
                     <button onclick="exportExcel()" class="btn btn-success" data-tooltip="Export Excel">Export Excel</button>
                     <button onclick="openPrintForm()" class="btn btn-info" data-tooltip="พิมพ์แบบฟอร์มคำร้อง วก.กทว.101/102">🖨️ แบบฟอร์มคำร้อง</button>
+                    <button onclick="openExecReport()" class="btn btn-primary" data-tooltip="บันทึกข้อความเสนอผู้บริหาร + ตารางแนบท้ายแยกตามครู">📄 รายงานผู้บริหาร</button>
+                    <button onclick="openCheckLinkModal()" class="btn btn-success" data-tooltip="ลิงก์ให้ครูตรวจสอบนักเรียนที่ติด 0 ร มส ในวิชาของตน">🔗 ลิงก์ตรวจสอบสำหรับครู</button>
                     <button onclick="printData()" class="btn btn-warning" data-tooltip="พิมพ์">พิมพ์</button>
                 </div>
             </div>
@@ -690,6 +698,45 @@
             </div>
 
         </div><!-- /page-settings -->
+
+
+        <!-- ════════════════════════════════════════════════
+             PAGE: CHECK — หน้าตรวจสอบสำหรับครูผู้สอน (?page=check)
+        ════════════════════════════════════════════════ -->
+        <div id="page-check" class="page">
+            <div class="header-card p-6 mb-6 relative z-10">
+                <div class="flex flex-col items-center text-white">
+                    <div class="logo-ring mb-3"><img src="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png" alt="โลโก้" class="w-14 h-14 object-contain"></div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-center mb-1 relative z-10">ตรวจสอบนักเรียนที่ติด 0 ร มส</h1>
+                    <p class="text-indigo-100 text-sm">โรงเรียนกระดุมทองวิทยา · เลือกชื่อครูผู้สอนเพื่อดูรายวิชาที่รับผิดชอบ</p>
+                </div>
+            </div>
+            <div class="glass p-6 mb-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <div><label class="form-label">ครูผู้สอน</label><select id="ckTeacher" class="input-field" onchange="ckTeacherChanged()"><option value="">กำลังโหลดข้อมูล...</option></select></div>
+                    <div><label class="form-label">รายวิชา</label><select id="ckSubject" class="input-field" onchange="ckRender(false)"><option value="">ทุกวิชา</option></select></div>
+                    <div><label class="form-label">ชั้น</label><select id="ckLevel" class="input-field" onchange="ckRender(false)"><option value="">ทุกชั้น</option></select></div>
+                </div>
+                <div class="toolbar">
+                    <label class="flex items-center gap-2 text-sm text-gray-600"><input type="checkbox" id="ckDone" onchange="ckRender(true)"> รวมรายการที่แก้ไขแล้ว</label>
+                    <span id="ckStatus" class="text-sm text-gray-400"></span>
+                    <div class="flex-1"></div>
+                    <button onclick="ckCopyMyLink()" class="btn btn-secondary btn-sm">🔗 คัดลอกลิงก์นี้</button>
+                    <button onclick="ckExcel()" class="btn btn-success ck-act" disabled>📊 ส่งออก Excel</button>
+                    <button onclick="ckPrint()" class="btn btn-warning ck-act" disabled>🖨️ พิมพ์</button>
+                </div>
+            </div>
+            <div id="ckSummary" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
+            <div class="glass overflow-hidden mb-6">
+                <div class="table-wrapper">
+                    <table class="data-table roomy">
+                        <thead><tr><th>ที่</th><th>นักเรียน</th><th>ชั้น</th><th>รายวิชา</th><th>ภาคเรียน</th><th style="text-align:center">ผลการเรียน</th><th>สถานะ</th></tr></thead>
+                        <tbody id="ckBody"><tr><td colspan="7" class="text-center text-gray-400" style="padding:48px 12px">กำลังโหลดข้อมูล...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <p class="text-center text-xs text-gray-400 mb-8">หากพบรายการที่ต้องแก้ไข กรุณาติดต่องานทะเบียนและเทียบโอนผลการเรียน · ระบบพัฒนาโดย ครูนนทพัทธ์ หิรัญเรือง</p>
+        </div><!-- /page-check -->
 
     </div><!-- /container -->
 
@@ -1084,6 +1131,7 @@
     //  INIT
     // ═══════════════════════════════════════════════════════
     document.addEventListener('DOMContentLoaded', async () => {
+        if (_isCheckMode()) { await initCheckMode(); return; }   // หน้าตรวจสอบสำหรับครู (?page=check)
         // Test Firestore connection
         try {
             await db.collection(COL_GRADES).limit(1).get();
@@ -3269,6 +3317,416 @@
             document.body.removeChild(ta);
             Swal.fire({ icon:'success', title:'คัดลอกแล้ว!', timer:1800, timerProgressBar:true, showConfirmButton:false, toast:true, position:'top-end' });
         }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  [ใหม่] รายงานผู้บริหาร (บันทึกข้อความ + ตารางแนบท้ายแยกตามครู)
+    //  และ หน้าตรวจสอบสำหรับครูผู้สอน (?page=check)
+    // ═══════════════════════════════════════════════════════
+    const _TITLE_RE = /^(นางสาว|นาย|นาง|ครู|ว่าที่ร้อยตรี|ดร\.)\s*/;
+    const _tKey = n => String(n || '').replace(/\s+/g, ' ').trim().replace(_TITLE_RE, '').replace(/\s+/g, '');
+    const _stuName = r => `${r.คำนำหน้า || ''}${r.ชื่อ || ''} ${r.สกุล || ''}`.replace(/\s+/g, ' ').trim();
+    const _subjLabel = r => `${r.รหัสวิชา || ''} ${r.ชื่อวิชา || ''}`.trim();
+    const _semOf = r => String(r['ภาคเรียน/ปีการศึกษา'] || '').trim();
+    const _TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    function _thaiDateLong(iso) {
+        const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date();
+        return `${d.getDate()} ${_TH_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`;
+    }
+    function _todayIso() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    function _levelOf(r) {
+        const m = String(r.ชั้น || '').match(/ม\.?\s*([1-6])/);
+        if (m) return 'ม.' + m[1];
+        return String(r.ชั้น || '').trim() || 'ไม่ระบุชั้น';
+    }
+    function _cmpRows(a, b) {
+        return String(a.รหัสวิชา || '').localeCompare(String(b.รหัสวิชา || ''), 'th')
+            || String(a.ชั้น || '').localeCompare(String(b.ชั้น || ''), 'th', { numeric: true })
+            || _stuName(a).localeCompare(_stuName(b), 'th');
+    }
+    function _failRows(includeDone) {
+        return filterFailedGrades(allData).filter(r => includeDone || r.Correction_Status !== 'แก้ไขแล้ว');
+    }
+    // ดัชนีครู: key (ไม่มีคำนำหน้า) → { key, name (แบบมีคำนำหน้า), codes:Set }
+    function _teacherIndex() {
+        const idx = new Map();
+        Object.keys(teacherAssignments).forEach(code => {
+            teacherNames(code).forEach(n => {
+                const k = _tKey(n); if (!k) return;
+                let t = idx.get(k);
+                if (!t) { t = { key: k, name: n, codes: new Set() }; idx.set(k, t); }
+                if (_TITLE_RE.test(n) && n.length >= t.name.length) t.name = n;
+                t.codes.add(code);
+            });
+        });
+        return idx;
+    }
+    function _rowsOfTeacher(key, includeDone) {
+        return _failRows(includeDone).filter(r => teacherNames(r.รหัสวิชา || '').some(n => _tKey(n) === key));
+    }
+    function _copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+        return new Promise((res, rej) => {
+            const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy') ? res() : rej(); } catch (e) { rej(e); } finally { document.body.removeChild(ta); }
+        });
+    }
+    function _toast(icon, title) { Swal.fire({ icon, title, timer: 1800, showConfirmButton: false, toast: true, position: 'top-end' }); }
+
+    // จัดกลุ่มแถว: mode = all | subject | level | level-subject
+    function _groupRows(rows, mode) {
+        if (mode === 'all') return [{ title: '', rows: [...rows].sort(_cmpRows) }];
+        const keyOf = mode === 'subject' ? (r => _subjLabel(r))
+            : mode === 'level' ? (r => _levelOf(r))
+            : (r => _levelOf(r) + '|' + _subjLabel(r));
+        const map = new Map();
+        rows.forEach(r => { const k = keyOf(r); if (!map.has(k)) map.set(k, []); map.get(k).push(r); });
+        return [...map.keys()].sort((a, b) => a.localeCompare(b, 'th', { numeric: true })).map(k => ({
+            title: mode === 'level' ? 'ชั้น ' + k : mode === 'level-subject' ? 'ชั้น ' + k.replace('|', ' · ') : k,
+            rows: map.get(k).sort(_cmpRows)
+        }));
+    }
+    const _MODE_OPTS = {
+        all: 'รวมทั้งหมด (ตารางเดียว)',
+        subject: 'แยกตามรายวิชา (วิชาละหน้า)',
+        level: 'แยกตามชั้น (ชั้นละหน้า)',
+        'level-subject': 'แยกตามชั้นและรายวิชา'
+    };
+
+    // ───────────────────────────────────────────────────────
+    //  1) รายงานผู้บริหาร
+    // ───────────────────────────────────────────────────────
+    const EXEC_MEMO_KEY = 'ktw_exec_memo';
+    const EXEC_DOCNO_PREFIX = 'ศก 51008.08/';
+    const EXEC_GARUDA = 'https://nonthaphathr.github.io/uploadimg/kruda.png';
+
+    function openExecReport() {
+        if (!allData.length) { Swal.fire({ icon: 'info', title: 'ยังไม่มีข้อมูล', text: 'รอให้ระบบโหลดข้อมูลผลการเรียนก่อน', confirmButtonColor: '#4f46e5' }); return; }
+        let last = {};
+        try { last = JSON.parse(localStorage.getItem(EXEC_MEMO_KEY) || '{}') || {}; } catch (e) {}
+        const sems = [...new Set(filterFailedGrades(allData).map(_semOf).filter(Boolean))].sort();
+        const v = (k, d) => _esc(last[k] || d);
+        const F = (id, label, val, ph, type) => `<div style="text-align:left"><label style="font-size:.78rem;color:#6b7280;display:block;margin-bottom:3px">${label}</label>
+            <input id="xr-${id}" type="${type || 'text'}" class="swal2-input" style="margin:0;width:100%;height:40px;font-size:.9rem" value="${val}" placeholder="${ph || ''}"></div>`;
+        Swal.fire({
+            title: '📄 สร้างรายงานผู้บริหาร', width: 760, confirmButtonText: 'สร้างเอกสาร', showCancelButton: true, cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5',
+            html: `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+                ${F('date', 'วันที่ในบันทึกข้อความ', _todayIso(), '', 'date')}
+                ${F('docNo', 'ที่ (เลขที่บันทึกข้อความ)', v('docNo', EXEC_DOCNO_PREFIX), EXEC_DOCNO_PREFIX + '...')}
+                <div style="grid-column:1/3">${F('subject', 'เรื่อง', v('subject', 'รายงานนักเรียนที่มีผลการเรียน 0 ร มส และยังไม่ได้รับการแก้ไข'))}</div>
+                <div style="grid-column:1/3">${F('to', 'เรียน', v('to', 'ผู้อำนวยการโรงเรียนกระดุมทองวิทยา'))}</div>
+                ${F('preparer', 'ผู้จัดทำรายงาน (ชื่อ)', v('preparer', 'นายนนทพัทธ์ หิรัญเรือง'))}
+                ${F('preparerPos', 'ตำแหน่ง/หน้าที่ผู้จัดทำ', v('preparerPos', 'งานทะเบียนและเทียบโอนผลการเรียน'))}
+                ${F('head', 'หัวหน้ากลุ่มบริหารงานวิชาการ', _esc(FORM_OFFICIALS.academicHead))}
+                ${F('deputy', 'รองผู้อำนวยการโรงเรียน', _esc(FORM_OFFICIALS.deputy))}
+                ${F('director', 'ผู้อำนวยการโรงเรียน', _esc(FORM_OFFICIALS.director))}
+                <div style="text-align:left"><label style="font-size:.78rem;color:#6b7280;display:block;margin-bottom:3px">ภาคเรียน/ปีการศึกษา</label>
+                    <select id="xr-sem" class="swal2-select" style="margin:0;width:100%;height:40px;font-size:.9rem"><option value="">ทุกภาคเรียน</option>${sems.map(s => `<option value="${_esc(s)}">${_esc(s)}</option>`).join('')}</select></div>
+                </div>
+                <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:.88rem;text-align:left"><input type="checkbox" id="xr-done"> รวมรายการที่แก้ไขแล้วด้วย (ปกติแสดงเฉพาะที่ยังไม่แก้ไข)</label>
+                <p style="color:#9ca3af;font-size:.75rem;margin-top:6px;text-align:left">ชื่อผู้บริหารเริ่มต้นตามระบบจัดสอนแทน (แก้ค่าถาวรได้ที่ ตั้งค่า → ผู้ลงนามในแบบฟอร์ม) · ผลลัพธ์เป็นบันทึกข้อความ + ตารางแนบท้าย A4 แนวตั้ง แยกตามครู</p>`,
+            preConfirm: () => {
+                const g = id => (document.getElementById('xr-' + id) || {}).value || '';
+                const o = {
+                    date: g('date') || _todayIso(), docNo: g('docNo').trim(), subject: g('subject').trim(), to: g('to').trim(),
+                    preparer: g('preparer').trim(), preparerPos: g('preparerPos').trim(), head: g('head').trim(), deputy: g('deputy').trim(), director: g('director').trim(),
+                    sem: g('sem'), done: !!document.getElementById('xr-done').checked
+                };
+                o.win = window.open('', '_blank');   // เปิดในจังหวะคลิกเพื่อไม่ให้ถูกบล็อก
+                return o;
+            }
+        }).then(res => {
+            if (!res.isConfirmed) return;
+            const o = res.value;
+            try { localStorage.setItem(EXEC_MEMO_KEY, JSON.stringify({ docNo: o.docNo, subject: o.subject, to: o.to, preparer: o.preparer, preparerPos: o.preparerPos })); } catch (e) {}
+            const rows = _failRows(o.done).filter(r => !o.sem || _semOf(r) === o.sem);
+            if (!rows.length) { if (o.win) o.win.close(); Swal.fire({ icon: 'info', title: 'ไม่มีรายการตามเงื่อนไข', confirmButtonColor: '#4f46e5' }); return; }
+            const html = buildExecReportHtml(o, rows);
+            if (!o.win) { Swal.fire({ icon: 'warning', title: 'เบราว์เซอร์บล็อกหน้าต่างใหม่', text: 'กรุณาอนุญาตป๊อปอัปของเว็บนี้ แล้วลองใหม่', confirmButtonColor: '#4f46e5' }); return; }
+            o.win.document.open(); o.win.document.write(html); o.win.document.close();
+        });
+    }
+
+    function buildExecReportHtml(o, rows) {
+        const e = _esc;
+        const dateStr = _thaiDateLong(o.date);
+        const docNo = (!o.docNo || o.docNo === EXEC_DOCNO_PREFIX) ? EXEC_DOCNO_PREFIX + '............' : o.docNo;
+        // จัดกลุ่มตามครู (วิชาที่มีครูหลายคน → ปรากฏทุกคน)
+        const idx = _teacherIndex();
+        const groups = new Map(); const NONE = '__none';
+        rows.forEach(r => {
+            const ns = teacherNames(r.รหัสวิชา || '');
+            const keys = ns.length ? [...new Set(ns.map(_tKey))] : [NONE];
+            keys.forEach(k => { if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+        });
+        const list = [...groups.keys()].map(k => {
+            const rs = groups.get(k).sort(_cmpRows);
+            const nm = k === NONE ? 'ยังไม่ระบุครูผู้สอน' : ((idx.get(k) || {}).name || k);
+            return { key: k, name: nm, rows: rs, c0: rs.filter(r => r.ผลการเรียน === '0').length, cR: rs.filter(r => r.ผลการเรียน === 'ร').length, cM: rs.filter(r => r.ผลการเรียน === 'มส').length, subs: new Set(rs.map(r => r.รหัสวิชา)).size };
+        }).sort((a, b) => (a.key === NONE) - (b.key === NONE) || a.name.localeCompare(b.name, 'th'));
+        const students = new Set(rows.map(_stuName)).size;
+        const subjects = new Set(rows.map(r => r.รหัสวิชา)).size;
+        const c0 = rows.filter(r => r.ผลการเรียน === '0').length, cR = rows.filter(r => r.ผลการเรียน === 'ร').length, cM = rows.filter(r => r.ผลการเรียน === 'มส').length;
+        const teacherCnt = list.filter(g => g.key !== NONE).length;
+
+        // ตารางแนบท้าย: หน้าสรุป + หน้าละครู (แบ่งหน้าละ 24 แถว)
+        const PER = 24;
+        const attach = [];
+        attach.push({ kind: 'summary' });
+        list.forEach(g => {
+            const n = Math.ceil(g.rows.length / PER);
+            for (let i = 0; i < n; i++) attach.push({ kind: 'teacher', g, part: i + 1, parts: n, rows: g.rows.slice(i * PER, (i + 1) * PER), start: i * PER });
+        });
+        const semTxt = o.sem ? ` ภาคเรียน/ปีการศึกษา ${e(o.sem)}` : '';
+        const head = (t1, t2) => `<div class="ah"><div class="ah1">แนบท้ายบันทึกข้อความ ที่ ${e(docNo)} ลงวันที่ ${e(dateStr)}</div>
+            <div class="ah2">${t1}</div><div class="ah3">${t2}</div></div>`;
+        const pagesHtml = attach.map((p, i) => {
+            const pg = `<div class="pn">หน้า ${i + 1}/${attach.length}</div>`;
+            if (p.kind === 'summary') {
+                const body = list.map((g, j) => `<tr><td>${j + 1}</td><td class="l">${e(g.name)}</td><td>${g.subs}</td><td>${g.c0}</td><td>${g.cR}</td><td>${g.cM}</td><td><b>${g.rows.length}</b></td></tr>`).join('');
+                return `<section class="page att">${head('สรุปจำนวนนักเรียนที่มีผลการเรียน 0 ร มส จำแนกตามครูผู้สอน', `โรงเรียนกระดุมทองวิทยา${semTxt}`)}
+                    <table><thead><tr><th style="width:8%">ที่</th><th>ครูผู้สอน</th><th style="width:13%">จำนวนวิชา</th><th style="width:9%">0</th><th style="width:9%">ร</th><th style="width:9%">มส</th><th style="width:13%">รวม (รายการ)</th></tr></thead>
+                    <tbody>${body}<tr class="tot"><td colspan="2">รวมทั้งสิ้น (${students} คน)</td><td>${subjects}</td><td>${c0}</td><td>${cR}</td><td>${cM}</td><td>${rows.length}</td></tr></tbody></table>
+                    <p class="note">หมายเหตุ: วิชาที่มีครูผู้สอนหลายคน นับซ้ำในแต่ละคนของครู จึงอาจรวมมากกว่าจำนวนรายการจริง</p>${pg}</section>`;
+            }
+            const body = p.rows.map((r, j) => `<tr><td>${p.start + j + 1}</td><td class="l">${e(_stuName(r))}</td><td>${e(r.ชั้น || '')}</td><td>${e(r.รหัสวิชา || '')}</td><td class="l">${e(r.ชื่อวิชา || '')}</td><td>${e(_semOf(r))}</td><td><b>${e(r.ผลการเรียน || '')}</b></td></tr>`).join('');
+            const sub = `จำนวน ${p.g.rows.length} รายการ (0 = ${p.g.c0}, ร = ${p.g.cR}, มส = ${p.g.cM})${p.parts > 1 ? ` · แผ่นที่ ${p.part}/${p.parts}` : ''}`;
+            return `<section class="page att">${head(`ครูผู้สอน: ${e(p.g.name)}`, `รายชื่อนักเรียนที่มีผลการเรียน 0 ร มส${semTxt} · ${sub}`)}
+                <table><thead><tr><th style="width:6%">ที่</th><th style="width:25%">ชื่อ-สกุล</th><th style="width:8%">ชั้น</th><th style="width:11%">รหัสวิชา</th><th>ชื่อวิชา</th><th style="width:11%">ภาคเรียน</th><th style="width:7%">ผล</th></tr></thead>
+                <tbody>${body}</tbody></table>${pg}</section>`;
+        }).join('');
+
+        const memo = `<section class="page memo">
+            <div class="mh"><img src="${EXEC_GARUDA}" class="garuda" alt=""><div class="mt">บันทึกข้อความ</div></div>
+            <div class="ln"><b>ส่วนราชการ</b> <span class="dot">กลุ่มบริหารงานวิชาการ โรงเรียนกระดุมทองวิทยา อำเภอกันทรารมย์ จังหวัดศรีสะเกษ</span></div>
+            <div class="ln two"><span><b>ที่</b> <span class="dot">${e(docNo)}</span></span><span><b>วันที่</b> <span class="dot">${e(dateStr)}</span></span></div>
+            <div class="ln"><b>เรื่อง</b> <span class="dot">${e(o.subject || 'รายงานนักเรียนที่มีผลการเรียน 0 ร มส')}</span></div>
+            <div class="ln to"><b>เรียน</b> ${e(o.to || 'ผู้อำนวยการโรงเรียนกระดุมทองวิทยา')}</div>
+            <p class="ind">ด้วย${e(o.preparerPos || 'งานทะเบียนและเทียบโอนผลการเรียน')} กลุ่มบริหารงานวิชาการ ได้ตรวจสอบข้อมูลผลการเรียนของนักเรียนจากระบบจัดการข้อมูลแก้ไขผลการเรียน โรงเรียนกระดุมทองวิทยา ณ วันที่ ${e(dateStr)}${semTxt} พบว่ามีนักเรียนที่มีผลการเรียน 0 ร มส${o.done ? '' : ' และยังไม่ได้รับการแก้ไข'} จำนวน <b>${students}</b> คน รวม <b>${rows.length}</b> รายการ (ผลการเรียน 0 จำนวน ${c0} รายการ ผลการเรียน ร จำนวน ${cR} รายการ ผลการเรียน มส จำนวน ${cM} รายการ) ใน ${subjects} รายวิชา ภายใต้ความรับผิดชอบของครูผู้สอน ${teacherCnt} คน รายละเอียดแยกตามครูผู้สอนดังตารางแนบท้ายนี้ จำนวน ${attach.length} หน้า</p>
+            <p class="ind">ในการนี้ จึงเรียนมาเพื่อโปรดทราบ และโปรดพิจารณามอบหมายให้ครูผู้สอนดำเนินการแก้ไขผลการเรียนของนักเรียนตามระเบียบว่าด้วยการวัดและประเมินผลการเรียนต่อไป</p>
+            <p class="ind">จึงเรียนมาเพื่อโปรดทราบและพิจารณา</p>
+            <div class="sg c"><div>ลงชื่อ........................................</div><div>(${e(o.preparer)})</div><div>${e(o.preparerPos)}</div></div>
+            <div class="cm2">
+                <div class="cm"><div>ความเห็นหัวหน้ากลุ่มบริหารงานวิชาการ</div><div class="d">...................................................................</div>
+                    <div class="sg c"><div>ลงชื่อ........................................</div><div>(${e(o.head)})</div><div>หัวหน้ากลุ่มบริหารงานวิชาการ</div></div></div>
+                <div class="cm"><div>ความเห็นรองผู้อำนวยการโรงเรียน</div><div class="d">...................................................................</div>
+                    <div class="sg c"><div>ลงชื่อ........................................</div><div>(${e(o.deputy)})</div><div>รองผู้อำนวยการโรงเรียนกระดุมทองวิทยา</div></div></div>
+            </div>
+            <div class="cm cm3"><div>ความเห็น/สั่งการ ผู้อำนวยการโรงเรียน</div><div class="d">...................................................................</div>
+                <div class="sg c"><div>ลงชื่อ........................................</div><div>(${e(o.director)})</div><div>ผู้อำนวยการโรงเรียนกระดุมทองวิทยา</div></div></div>
+        </section>`;
+
+        return `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานผู้บริหาร - ผลการเรียน 0 ร มส</title>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+        <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'TH Sarabun New','THSarabunNew','Sarabun',sans-serif;background:#e5e7eb;color:#000}
+        .bar{position:sticky;top:0;z-index:5;background:#312e81;color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;font-size:14px}
+        .bar button{background:#fff;color:#312e81;border:0;border-radius:8px;padding:7px 16px;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px}
+        .page{width:210mm;min-height:297mm;background:#fff;margin:14px auto;padding:14mm 14mm 12mm 22mm;position:relative;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+        .page.att{height:297mm;overflow:hidden}
+        .memo{font-size:14.5pt;line-height:1.28}
+        .mh{position:relative;height:26mm;margin-bottom:2mm}
+        .garuda{position:absolute;left:0;top:0;width:22mm;height:auto}
+        .mt{position:absolute;left:0;right:0;top:6mm;text-align:center;font-size:27pt;font-weight:700}
+        .ln{margin-bottom:1.5mm}
+        .ln.two{display:flex}.ln.two>span:first-child{flex:0 0 52%}
+        .dot{border-bottom:1px dotted #000;padding-bottom:0}
+        .ln.to{margin-top:2mm;margin-bottom:3mm;padding-top:2mm;border-top:1px solid #000}
+        .ind{text-indent:2.5cm;text-align:justify;margin-bottom:2mm}
+        .sg{margin-top:4mm;line-height:1.25}.sg.c{text-align:center;width:88mm;margin-left:auto;margin-right:6mm}
+        .cm2{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin-top:5mm}
+        .cm{font-size:13.5pt;line-height:1.25}.cm .d{margin-top:2mm;overflow:hidden;white-space:nowrap}
+        .cm .sg.c{width:100%;margin-right:0;margin-top:3mm}
+        .cm3{margin-top:4mm;width:52%;margin-left:auto}
+        .att{font-size:12pt;line-height:1.2}
+        .ah{text-align:center;margin-bottom:4mm}.ah1{font-size:10.5pt;text-align:right;color:#444}.ah2{font-size:15pt;font-weight:700;margin-top:2mm}.ah3{font-size:12pt}
+        table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:1.5mm 2mm;text-align:center;vertical-align:middle}th{background:#f1f5f9;font-weight:700}td.l{text-align:left}
+        thead{display:table-header-group}tr{page-break-inside:avoid}tr.tot td{font-weight:700;background:#f8fafc}
+        .note{font-size:10.5pt;color:#444;margin-top:3mm}.pn{position:absolute;bottom:8mm;right:14mm;font-size:10pt;color:#555}
+        @media print{@page{size:A4 portrait;margin:0}body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;page-break-after:always}.page:last-child{page-break-after:auto}
+          *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+        </style></head><body>
+        <div class="bar"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button><span>บันทึกข้อความ 1 หน้า + ตารางแนบท้าย ${attach.length} หน้า (A4 แนวตั้ง · แยกตามครู)</span></div>
+        ${memo}${pagesHtml}</body></html>`;
+    }
+
+    // ───────────────────────────────────────────────────────
+    //  2) ลิงก์ตรวจสอบแจ้งครูผู้สอน
+    // ───────────────────────────────────────────────────────
+    function _checkBaseUrl() { return location.origin + location.pathname + '?page=check'; }
+    function openCheckLinkModal() {
+        const idx = _teacherIndex();
+        const base = _checkBaseUrl();
+        const opts = [...idx.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+        Swal.fire({
+            title: '🔗 ลิงก์ตรวจสอบสำหรับครูผู้สอน', width: 680, showConfirmButton: false, showCloseButton: true,
+            html: `<div style="text-align:left;font-size:.9rem">
+                <p style="color:#6b7280;margin-bottom:10px">ส่งลิงก์นี้ให้ครู — เมื่อคลิกจะเปิดเป็นหน้าใหม่ เลือกชื่อตนเองเพื่อดูนักเรียนที่ติด 0 ร มส ในรายวิชาที่รับผิดชอบ พิมพ์/ส่งออก Excel ได้</p>
+                <label style="font-size:.78rem;color:#6b7280">ลิงก์สำหรับ</label>
+                <select id="lkTeacher" class="swal2-select" style="margin:4px 0 10px;width:100%;height:40px;font-size:.9rem"><option value="">ทุกคน (ให้ครูเลือกชื่อเอง)</option>${opts.map(t => `<option value="${_esc(t.key)}">${_esc(t.name)}</option>`).join('')}</select>
+                <input id="lkUrl" readonly class="swal2-input" style="margin:0 0 10px;width:100%;height:40px;font-size:.82rem" value="${_esc(base)}">
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button id="lkCopy" class="swal2-confirm swal2-styled" style="background:#4f46e5;margin:0">คัดลอกลิงก์</button>
+                    <button id="lkMsg" class="swal2-confirm swal2-styled" style="background:#10b981;margin:0">คัดลอกข้อความแจ้งครู</button>
+                    <button id="lkOpen" class="swal2-confirm swal2-styled" style="background:#6b7280;margin:0">เปิดดูหน้าตรวจสอบ</button>
+                </div></div>`,
+            didOpen: () => {
+                const sel = document.getElementById('lkTeacher'), inp = document.getElementById('lkUrl');
+                const cur = () => sel.value ? base + '&t=' + encodeURIComponent((idx.get(sel.value) || {}).name || '') : base;
+                sel.onchange = () => { inp.value = cur(); };
+                document.getElementById('lkCopy').onclick = () => _copyText(inp.value).then(() => _toast('success', 'คัดลอกลิงก์แล้ว')).catch(() => { inp.select(); _toast('info', 'กด Ctrl+C เพื่อคัดลอก'); });
+                document.getElementById('lkMsg').onclick = () => {
+                    const t = sel.value ? ((idx.get(sel.value) || {}).name || '') : '';
+                    const msg = `เรียน ${t || 'ครูผู้สอน'}\nกลุ่มบริหารงานวิชาการขอให้ตรวจสอบรายชื่อนักเรียนที่มีผลการเรียน 0 ร มส ในรายวิชาที่ท่านรับผิดชอบ ได้ที่ลิงก์ด้านล่าง${t ? '' : ' (เลือกชื่อของท่านจากรายการ)'}\n${inp.value}\nหากพบรายการที่ต้องแก้ไข กรุณาดำเนินการแก้ไขผลการเรียนตามขั้นตอน\n— งานทะเบียนและเทียบโอนผลการเรียน โรงเรียนกระดุมทองวิทยา`;
+                    _copyText(msg).then(() => _toast('success', 'คัดลอกข้อความแล้ว')).catch(() => _toast('error', 'คัดลอกไม่สำเร็จ'));
+                };
+                document.getElementById('lkOpen').onclick = () => window.open(inp.value, '_blank');
+            }
+        });
+    }
+
+    // ───────────────────────────────────────────────────────
+    //  3) หน้าตรวจสอบสำหรับครู (?page=check)
+    // ───────────────────────────────────────────────────────
+    const _isCheckMode = () => new URLSearchParams(location.search).get('page') === 'check';
+    let _ckRows = [];   // แถวที่แสดงอยู่ตอนนี้ (หลังกรองวิชา/ชั้น)
+
+    async function initCheckMode() {
+        document.body.classList.add('check-mode');
+        document.title = 'ตรวจสอบนักเรียนที่ติด 0 ร มส — กระดุมทองวิทยา';
+        document.getElementById('page-check').classList.add('active');
+        const st = document.getElementById('ckStatus');
+        try {
+            await loadData(true);
+            if (!Object.keys(teacherAssignments).length) { try { await loadTeacherData(); } catch (e) {} }
+        } catch (e) { console.warn(e); }
+        st.textContent = '';
+        const idx = _teacherIndex();
+        const opts = [...idx.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+        const sel = document.getElementById('ckTeacher');
+        sel.innerHTML = '<option value="">— เลือกชื่อครูผู้สอน —</option>' + opts.map(t => {
+            const n = _rowsOfTeacher(t.key, false).length;
+            return `<option value="${_esc(t.key)}">${_esc(t.name)}${n ? ` (ค้าง ${n} รายการ)` : ''}</option>`;
+        }).join('');
+        if (!opts.length) st.textContent = 'ยังไม่มีข้อมูลครูผู้สอนในระบบ';
+        const t = new URLSearchParams(location.search).get('t');
+        if (t && idx.has(_tKey(t))) sel.value = _tKey(t);
+        ckRender(true);
+    }
+
+    function ckRender(resetSub) {
+        const key = document.getElementById('ckTeacher').value;
+        const inclDone = document.getElementById('ckDone').checked;
+        const subSel = document.getElementById('ckSubject'), lvSel = document.getElementById('ckLevel');
+        const body = document.getElementById('ckBody'), sum = document.getElementById('ckSummary');
+        const actions = document.querySelectorAll('.ck-act');
+        if (!key) {
+            _ckRows = []; sum.innerHTML = ''; actions.forEach(b => b.disabled = true);
+            subSel.innerHTML = '<option value="">ทุกวิชา</option>'; lvSel.innerHTML = '<option value="">ทุกชั้น</option>';
+            body.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400" style="padding:48px 12px">เลือกชื่อครูผู้สอนด้านบนเพื่อดูรายการ</td></tr>';
+            return;
+        }
+        const all = _rowsOfTeacher(key, inclDone);
+        if (resetSub) {
+            const subs = [...new Map(all.map(r => [r.รหัสวิชา, _subjLabel(r)])).entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'th'));
+            const lvs = [...new Set(all.map(_levelOf))].sort((a, b) => a.localeCompare(b, 'th', { numeric: true }));
+            subSel.innerHTML = '<option value="">ทุกวิชา</option>' + subs.map(([c, l]) => `<option value="${_esc(c)}">${_esc(l)}</option>`).join('');
+            lvSel.innerHTML = '<option value="">ทุกชั้น</option>' + lvs.map(l => `<option value="${_esc(l)}">${_esc(l)}</option>`).join('');
+        }
+        const fs = subSel.value, fl = lvSel.value;
+        _ckRows = all.filter(r => (!fs || r.รหัสวิชา === fs) && (!fl || _levelOf(r) === fl)).sort(_cmpRows);
+        actions.forEach(b => b.disabled = !_ckRows.length);
+        const c = g => _ckRows.filter(r => r.ผลการเรียน === g).length;
+        const pill = (lbl, n, col) => `<div class="stat-card" style="padding:14px;text-align:center"><p class="text-xs text-gray-500">${lbl}</p><p class="stat-number" style="color:${col};font-size:1.8rem">${n}</p></div>`;
+        sum.innerHTML = pill('นักเรียน (คน)', new Set(_ckRows.map(_stuName)).size, '#4f46e5') + pill('รายการทั้งหมด', _ckRows.length, '#4f46e5') + pill('ผล 0', c('0'), '#ef4444') + pill('ผล ร', c('ร'), '#f59e0b') + pill('ผล มส', c('มส'), '#8b5cf6');
+        if (!_ckRows.length) {
+            body.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:48px 12px;color:#059669">🎉 ไม่พบนักเรียนที่ติด 0 ร มส${inclDone ? '' : ' (ที่ยังไม่แก้ไข)'} ในรายวิชาของท่าน</td></tr>`;
+            return;
+        }
+        body.innerHTML = _ckRows.map((r, i) => {
+            const g = r.ผลการเรียน, cls = g === 'ร' ? 'badge-warning' : g === 'มส' ? 'badge-purple' : 'badge-danger';
+            const done = r.Correction_Status === 'แก้ไขแล้ว';
+            return `<tr class="${done ? 'edited-row' : ''}"><td>${i + 1}</td><td>${_esc(_stuName(r))}</td><td>${_esc(r.ชั้น || '')}</td><td>${_esc(_subjLabel(r))}</td><td>${_esc(_semOf(r))}</td>
+                <td style="text-align:center"><span class="badge ${cls}">${_esc(g)}</span></td><td>${done ? `<span class="pill pill-done">แก้ไขแล้ว${r.New_Result ? ' → ' + _esc(r.New_Result) : ''}</span>` : '<span class="pill pill-pending">รอดำเนินการ</span>'}</td></tr>`;
+        }).join('');
+    }
+
+    function ckTeacherChanged() {
+        const sel = document.getElementById('ckTeacher');
+        try {
+            const u = new URL(location.href); const o = sel.options[sel.selectedIndex];
+            if (sel.value) u.searchParams.set('t', o.text.replace(/\s*\(ค้าง.*$/, '')); else u.searchParams.delete('t');
+            history.replaceState(null, '', u.toString());
+        } catch (e) {}
+        ckRender(true);
+    }
+    function _ckTeacherName() {
+        const sel = document.getElementById('ckTeacher'); const o = sel.options[sel.selectedIndex];
+        return o && sel.value ? o.text.replace(/\s*\(ค้าง.*$/, '') : '';
+    }
+    function ckCopyMyLink() { _copyText(location.href).then(() => _toast('success', 'คัดลอกลิงก์แล้ว')).catch(() => _toast('error', 'คัดลอกไม่สำเร็จ')); }
+
+    function _askMode(title, confirmText, withWin) {
+        return Swal.fire({
+            title, input: 'radio', inputOptions: _MODE_OPTS, inputValue: 'all', confirmButtonText: confirmText, showCancelButton: true, cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5',
+            customClass: { input: 'ck-radio' },
+            preConfirm: v => ({ mode: v, win: withWin ? window.open('', '_blank') : null })
+        }).then(r => r.isConfirmed ? r.value : null);
+    }
+
+    async function ckPrint() {
+        if (!_ckRows.length) return;
+        const sel = await _askMode('🖨️ เลือกรูปแบบการพิมพ์', 'พิมพ์', true);
+        if (!sel) return;
+        if (!sel.win) { Swal.fire({ icon: 'warning', title: 'เบราว์เซอร์บล็อกหน้าต่างใหม่', text: 'กรุณาอนุญาตป๊อปอัปแล้วลองใหม่', confirmButtonColor: '#4f46e5' }); return; }
+        const groups = _groupRows(_ckRows, sel.mode);
+        const e = _esc, tName = _ckTeacherName();
+        const dateStr = _thaiDateLong(_todayIso());
+        const showSub = !(sel.mode === 'subject' || sel.mode === 'level-subject'), showLv = !(sel.mode === 'level' || sel.mode === 'level-subject');
+        const sections = groups.map((g, gi) => {
+            const c = k => g.rows.filter(r => r.ผลการเรียน === k).length;
+            const body = g.rows.map((r, i) => `<tr><td>${i + 1}</td><td class="l">${e(_stuName(r))}</td>${showLv ? `<td>${e(r.ชั้น || '')}</td>` : ''}${showSub ? `<td>${e(r.รหัสวิชา || '')}</td><td class="l">${e(r.ชื่อวิชา || '')}</td>` : ''}<td>${e(_semOf(r))}</td><td><b>${e(r.ผลการเรียน || '')}</b></td><td>${r.Correction_Status === 'แก้ไขแล้ว' ? 'แก้ไขแล้ว' : ''}</td></tr>`).join('');
+            return `<section class="sec" style="${gi ? 'page-break-before:always' : ''}">
+                <div class="hd"><div class="t1">รายชื่อนักเรียนที่มีผลการเรียน 0 ร มส</div><div class="t2">โรงเรียนกระดุมทองวิทยา · ครูผู้สอน: ${e(tName)}</div>
+                ${g.title ? `<div class="t3">${e(g.title)}</div>` : ''}<div class="t4">พิมพ์วันที่ ${e(dateStr)} · ${g.rows.length} รายการ (0 = ${c('0')}, ร = ${c('ร')}, มส = ${c('มส')})</div></div>
+                <table><thead><tr><th style="width:6%">ที่</th><th>ชื่อ-สกุล</th>${showLv ? '<th style="width:9%">ชั้น</th>' : ''}${showSub ? '<th style="width:11%">รหัสวิชา</th><th>ชื่อวิชา</th>' : ''}<th style="width:11%">ภาคเรียน</th><th style="width:7%">ผล</th><th style="width:12%">สถานะ</th></tr></thead><tbody>${body}</tbody></table></section>`;
+        }).join('');
+        sel.win.document.open();
+        sel.win.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>ตรวจสอบ ร มส - ${e(tName)}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+        <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Sarabun',sans-serif;font-size:12pt;padding:14mm 12mm}
+        .hd{text-align:center;margin-bottom:5mm}.t1{font-size:16pt;font-weight:700}.t2{font-size:13pt}.t3{font-size:14pt;font-weight:700;margin-top:2mm;color:#312e81}.t4{font-size:11pt;color:#444}
+        table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:1.4mm 2mm;text-align:center}th{background:#e0e7ff;-webkit-print-color-adjust:exact;print-color-adjust:exact}td.l{text-align:left}thead{display:table-header-group}tr{page-break-inside:avoid}
+        .bar{position:sticky;top:0;background:#312e81;color:#fff;padding:8px 12px;margin:-14mm -12mm 8mm}.bar button{padding:6px 14px;border:0;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit}
+        @media print{@page{size:A4 portrait;margin:12mm}body{padding:0}.bar{display:none}}</style></head><body>
+        <div class="bar"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button></div>${sections}</body></html>`);
+        sel.win.document.close();
+    }
+
+    async function ckExcel() {
+        if (!_ckRows.length) return;
+        const sel = await _askMode('📊 เลือกรูปแบบไฟล์ Excel', 'ส่งออก', false);
+        if (!sel) return;
+        const groups = _groupRows(_ckRows, sel.mode);
+        const H = ['ที่', 'ชื่อ-สกุล', 'ชั้น', 'รหัสวิชา', 'ชื่อวิชา', 'ภาคเรียน/ปีการศึกษา', 'ผลการเรียน', 'สถานะการแก้ไข', 'ผลการเรียนใหม่', 'หมายเหตุ (LS)'];
+        const wb = XLSX.utils.book_new(); const used = new Set();
+        groups.forEach((g, i) => {
+            const rows = g.rows.map((r, j) => [j + 1, _stuName(r), r.ชั้น || '', r.รหัสวิชา || '', r.ชื่อวิชา || '', _semOf(r), r.ผลการเรียน || '', r.Correction_Status === 'แก้ไขแล้ว' ? 'แก้ไขแล้ว' : 'รอดำเนินการ', r.New_Result || '', r.LS_Status || '']);
+            const ws = XLSX.utils.aoa_to_sheet([H, ...rows]);
+            ws['!cols'] = [6, 26, 9, 11, 30, 18, 11, 16, 14, 24].map(w => ({ wch: w }));
+            let nm = (g.title || 'ผลการเรียน').replace(/[\\\/\?\*\[\]:]/g, '-').slice(0, 28) || ('ชีต' + (i + 1));
+            let k = nm, n = 2; while (used.has(k)) k = nm.slice(0, 26) + '_' + n++;
+            used.add(k); XLSX.utils.book_append_sheet(wb, ws, k);
+        });
+        const t = _ckTeacherName().replace(_TITLE_RE, '').replace(/\s+/g, '_') || 'ครู';
+        XLSX.writeFile(wb, `ตรวจสอบ_ร_มส_${t}_${_todayIso()}.xlsx`);
+        _toast('success', 'ส่งออก Excel แล้ว');
     }
     </script>
 </body>
