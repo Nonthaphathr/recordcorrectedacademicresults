@@ -343,6 +343,28 @@
         .ck-radio { text-align:left; display:flex !important; flex-direction:column; gap:8px; align-items:flex-start; font-size:.95rem; }
         .ck-radio label { display:flex; gap:8px; align-items:center; cursor:pointer; }
         @media print { .ck-noprint { display:none !important; } }
+    
+        /* ── UX v2: dropdown menu / tabs ── */
+        .menu-wrap { position:relative; display:inline-block; }
+        .menu-pop { display:none; position:absolute; right:0; top:calc(100% + 6px); min-width:270px; background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 14px 40px rgba(79,70,229,.18); padding:6px; z-index:60; }
+        .menu-wrap.open .menu-pop { display:block; }
+        .menu-item { display:flex; align-items:flex-start; gap:10px; width:100%; text-align:left; padding:9px 12px; border-radius:10px; border:none; background:transparent; cursor:pointer; font-family:'Kanit',sans-serif; font-size:.88rem; color:var(--text); }
+        .menu-item:hover { background:#eef2ff; }
+        .menu-item small { display:block; color:#94a3b8; font-size:.74rem; line-height:1.25; margin-top:1px; }
+        .menu-item .mi { font-size:1.05rem; line-height:1.3; }
+        .menu-sep { height:1px; background:#eef2ff; margin:4px 6px; }
+        .adv-filter > summary { cursor:pointer; list-style:none; font-size:.85rem; color:var(--primary); font-weight:500; display:inline-flex; align-items:center; gap:6px; padding:4px 0; user-select:none; }
+        .adv-filter > summary::-webkit-details-marker { display:none; }
+        .adv-filter[open] > summary .chev { transform:rotate(90deg); }
+        .adv-filter .chev { transition:transform .2s; display:inline-block; }
+        .adv-badge { background:#4f46e5; color:#fff; border-radius:999px; font-size:.7rem; padding:0 7px; margin-left:2px; }
+        .set-tabs { display:flex; gap:6px; flex-wrap:wrap; background:#fff; border:1px solid var(--border); border-radius:14px; padding:6px; margin-bottom:20px; }
+        .set-tab { flex:1; min-width:140px; padding:10px 14px; border-radius:10px; border:none; background:transparent; cursor:pointer; font-family:'Kanit',sans-serif; font-size:.92rem; font-weight:500; color:var(--text-muted); transition:all .2s; }
+        .set-tab:hover { background:#eef2ff; color:var(--primary); }
+        .set-tab.active { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; box-shadow:0 4px 14px rgba(79,70,229,.3); }
+        .set-panel { display:none; }
+        .set-panel.active { display:block; }
+        @media print { .menu-wrap, .set-tabs { display:none !important; } }
     </style>
 </head>
 <body>
@@ -435,33 +457,46 @@
             </div>
 
             <!-- Filter panel -->
-            <div class="glass p-6 mb-6 no-print">
+            <div class="glass p-6 mb-6 no-print" style="position:relative;z-index:30">
                 <div class="flex items-center gap-2 mb-5">
                     <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
                     <h2 class="font-semibold text-gray-700">ตัวกรองและค้นหา</h2>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div><label class="form-label">ค้นหาชื่อ-สกุล</label><input type="text" id="searchName" placeholder="ชื่อ หรือ สกุล" class="input-field" oninput="searchData()"></div>
                     <div><label class="form-label">รหัสวิชา</label><input type="text" id="searchSubject" placeholder="รหัสวิชา" class="input-field" oninput="searchData()"></div>
                     <div><label class="form-label">ชั้นปีปัจจุบัน</label><select id="filterYear" class="input-field" onchange="searchData()"><option value="">ทุกชั้นปี</option></select></div>
                     <div><label class="form-label">ภาคเรียน/ปีการศึกษา</label><select id="filterSemester" class="input-field" onchange="searchData()"><option value="">ทุกภาคเรียน</option></select></div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                <details class="adv-filter mb-5" id="advFilter">
+<summary><span class="chev">▶</span> ตัวกรองเพิ่มเติม (สถานะ · ครู · LS) <span id="advCount" class="adv-badge" style="display:none"></span></summary>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
                     <div><label class="form-label">สถานะผลการเรียน</label><select id="filterGradeStatus" class="input-field" onchange="searchData()"><option value="">ทุกสถานะ</option><option value="0">0</option><option value="ร">ร</option><option value="มส">มส</option></select></div>
                     <div><label class="form-label">สถานะการแก้ไข</label><select id="filterStatus" class="input-field" onchange="searchData()"><option value="">ทั้งหมด</option><option value="แก้ไขแล้ว">แก้ไขแล้ว</option><option value="ยังไม่แก้ไข">ยังไม่แก้ไข</option></select></div>
                     <div><label class="form-label">ครูผู้สอน</label><select id="filterTeacher" class="input-field" onchange="searchData()"><option value="">ทุกครูผู้สอน</option></select></div>
                     <div><label class="form-label">หมายเหตุ (สถานะ LS)</label><select id="filterLs" class="input-field" onchange="searchData()"><option value="">ทั้งหมด</option><option value="ติดในระบบ LS">ติดในระบบ LS</option><option value="แก้ให้มีเกรดแล้วในระบบ LS">แก้ให้มีเกรดแล้วในระบบ LS</option><option value="__none">ยังไม่ระบุ</option></select></div>
                 </div>
+</details>
                 <div class="toolbar">
                     <button onclick="searchData()" class="btn btn-primary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 0 5 11a6 6 0 0 0 12 0z"/></svg>ค้นหา</button>
                     <button onclick="resetFilters()" class="btn btn-secondary">ล้างตัวกรอง</button>
-                    <button onclick="loadData()" class="btn btn-info">รีเฟรช</button>
+                    <button onclick="loadData()" class="btn btn-secondary" data-tooltip="โหลดข้อมูลใหม่จากฐานข้อมูล">↻ รีเฟรช</button>
                     <div class="flex-1"></div>
-                    <button onclick="exportExcel()" class="btn btn-success" data-tooltip="Export Excel">Export Excel</button>
-                    <button onclick="openPrintForm()" class="btn btn-info" data-tooltip="พิมพ์แบบฟอร์มคำร้อง วก.กทว.101/102">🖨️ แบบฟอร์มคำร้อง</button>
-                    <button onclick="openExecReport()" class="btn btn-primary" data-tooltip="บันทึกข้อความเสนอผู้บริหาร + ตารางแนบท้ายแยกตามครู">📄 รายงานผู้บริหาร</button>
-                    <button onclick="openCheckLinkModal()" class="btn btn-success" data-tooltip="ลิงก์ให้ครูตรวจสอบนักเรียนที่ติด 0 ร มส ในวิชาของตน">🔗 ลิงก์ตรวจสอบสำหรับครู</button>
-                    <button onclick="printData()" class="btn btn-warning" data-tooltip="พิมพ์">พิมพ์</button>
+                    <div class="menu-wrap" id="menuDoc">
+                        <button onclick="toggleMenu('menuDoc',event)" class="btn btn-primary">📄 เอกสาร &amp; รายงาน ▾</button>
+                        <div class="menu-pop">
+                            <button class="menu-item" onclick="closeMenus();openExecReport()"><span class="mi">📄</span><span>รายงานผู้บริหาร<small>บันทึกข้อความ + ตารางแนบท้ายแยกตามครู</small></span></button>
+                            <button class="menu-item" onclick="closeMenus();openPrintForm()"><span class="mi">🖨️</span><span>แบบฟอร์มคำร้อง<small>วก.กทว.101 / 102</small></span></button>
+                            <button class="menu-item" onclick="closeMenus();openCheckLinkModal()"><span class="mi">🔗</span><span>ลิงก์ตรวจสอบสำหรับครู<small>ให้ครูดูนักเรียนที่ติด 0 ร มส ในวิชาของตน</small></span></button>
+                        </div>
+                    </div>
+                    <div class="menu-wrap" id="menuOut">
+                        <button onclick="toggleMenu('menuOut',event)" class="btn btn-success">⬇ ส่งออก &amp; พิมพ์ ▾</button>
+                        <div class="menu-pop" style="min-width:220px">
+                            <button class="menu-item" onclick="closeMenus();exportExcel()"><span class="mi">📊</span><span>Export Excel</span></button>
+                            <button class="menu-item" onclick="closeMenus();printData()"><span class="mi">🖨️</span><span>พิมพ์ตารางนี้</span></button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -558,22 +593,13 @@
                 </div>
             </div>
 
-            <!-- Section 1: Editor name list -->
-            <div class="settings-section mb-6">
-                <div class="settings-section-header">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                    <h3 class="font-semibold text-gray-700">จัดการชื่อครู (AutoFill Suggest)</h3>
-                </div>
-                <div class="settings-section-body">
-                    <p class="text-sm text-gray-500 mb-4">ชื่อครูที่ปรากฏด้านล่างจะถูกแนะนำเวลากรอกชื่อผู้แก้ไข สามารถเพิ่มหรือลบได้</p>
-                    <div class="flex gap-3 mb-4">
-                        <input type="text" id="newEditorName" placeholder="ชื่อครูที่ต้องการเพิ่ม เช่น นายสมชาย ดีใจ" class="input-field">
-                        <button onclick="addEditorNameManual()" class="btn btn-primary" style="white-space:nowrap">เพิ่ม</button>
-                    </div>
-                    <div id="editorNameTags" class="flex flex-wrap gap-2"></div>
-                </div>
+            
+            <div class="set-tabs">
+                <button class="set-tab active" id="stab-import" onclick="settingsTab('import')">📥 นำเข้า &amp; ซิงก์</button>
+                <button class="set-tab" id="stab-manage" onclick="settingsTab('manage')">🗂️ จัดการข้อมูล</button>
+                <button class="set-tab" id="stab-people" onclick="settingsTab('people')">👩‍🏫 ครู &amp; ผู้ลงนาม</button>
             </div>
-
+            <div class="set-panel active" id="spanel-import">
             <!-- Section 2: Import xlsx -->
             <div class="settings-section mb-6">
                 <div class="settings-section-header">
@@ -612,6 +638,34 @@
                 </div>
             </div>
 
+            </div>
+            <div class="set-panel" id="spanel-manage">
+            <!-- Section 2.7: ลบคนที่แก้ไขผลการเรียนแล้ว -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <h3 class="font-semibold text-gray-700">🗑️ ลบคนที่แก้ไขผลการเรียนแล้ว</h3>
+                </div>
+                <div class="settings-section-body">
+                    <div class="info-box mb-4">
+                        <p class="text-sm text-blue-700">ลบคนที่แก้ไขผลการเรียนแล้วและลงบนระบบ Local School แล้วออกจากระบบนี้<br>
+                        <span class="text-xs text-blue-500">เงื่อนไข: ลบเฉพาะรายการวิชาที่มีสถานะ "แก้ไขแล้ว" และหมายเหตุ "แก้ให้มีเกรดแล้วในระบบ LS" · วิชาอื่นของนักเรียนคนเดิมที่ยังไม่เข้าเงื่อนไขจะไม่ถูกลบ · ระบบจะดาวน์โหลดไฟล์สำรองก่อนลบทุกครั้ง · ประวัติการแก้ไขยังคงอยู่</span></p>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">เลือกเงื่อนไขที่จะตัดออก</label>
+                        <select id="cleanupMode" class="input-field" onchange="document.getElementById('cleanupConfirmBtn').style.display='none';document.getElementById('cleanupPreviewArea').innerHTML=''">
+                            <option value="strict">แก้ไขแล้ว และ LS แก้ให้มีเกรดแล้ว (เข้มงวด – ค่าเดิม)</option>
+                            <option value="current">แก้ไขแล้ว หรือ LS แก้ให้มีเกรดแล้ว (ณ ปัจจุบัน)</option>
+                            <option value="student">ตัดทั้งนักเรียน – เฉพาะคนที่ทุกรายการแก้ไขแล้ว/LS แก้แล้ว</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-3 mb-4 flex-wrap">
+                        <button onclick="previewCleanup()" class="btn btn-info">ดูรายชื่อที่จะลบ</button>
+                        <button onclick="confirmCleanup()" id="cleanupConfirmBtn" class="btn btn-danger" style="display:none">ลบออกจากระบบ</button>
+                    </div>
+                    <div id="cleanupPreviewArea"></div>
+                </div>
+            </div>
+
             <!-- Section 2.6: เลื่อนชั้นนักเรียน -->
             <div class="settings-section mb-6">
                 <div class="settings-section-header">
@@ -640,21 +694,38 @@
                 </div>
             </div>
 
-            <!-- Section 2.7: ลบคนที่แก้ไขผลการเรียนแล้ว -->
+            <!-- Section 3: Data management -->
             <div class="settings-section mb-6">
                 <div class="settings-section-header">
-                    <h3 class="font-semibold text-gray-700">🗑️ ลบคนที่แก้ไขผลการเรียนแล้ว</h3>
+                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/></svg>
+                    <h3 class="font-semibold text-gray-700">จัดการข้อมูล Firestore</h3>
                 </div>
                 <div class="settings-section-body">
-                    <div class="info-box mb-4">
-                        <p class="text-sm text-blue-700">ลบคนที่แก้ไขผลการเรียนแล้วและลงบนระบบ Local School แล้วออกจากระบบนี้<br>
-                        <span class="text-xs text-blue-500">เงื่อนไข: ลบเฉพาะรายการวิชาที่มีสถานะ "แก้ไขแล้ว" และหมายเหตุ "แก้ให้มีเกรดแล้วในระบบ LS" · วิชาอื่นของนักเรียนคนเดิมที่ยังไม่เข้าเงื่อนไขจะไม่ถูกลบ · ระบบจะดาวน์โหลดไฟล์สำรองก่อนลบทุกครั้ง · ประวัติการแก้ไขยังคงอยู่</span></p>
+                    <p class="text-sm text-gray-500 mb-4">สถิติการใช้งาน Firestore และการจัดการข้อมูล</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5" id="firestoreStats">
+                        <div class="bg-indigo-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-indigo-600" id="fsStatRecords">—</p><p class="text-xs text-gray-500">บันทึกผลการเรียน</p></div>
+                        <div class="bg-green-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-green-600" id="fsStatLogs">—</p><p class="text-xs text-gray-500">บันทึกการแก้ไข</p></div>
+                        <div class="bg-purple-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-purple-600" id="fsStatTeachers">—</p><p class="text-xs text-gray-500">วิชาที่ระบุครู</p></div>
+                        <div class="bg-amber-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-amber-600" id="fsStatEditors">—</p><p class="text-xs text-gray-500">ชื่อครูผู้แก้ไข</p></div>
                     </div>
-                    <div class="flex gap-3 mb-4 flex-wrap">
-                        <button onclick="previewCleanup()" class="btn btn-info">ดูรายชื่อที่จะลบ</button>
-                        <button onclick="confirmCleanup()" id="cleanupConfirmBtn" class="btn btn-danger" style="display:none">ลบออกจากระบบ</button>
+                    <button onclick="refreshFirestoreStats()" class="btn btn-secondary btn-sm">รีเฟรชสถิติ</button>
+                </div>
+            </div>
+            </div>
+            <div class="set-panel" id="spanel-people">
+            <!-- Section 1: Editor name list -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    <h3 class="font-semibold text-gray-700">จัดการชื่อครู (AutoFill Suggest)</h3>
+                </div>
+                <div class="settings-section-body">
+                    <p class="text-sm text-gray-500 mb-4">ชื่อครูที่ปรากฏด้านล่างจะถูกแนะนำเวลากรอกชื่อผู้แก้ไข สามารถเพิ่มหรือลบได้</p>
+                    <div class="flex gap-3 mb-4">
+                        <input type="text" id="newEditorName" placeholder="ชื่อครูที่ต้องการเพิ่ม เช่น นายสมชาย ดีใจ" class="input-field">
+                        <button onclick="addEditorNameManual()" class="btn btn-primary" style="white-space:nowrap">เพิ่ม</button>
                     </div>
-                    <div id="cleanupPreviewArea"></div>
+                    <div id="editorNameTags" class="flex flex-wrap gap-2"></div>
                 </div>
             </div>
 
@@ -679,24 +750,7 @@
                 </div>
             </div>
 
-            <!-- Section 3: Data management -->
-            <div class="settings-section mb-6">
-                <div class="settings-section-header">
-                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/></svg>
-                    <h3 class="font-semibold text-gray-700">จัดการข้อมูล Firestore</h3>
-                </div>
-                <div class="settings-section-body">
-                    <p class="text-sm text-gray-500 mb-4">สถิติการใช้งาน Firestore และการจัดการข้อมูล</p>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5" id="firestoreStats">
-                        <div class="bg-indigo-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-indigo-600" id="fsStatRecords">—</p><p class="text-xs text-gray-500">บันทึกผลการเรียน</p></div>
-                        <div class="bg-green-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-green-600" id="fsStatLogs">—</p><p class="text-xs text-gray-500">บันทึกการแก้ไข</p></div>
-                        <div class="bg-purple-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-purple-600" id="fsStatTeachers">—</p><p class="text-xs text-gray-500">วิชาที่ระบุครู</p></div>
-                        <div class="bg-amber-50 rounded-xl p-4 text-center"><p class="text-2xl font-bold text-amber-600" id="fsStatEditors">—</p><p class="text-xs text-gray-500">ชื่อครูผู้แก้ไข</p></div>
-                    </div>
-                    <button onclick="refreshFirestoreStats()" class="btn btn-secondary btn-sm">รีเฟรชสถิติ</button>
-                </div>
             </div>
-
         </div><!-- /page-settings -->
 
 
@@ -3083,7 +3137,17 @@
 
     function previewCleanup() {
         const base = filterFailedGrades(allData);
-        cleanupPlan = base.filter(r => r.Correction_Status === 'แก้ไขแล้ว' && r.LS_Status === LS_DONE && r._docId);
+        const mode = (document.getElementById('cleanupMode') || {}).value || 'strict';
+        const isDone = r => r.Correction_Status === 'แก้ไขแล้ว' || r.LS_Status === LS_DONE;
+        if (mode === 'strict') {
+            cleanupPlan = base.filter(r => r.Correction_Status === 'แก้ไขแล้ว' && r.LS_Status === LS_DONE && r._docId);
+        } else if (mode === 'current') {
+            cleanupPlan = base.filter(r => isDone(r) && r._docId);
+        } else {
+            const key = r => _nm(`${r.คำนำหน้า||''}${r.ชื่อ||''}${r.สกุล||''}`);
+            const bad = new Set(base.filter(r => !isDone(r)).map(key));
+            cleanupPlan = base.filter(r => !bad.has(key(r)) && isDone(r) && r._docId);
+        }
         const kept = base.length - cleanupPlan.length;
         const stuCount = new Set(cleanupPlan.map(r => _nm(`${r.คำนำหน้า||''}${r.ชื่อ||''}${r.สกุล||''}`))).size;
         const area = document.getElementById('cleanupPreviewArea');
@@ -3348,8 +3412,10 @@
             || String(a.ชั้น || '').localeCompare(String(b.ชั้น || ''), 'th', { numeric: true })
             || _stuName(a).localeCompare(_stuName(b), 'th');
     }
-    function _failRows(includeDone) {
-        return filterFailedGrades(allData).filter(r => includeDone || r.Correction_Status !== 'แก้ไขแล้ว');
+    // includeDone=false → ตัดรายการที่แก้ไขแล้ว; excludeLs=true → ตัดรายการที่หมายเหตุ LS = "แก้ให้มีเกรดแล้วในระบบ LS" ด้วย
+    function _failRows(includeDone, excludeLs) {
+        if (excludeLs === undefined) excludeLs = !includeDone;
+        return filterFailedGrades(allData).filter(r => (includeDone || r.Correction_Status !== 'แก้ไขแล้ว') && !(excludeLs && r.LS_Status === LS_DONE));
     }
     // ดัชนีครู: key (ไม่มีคำนำหน้า) → { key, name (แบบมีคำนำหน้า), codes:Set }
     function _teacherIndex() {
@@ -3430,14 +3496,15 @@
                 <div style="text-align:left"><label style="font-size:.78rem;color:#6b7280;display:block;margin-bottom:3px">ภาคเรียน/ปีการศึกษา</label>
                     <select id="xr-sem" class="swal2-select" style="margin:0;width:100%;height:40px;font-size:.9rem"><option value="">ทุกภาคเรียน</option>${sems.map(s => `<option value="${_esc(s)}">${_esc(s)}</option>`).join('')}</select></div>
                 </div>
-                <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:.88rem;text-align:left"><input type="checkbox" id="xr-done"> รวมรายการที่แก้ไขแล้วด้วย (ปกติแสดงเฉพาะที่ยังไม่แก้ไข)</label>
+                <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:.88rem;text-align:left"><input type="checkbox" id="xr-ls" checked> ไม่นับรายการที่หมายเหตุ LS เป็น "แก้ให้มีเกรดแล้วในระบบ LS"</label>
+                <label style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:.88rem;text-align:left"><input type="checkbox" id="xr-done"> รวมรายการที่แก้ไขแล้วด้วย (ปกติแสดงเฉพาะที่ยังไม่แก้ไข)</label>
                 <p style="color:#9ca3af;font-size:.75rem;margin-top:6px;text-align:left">ชื่อผู้บริหารเริ่มต้นตามระบบจัดสอนแทน (แก้ค่าถาวรได้ที่ ตั้งค่า → ผู้ลงนามในแบบฟอร์ม) · ผลลัพธ์เป็นบันทึกข้อความ + ตารางแนบท้าย A4 แนวตั้ง แยกตามครู</p>`,
             preConfirm: () => {
                 const g = id => (document.getElementById('xr-' + id) || {}).value || '';
                 const o = {
                     date: g('date') || _todayIso(), docNo: g('docNo').trim(), subject: g('subject').trim(), to: g('to').trim(),
                     preparer: g('preparer').trim(), coName: g('coName').trim(), coPos: g('coPos').trim(), preparerPos: g('preparerPos').trim(), head: g('head').trim(), deputy: g('deputy').trim(), director: g('director').trim(),
-                    sem: g('sem'), done: !!document.getElementById('xr-done').checked
+                    sem: g('sem'), done: !!document.getElementById('xr-done').checked, ls: !!document.getElementById('xr-ls').checked
                 };
                 o.win = window.open('', '_blank');   // เปิดในจังหวะคลิกเพื่อไม่ให้ถูกบล็อก
                 return o;
@@ -3446,7 +3513,7 @@
             if (!res.isConfirmed) return;
             const o = res.value;
             try { localStorage.setItem(EXEC_MEMO_KEY, JSON.stringify({ docNo: o.docNo, subject: o.subject, to: o.to, preparer: o.preparer, preparerPos: o.preparerPos, coName: o.coName, coPos: o.coPos })); } catch (e) {}
-            const rows = _failRows(o.done).filter(r => !o.sem || _semOf(r) === o.sem);
+            const rows = _failRows(o.done, o.ls).filter(r => !o.sem || _semOf(r) === o.sem);
             if (!rows.length) { if (o.win) o.win.close(); Swal.fire({ icon: 'info', title: 'ไม่มีรายการตามเงื่อนไข', confirmButtonColor: '#4f46e5' }); return; }
             const html = buildExecReportHtml(o, rows);
             if (!o.win) { Swal.fire({ icon: 'warning', title: 'เบราว์เซอร์บล็อกหน้าต่างใหม่', text: 'กรุณาอนุญาตป๊อปอัปของเว็บนี้ แล้วลองใหม่', confirmButtonColor: '#4f46e5' }); return; }
@@ -3730,6 +3797,36 @@
         XLSX.writeFile(wb, `ตรวจสอบ_ร_มส_${t}_${_todayIso()}.xlsx`);
         _toast('success', 'ส่งออก Excel แล้ว');
     }
-    </script>
+    
+    // ── UX v2: dropdown menus + settings tabs ──
+    function closeMenus() { document.querySelectorAll('.menu-wrap.open').forEach(m => m.classList.remove('open')); }
+    function toggleMenu(id, ev) {
+        if (ev) ev.stopPropagation();
+        const el = document.getElementById(id), was = el.classList.contains('open');
+        closeMenus(); if (!was) el.classList.add('open');
+    }
+    document.addEventListener('click', e => { if (!e.target.closest('.menu-wrap')) closeMenus(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
+    function settingsTab(name) {
+        ['import','manage','people'].forEach(n => {
+            const p = document.getElementById('spanel-' + n), t = document.getElementById('stab-' + n);
+            if (p) p.classList.toggle('active', n === name);
+            if (t) t.classList.toggle('active', n === name);
+        });
+        try { sessionStorage.setItem('ktw_settings_tab', name); } catch(e) {}
+    }
+    function _updAdvCount() {
+        const ids = ['filterGradeStatus','filterStatus','filterTeacher','filterLs'];
+        const n = ids.filter(i => { const e = document.getElementById(i); return e && e.value; }).length;
+        const b = document.getElementById('advCount'), d = document.getElementById('advFilter');
+        if (!b) return;
+        b.style.display = n ? '' : 'none'; b.textContent = n;
+        if (n && d) d.open = true;
+    }
+    document.addEventListener('change', e => { if (e.target && /^filter(GradeStatus|Status|Teacher|Ls)$/.test(e.target.id)) _updAdvCount(); });
+    document.addEventListener('DOMContentLoaded', () => {
+        try { const t = sessionStorage.getItem('ktw_settings_tab'); if (t) settingsTab(t); } catch(e) {}
+    });
+</script>
 </body>
 </html>
