@@ -494,6 +494,7 @@
                         <button onclick="toggleMenu('menuOut',event)" class="btn btn-success">⬇ ส่งออก &amp; พิมพ์ ▾</button>
                         <div class="menu-pop" style="min-width:220px">
                             <button class="menu-item" onclick="closeMenus();exportExcel()"><span class="mi">📊</span><span>Export Excel</span></button>
+                            <button class="menu-item" onclick="closeMenus();openTlExport()"><span class="mi">⬇️</span><span>ส่งออกให้ Teaching Log<small>นักเรียนที่ติด 0 ร มส ของครูแต่ละคน (กรองได้)</small></span></button>
                             <button class="menu-item" onclick="closeMenus();printData()"><span class="mi">🖨️</span><span>พิมพ์ตารางนี้</span></button>
                         </div>
                     </div>
@@ -766,10 +767,11 @@
                 </div>
             </div>
             <div class="glass p-6 mb-6">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div><label class="form-label">ครูผู้สอน</label><select id="ckTeacher" class="input-field" onchange="ckTeacherChanged()"><option value="">กำลังโหลดข้อมูล...</option></select></div>
                     <div><label class="form-label">รายวิชา</label><select id="ckSubject" class="input-field" onchange="ckRender(false)"><option value="">ทุกวิชา</option></select></div>
                     <div><label class="form-label">ชั้น</label><select id="ckLevel" class="input-field" onchange="ckRender(false)"><option value="">ทุกชั้น</option></select></div>
+                    <div><label class="form-label">ผลการเรียน</label><select id="ckGrade" class="input-field" onchange="ckRender(false)"><option value="">ทั้ง 0 / ร / มส</option><option value="0">0</option><option value="ร">ร</option><option value="มส">มส</option></select></div>
                 </div>
                 <div class="toolbar">
                     <label class="flex items-center gap-2 text-sm text-gray-600"><input type="checkbox" id="ckDone" onchange="ckRender(true)"> รวมรายการที่แก้ไขแล้ว</label>
@@ -777,6 +779,7 @@
                     <div class="flex-1"></div>
                     <button onclick="ckCopyMyLink()" class="btn btn-secondary btn-sm">🔗 คัดลอกลิงก์นี้</button>
                     <button onclick="ckExcel()" class="btn btn-success ck-act" disabled>📊 ส่งออก Excel</button>
+                    <button onclick="ckTlExport()" class="btn btn-primary ck-act" disabled data-tooltip="ไฟล์ที่นำเข้าระบบ Teaching Log เพื่อมอบภาระงานแก้ 0 ร มส">⬇️ ไฟล์สำหรับ Teaching Log</button>
                     <button onclick="ckPrint()" class="btn btn-warning ck-act" disabled>🖨️ พิมพ์</button>
                 </div>
             </div>
@@ -1027,6 +1030,7 @@
                 </div>
             </div>
             <div class="modal-footer" style="flex:none;box-shadow:0 -6px 14px rgba(0,0,0,.06)">
+                <button onclick="pfShowHistory()" class="btn btn-secondary" style="margin-right:auto">📜 ประวัติการดาวน์โหลด</button>
                 <button onclick="closePrintForm()" class="btn btn-secondary">ปิด</button>
                 <button id="pfGenBtn" onclick="pfGenerate()" class="btn btn-primary">⬇️ สร้างเอกสาร (.docx)</button>
             </div>
@@ -1078,6 +1082,7 @@
     const COL_LOGS      = 'correction_logs'; // บันทึกการแก้ไข
     const COL_TEACHERS  = 'teacher_assignments'; // ครูผู้สอน: { subjectCode, subjectName, teacherName }
     const COL_EDITORS   = 'editor_names';  // ชื่อครูผู้แก้ไข (autofill): { name, usedAt }
+    const COL_FORMLOG   = 'form_downloads'; // ประวัติการดาวน์โหลดคำร้อง 101/102: 1 เอกสาร = 1 ครั้งต่อ (นักเรียน × วิชา × ภาคเรียน)
 
     // ═══════════════════════════════════════════════════════
     //  GLOBAL STATE
@@ -2743,7 +2748,101 @@
     // ═══════════════════════════════════════════════════════
     //  PRINT FORM UI — เลือกนักเรียน/วิชา แล้วสร้างแบบฟอร์ม 101 / 102
     // ═══════════════════════════════════════════════════════
-    const pf = { mode: '101', rows: [], students: [], subjects: [], stu: null, sub: null };
+    const pf = { mode: '101', rows: [], students: [], subjects: [], stu: null, sub: null, logs: [], logMap: new Map(), logErr: '' };
+
+    // ── ประวัติการดาวน์โหลดเอกสาร (หลักฐานว่าเคยโหลดให้นักเรียนแล้วกี่ครั้ง) ──
+    const pfLogKey = (kind, r) => kind + '|' + pfStuKey(r) + '|' + (r.รหัสวิชา || '') + '|' + _nm(r['ภาคเรียน/ปีการศึกษา'] || '');
+    function pfFmtDT(ms) {
+        const d = new Date(ms), p = n => String(n).padStart(2, '0');
+        return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543} ${p(d.getHours())}:${p(d.getMinutes())} น.`;
+    }
+    async function pfLoadLogs() {
+        pf.logs = []; pf.logMap = new Map(); pf.logErr = '';
+        try {
+            const snap = await db.collection(COL_FORMLOG).get();
+            snap.docs.forEach(doc => {
+                const d = doc.data(); const ms = d.downloadedAtMs || (d.downloadedAt && d.downloadedAt.toMillis ? d.downloadedAt.toMillis() : 0);
+                const k = (d.kind || '') + '|' + (d.studentKey || '') + '|' + (d.subjectCode || '') + '|' + (d.termKey || '');
+                if (!pf.logMap.has(k)) pf.logMap.set(k, []);
+                pf.logMap.get(k).push(ms);
+                pf.logs.push({ kind: d.kind || '', studentName: d.studentName || '', code: d.subjectCode || '', subjectName: d.subjectName || '', term: d.term || '', seq: d.seq || 0, ms, level: d.level || '' });
+            });
+        } catch (e) { console.warn('form download log load failed:', e); pf.logErr = e.message || String(e); }
+    }
+    function pfLogInfo(kind, r) { const a = pf.logMap.get(pfLogKey(kind, r)); return a && a.length ? { n: a.length, last: Math.max(...a) } : null; }
+    function pfRenderBadges() {
+        const put = (id, kind, r) => {
+            const el = document.getElementById(id); if (!el) return;
+            const i = pfLogInfo(kind, r);
+            el.innerHTML = i ? ` · <span style="color:#b45309;font-weight:600">📥 โหลดแล้ว ${i.n} ครั้ง (ล่าสุด ${_esc(pfFmtDT(i.last))})</span>` : '';
+        };
+        if (pf.mode === '101' && pf.stu) pf.stu.recs.forEach((r, i) => put('pfLg-' + i, '101', r));
+        if (pf.mode === '102') (pf.subSorted || []).forEach((r, i) => put('pfSLg-' + i, '102', r));
+    }
+    // ถามก่อนดาวน์โหลดว่าจะบันทึกประวัติหรือไม่ (เผื่อครูโหลดทดสอบ) → 'save' | 'nosave' | null (ยกเลิก)
+    async function pfAskLog(kind, recs) {
+        const prev = recs.map(r => ({ r, i: pfLogInfo(kind, r) })).filter(x => x.i);
+        const prevHtml = prev.length
+            ? `<div style="text-align:left;margin-top:10px;padding:8px 10px;border-radius:8px;background:#fffbeb;border:1px solid #fcd34d;font-size:.85rem">
+                <b>⚠️ มีรายการที่เคยดาวน์โหลดแล้ว ${prev.length} รายการ</b>
+                <ul style="margin:4px 0 0 18px;padding:0">${prev.slice(0, 6).map(x => `<li>${_esc(kind === '101' ? (x.r.รหัสวิชา || '') + ' ' + (x.r.ชื่อวิชา || '') : pfStuName(x.r))} — ${x.i.n} ครั้ง (ล่าสุด ${_esc(pfFmtDT(x.i.last))})</li>`).join('')}${prev.length > 6 ? `<li>และอีก ${prev.length - 6} รายการ</li>` : ''}</ul></div>` : '';
+        const errHtml = pf.logErr ? `<div style="margin-top:8px;font-size:.8rem;color:#b91c1c">อ่านประวัติเดิมไม่ได้ (${_esc(pf.logErr)}) — ลำดับครั้งที่อาจไม่ถูกต้อง</div>` : '';
+        const r = await Swal.fire({
+            icon: 'question', title: 'บันทึกประวัติการดาวน์โหลดหรือไม่?',
+            html: `<div style="font-size:.92rem">เอกสาร ${kind === '101' ? 'วก.กทว.101' : 'วก.กทว.102'} จำนวน <b>${recs.length}</b> รายการ<br><span style="color:#6b7280">ถ้าโหลดเพื่อทดสอบ ให้เลือก “ไม่บันทึก” จะได้ไม่นับเป็นครั้งที่โหลดให้นักเรียน</span></div>${prevHtml}${errHtml}`,
+            showDenyButton: true, showCancelButton: true, confirmButtonText: '📝 บันทึกประวัติ แล้วดาวน์โหลด', denyButtonText: '⬇️ ดาวน์โหลดโดยไม่บันทึก', cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#4f46e5', denyButtonColor: '#6b7280', width: 600
+        });
+        return r.isConfirmed ? 'save' : r.isDenied ? 'nosave' : null;
+    }
+    // items = [{ r, level, times }]
+    async function pfSaveLog(kind, items, fileName) {
+        const now = Date.now(), batchId = 'b' + now.toString(36);
+        const entries = items.map(({ r, level, times }) => {
+            const k = pfLogKey(kind, r), seq = (pf.logMap.get(k) || []).length + 1;
+            return { k, seq, data: {
+                kind, studentKey: pfStuKey(r), studentName: pfStuName(r), level: level || '', subjectCode: r.รหัสวิชา || '', subjectName: r.ชื่อวิชา || '',
+                term: r['ภาคเรียน/ปีการศึกษา'] || '', termKey: _nm(r['ภาคเรียน/ปีการศึกษา'] || ''), grade: String(r.ผลการเรียน || '').trim(),
+                retakeTimes: times || '', seq, fileName, batchId, docCount: items.length,
+                downloadedAt: firebase.firestore.FieldValue.serverTimestamp(), downloadedAtMs: now
+            } };
+        });
+        for (let i = 0; i < entries.length; i += 400) {
+            const b = db.batch();
+            entries.slice(i, i + 400).forEach(e => b.set(db.collection(COL_FORMLOG).doc(), e.data));
+            await b.commit();
+        }
+        entries.forEach(e => {
+            if (!pf.logMap.has(e.k)) pf.logMap.set(e.k, []);
+            pf.logMap.get(e.k).push(now);
+            pf.logs.push({ kind, studentName: e.data.studentName, code: e.data.subjectCode, subjectName: e.data.subjectName, term: e.data.term, seq: e.seq, ms: now, level: e.data.level });
+        });
+    }
+    // บันทึกประวัติหลังดาวน์โหลดสำเร็จ — ถ้าบันทึกไม่ได้ ไฟล์ยังคงโหลดแล้ว แต่แจ้งเตือนให้ทราบ
+    async function pfSaveLogSafe(kind, items, fileName) {
+        try { await pfSaveLog(kind, items, fileName); pfRenderBadges(); _toast('success', `บันทึกประวัติการดาวน์โหลด ${items.length} รายการแล้ว`); }
+        catch (e) {
+            console.error(e);
+            Swal.fire({ icon: 'warning', title: 'ดาวน์โหลดแล้ว แต่บันทึกประวัติไม่สำเร็จ', html: `<div style="font-size:.9rem">${_esc(e.message || e)}<br><span style="color:#6b7280">ตรวจสอบ Firestore Rules ให้อนุญาตคอลเลกชัน <b>${COL_FORMLOG}</b></span></div>`, confirmButtonColor: '#4f46e5' });
+        }
+    }
+    function pfShowHistory() {
+        const rows = [...pf.logs].sort((a, b) => b.ms - a.ms);
+        const draw = q => {
+            const f = rows.filter(x => !q || (x.studentName + ' ' + x.code + ' ' + x.subjectName).toLowerCase().includes(q)).slice(0, 200);
+            return f.length ? f.map((x, i) => `<tr><td>${i + 1}</td><td>${_esc(pfFmtDT(x.ms))}</td><td>${x.kind}</td><td style="text-align:left">${_esc(x.studentName)}</td><td style="text-align:left">${_esc(x.code)} ${_esc(x.subjectName)}</td><td>${_esc(x.term)}</td><td><b>${x.seq || '-'}</b></td></tr>`).join('')
+                : '<tr><td colspan="7" style="padding:24px;color:#9ca3af">ยังไม่มีประวัติ</td></tr>';
+        };
+        Swal.fire({
+            title: '📜 ประวัติการดาวน์โหลดคำร้อง', width: 900, showConfirmButton: false, showCloseButton: true,
+            html: `<div style="text-align:left">${pf.logErr ? `<p style="color:#b91c1c;font-size:.82rem">อ่านประวัติไม่ได้: ${_esc(pf.logErr)}</p>` : ''}
+                <input id="pfHistQ" class="swal2-input" placeholder="ค้นหาชื่อนักเรียน / วิชา" style="margin:0 0 8px;width:100%;height:38px;font-size:.9rem">
+                <div style="max-height:55vh;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem;text-align:center">
+                <thead><tr style="background:#e0e7ff;position:sticky;top:0"><th>ที่</th><th>วันเวลาที่ดาวน์โหลด</th><th>ฟอร์ม</th><th>นักเรียน</th><th>วิชา</th><th>ภาคเรียน</th><th>ครั้งที่</th></tr></thead>
+                <tbody id="pfHistBody">${draw('')}</tbody></table></div><p style="font-size:.75rem;color:#9ca3af;margin-top:6px">แสดงล่าสุดไม่เกิน 200 รายการ · รวมทั้งหมด ${rows.length} รายการ</p></div>`,
+            didOpen: () => { document.getElementById('pfHistQ').oninput = e => { document.getElementById('pfHistBody').innerHTML = draw(e.target.value.trim().toLowerCase()); }; }
+        });
+    }
 
     function pfLevelOf(r) {                         // ชั้นปัจจุบัน → "2" หรือ "2/1"
         const re = /^(?:ม\.?\s*)?([1-6])(?:\s*[\/\-]\s*(\d{1,2}))?$/;
@@ -2786,7 +2885,8 @@
         loadFormOfficialsRemote();
         if (!Object.keys(teacherLibrary).length) { try { await loadTeacherData(); } catch (e) { console.warn('teacher data (print form):', e); } }
         pfBuildIndex();
-        pf.stu = null; pf.sub = null;
+        await pfLoadLogs();
+        pf.stu = null; pf.sub = null; pf.subSorted = [];
         document.getElementById('pfStuSearch').value = ''; document.getElementById('pfSubSearch').value = '';
         pfSetMode(opts.mode || '101');
         document.getElementById('printFormModal').classList.add('show');
@@ -2837,12 +2937,13 @@
                 <input type="checkbox" id="pfChk-${i}" ${checked ? 'checked' : ''} style="width:18px;height:18px">
                 <div class="flex-1 min-w-[200px]">
                     <p class="text-sm font-medium text-gray-800">${_esc(r.รหัสวิชา || '')} <span class="font-normal text-gray-600">${_esc(r.ชื่อวิชา || '')}</span></p>
-                    <p class="text-xs text-gray-500">ภาคเรียน ${_esc(r['ภาคเรียน/ปีการศึกษา'] || '—')} · <span class="badge ${gb}">${_esc(g)}</span>${done ? ' · <span style="color:#059669">แก้ไขแล้ว</span>' : ''}</p>
+                    <p class="text-xs text-gray-500">ภาคเรียน ${_esc(r['ภาคเรียน/ปีการศึกษา'] || '—')} · <span class="badge ${gb}">${_esc(g)}</span>${done ? ' · <span style="color:#059669">แก้ไขแล้ว</span>' : ''}<span id="pfLg-${i}"></span></p>
                 </div>
                 <label class="text-xs text-gray-500">หน่วยกิต <input type="text" id="pfCr-${i}" value="${_esc(pfCredit(r.รหัสวิชา || '', ty.year))}" class="teacher-input" style="width:64px;min-width:0;text-align:center"></label>
                 <label class="text-xs text-gray-500">ครูผู้สอน <input type="text" id="pfTc-${i}" value="${_esc(teacherAssignments[r.รหัสวิชา || ''] || '')}" class="teacher-input" style="width:190px;min-width:0"></label>
             </div>`;
         }).join('');
+        pfRenderBadges();
     }
 
     function pfRenderSubjectList() {
@@ -2865,11 +2966,12 @@
             <div class="flex items-center gap-3 flex-wrap py-2" style="border-top:1px solid #f1f5f9">
                 <input type="checkbox" id="pfSChk-${i}" ${done ? '' : 'checked'} style="width:18px;height:18px">
                 <div class="flex-1 min-w-[200px]"><p class="text-sm font-medium text-gray-800">${_esc(pfStuName(r))}</p>
-                    <p class="text-xs text-gray-500">ผลการเรียนเดิม <b>${_esc(r.ผลการเรียน || '')}</b>${done ? ' · <span style="color:#059669">แก้ไขแล้ว</span>' : ''}</p></div>
+                    <p class="text-xs text-gray-500">ผลการเรียนเดิม <b>${_esc(r.ผลการเรียน || '')}</b>${done ? ' · <span style="color:#059669">แก้ไขแล้ว</span>' : ''}<span id="pfSLg-${i}"></span></p></div>
                 <label class="text-xs text-gray-500">ชั้น ม. <input type="text" id="pfSLv-${i}" value="${_esc(pfLevelOf(r))}" class="teacher-input" style="width:70px;min-width:0;text-align:center"></label>
             </div>`;
         }).join('');
         pf.subSorted = s.recs.slice().sort((a, b) => pfStuName(a).localeCompare(pfStuName(b), 'th'));
+        pfRenderBadges();
     }
 
     async function pfGenerate() {
@@ -2891,8 +2993,13 @@
                     name: pfStuName(pf.stu.recs[0]), level: v('pfLevel').trim(), studentNo: v('pfStudentNo').trim(),
                     term: g.ty.term, year: g.ty.year, times: v('pfTimes').trim(), subjects: g.subjects
                 }));
+                const choice = await pfAskLog('101', picked.map(x => x.r));
+                if (!choice) return;
                 btn.disabled = true; btn.textContent = 'กำลังสร้างเอกสาร...';
-                await formDownloadDocx('101', list, `คำร้องขอสอบแก้ตัว วก.กทว.101 - ${pf.stu.name}`);
+                const fname = `คำร้องขอสอบแก้ตัว วก.กทว.101 - ${pf.stu.name}`;
+                await formDownloadDocx('101', list, fname);
+                if (choice === 'save') await pfSaveLogSafe('101', picked.map(x => ({ r: x.r, level: v('pfLevel').trim(), times: v('pfTimes').trim() })), fname);
+                else _toast('info', 'ดาวน์โหลดโดยไม่บันทึกประวัติ');
             } else {
                 if (!pf.sub) return warn('เลือกรายวิชาก่อน');
                 const v = id => (document.getElementById(id) || {}).value || '';
@@ -2900,9 +3007,14 @@
                     .map(({ r, i }) => ({ name: pfStuName(r), level: v('pfSLv-' + i).trim(), grade: String(r.ผลการเรียน || '').trim() }));
                 if (!students.length) return warn('เลือกนักเรียนอย่างน้อย 1 คน');
                 const ty = pfTermYear(pf.sub.recs[0]);
+                const pickedRecs = (pf.subSorted || []).map((r, i) => ({ r, i })).filter(x => document.getElementById('pfSChk-' + x.i).checked);
+                const choice = await pfAskLog('102', pickedRecs.map(x => x.r));
+                if (!choice) return;
                 btn.disabled = true; btn.textContent = 'กำลังสร้างเอกสาร...';
-                await formDownloadDocx('102', [{ subjectName: pf.sub.name, subjectCode: pf.sub.code, term: ty.term, year: ty.year, times: v('pfTimes2').trim(), teacher: v('pfTeacher2').trim(), students }],
-                    `แจ้งผลการสอบแก้ตัว วก.กทว.102 - ${pf.sub.code}`);
+                const fname = `แจ้งผลการสอบแก้ตัว วก.กทว.102 - ${pf.sub.code}`;
+                await formDownloadDocx('102', [{ subjectName: pf.sub.name, subjectCode: pf.sub.code, term: ty.term, year: ty.year, times: v('pfTimes2').trim(), teacher: v('pfTeacher2').trim(), students }], fname);
+                if (choice === 'save') await pfSaveLogSafe('102', pickedRecs.map(x => ({ r: x.r, level: v('pfSLv-' + x.i).trim(), times: v('pfTimes2').trim() })), fname);
+                else _toast('info', 'ดาวน์โหลดโดยไม่บันทึกประวัติ');
             }
         } catch (e) {
             console.error(e);
@@ -3708,8 +3820,8 @@
             subSel.innerHTML = '<option value="">ทุกวิชา</option>' + subs.map(([c, l]) => `<option value="${_esc(c)}">${_esc(l)}</option>`).join('');
             lvSel.innerHTML = '<option value="">ทุกชั้น</option>' + lvs.map(l => `<option value="${_esc(l)}">${_esc(l)}</option>`).join('');
         }
-        const fs = subSel.value, fl = lvSel.value;
-        _ckRows = all.filter(r => (!fs || r.รหัสวิชา === fs) && (!fl || _levelOf(r) === fl)).sort(_cmpRows);
+        const fs = subSel.value, fl = lvSel.value, fg = (document.getElementById('ckGrade') || {}).value || '';
+        _ckRows = all.filter(r => (!fs || r.รหัสวิชา === fs) && (!fl || _levelOf(r) === fl) && (!fg || String(r.ผลการเรียน || '').trim() === fg)).sort(_cmpRows);
         actions.forEach(b => b.disabled = !_ckRows.length);
         const c = g => _ckRows.filter(r => r.ผลการเรียน === g).length;
         const pill = (lbl, n, col) => `<div class="stat-card" style="padding:14px;text-align:center"><p class="text-xs text-gray-500">${lbl}</p><p class="stat-number" style="color:${col};font-size:1.8rem">${n}</p></div>`;
@@ -3797,7 +3909,82 @@
         XLSX.writeFile(wb, `ตรวจสอบ_ร_มส_${t}_${_todayIso()}.xlsx`);
         _toast('success', 'ส่งออก Excel แล้ว');
     }
-    
+
+    // ───────────────────────────────────────────────────────
+    //  4) ส่งออกไฟล์สำหรับนำเข้าระบบ Teaching Log (งานแก้ 0 ร มส)
+    //     หัวคอลัมน์ต้องคงที่ — ระบบ Teaching Log อ่านไฟล์โดยจับคู่จากชื่อหัวคอลัมน์
+    // ───────────────────────────────────────────────────────
+    const TL_HEADERS = ['ที่', 'ชื่อ-สกุล', 'ชั้น', 'รหัสวิชา', 'ชื่อวิชา', 'ภาคเรียน/ปีการศึกษา', 'ผลการเรียน', 'ครูผู้สอน', 'สถานะการแก้ไข', 'ผลการเรียนใหม่', 'หมายเหตุ (LS)'];
+
+    function tlDownload(rows, teacherLabel) {
+        if (!rows.length) { _toast('info', 'ไม่มีรายการให้ส่งออก'); return false; }
+        const data = [...rows].sort(_cmpRows).map((r, i) => [
+            i + 1, _stuName(r), r.ชั้น || '', r.รหัสวิชา || '', r.ชื่อวิชา || '', _semOf(r),
+            String(r.ผลการเรียน || '').trim(), teacherNames(r.รหัสวิชา || '').join(', '),
+            r.Correction_Status === 'แก้ไขแล้ว' ? 'แก้ไขแล้ว' : 'รอดำเนินการ', r.New_Result || '', r.LS_Status || ''
+        ]);
+        const ws = XLSX.utils.aoa_to_sheet([TL_HEADERS, ...data]);
+        ws['!cols'] = [6, 26, 9, 11, 30, 18, 11, 24, 16, 14, 24].map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'TeachingLog_0รมส');
+        const t = String(teacherLabel || '').replace(_TITLE_RE, '').replace(/[\\\/:*?"<>|]/g, '').replace(/\s+/g, '_') || 'ทุกครู';
+        XLSX.writeFile(wb, `TeachingLog_แก้0รมส_${t}_${_todayIso()}.xlsx`);
+        _toast('success', `ส่งออก ${data.length} รายการแล้ว`);
+        return true;
+    }
+
+    // ปุ่มบนหน้าตรวจสอบของครู — ส่งออกตามตัวกรองที่เลือกอยู่ (ครู/วิชา/ชั้น/ผลการเรียน/รวมที่แก้แล้ว)
+    function ckTlExport() { if (_ckRows.length) tlDownload(_ckRows, _ckTeacherName()); }
+
+    // เมนูส่งออกบนหน้าหลัก (สำหรับงานทะเบียน) — เลือกครู/วิชา/ชั้น/ผลการเรียนได้
+    async function openTlExport() {
+        if (!allData.length) { Swal.fire({ icon: 'info', title: 'ยังไม่มีข้อมูล', text: 'รอให้ระบบโหลดข้อมูลผลการเรียนก่อน', confirmButtonColor: '#4f46e5' }); return; }
+        if (!Object.keys(teacherAssignments).length) { try { await loadTeacherData(); } catch (e) { console.warn('teacher data (tl export):', e); } }
+        const idx = _teacherIndex();
+        const tOpts = [...idx.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+        const $ = id => document.getElementById(id);
+        const baseRows = () => { const key = $('tlxTeacher').value, done = $('tlxDone').checked; return key ? _rowsOfTeacher(key, done) : _failRows(done); };
+        const pick = () => {
+            const fs = $('tlxSubject').value, fl = $('tlxLevel').value, fg = $('tlxGrade').value;
+            return baseRows().filter(r => (!fs || r.รหัสวิชา === fs) && (!fl || _levelOf(r) === fl) && (!fg || String(r.ผลการเรียน || '').trim() === fg));
+        };
+        const fillOpts = () => {
+            const all = baseRows(), sSel = $('tlxSubject'), lSel = $('tlxLevel'), ps = sSel.value, pl = lSel.value;
+            const subs = [...new Map(all.map(r => [r.รหัสวิชา, _subjLabel(r)])).entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'th'));
+            const lvs = [...new Set(all.map(_levelOf))].sort((a, b) => a.localeCompare(b, 'th', { numeric: true }));
+            sSel.innerHTML = '<option value="">ทุกวิชา</option>' + subs.map(([c, l]) => `<option value="${_esc(c)}">${_esc(l)}</option>`).join('');
+            lSel.innerHTML = '<option value="">ทุกชั้น</option>' + lvs.map(l => `<option value="${_esc(l)}">${_esc(l)}</option>`).join('');
+            if (subs.some(s => s[0] === ps)) sSel.value = ps;
+            if (lvs.includes(pl)) lSel.value = pl;
+        };
+        const count = () => { const n = pick(); $('tlxCount').textContent = `จะส่งออก ${n.length} รายการ (${new Set(n.map(_stuName)).size} คน)`; };
+        const sty = 'margin:4px 0 10px;width:100%;height:40px;font-size:.9rem';
+        const res = await Swal.fire({
+            title: '⬇️ ส่งออกให้ Teaching Log', width: 560, showCancelButton: true, confirmButtonText: 'ดาวน์โหลด .xlsx', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5',
+            html: `<div style="text-align:left;font-size:.9rem">
+                <p style="color:#6b7280;margin-bottom:10px">ไฟล์ที่ได้นำไปนำเข้าที่เมนู “งานแก้ 0 ร มส” ในระบบ Teaching Log ได้ทันที</p>
+                <label style="font-size:.78rem;color:#6b7280">ครูผู้สอน</label>
+                <select id="tlxTeacher" class="swal2-select" style="${sty}"><option value="">ทุกคน</option>${tOpts.map(t => `<option value="${_esc(t.key)}">${_esc(t.name)}</option>`).join('')}</select>
+                <label style="font-size:.78rem;color:#6b7280">รายวิชา</label><select id="tlxSubject" class="swal2-select" style="${sty}"></select>
+                <label style="font-size:.78rem;color:#6b7280">ชั้น</label><select id="tlxLevel" class="swal2-select" style="${sty}"></select>
+                <label style="font-size:.78rem;color:#6b7280">ผลการเรียน</label><select id="tlxGrade" class="swal2-select" style="${sty}"><option value="">ทั้ง 0 / ร / มส</option><option value="0">0</option><option value="ร">ร</option><option value="มส">มส</option></select>
+                <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="tlxDone"> รวมรายการที่แก้ไขแล้ว / แก้ให้มีเกรดใน LS แล้ว</label>
+                <b id="tlxCount" style="color:#4f46e5"></b></div>`,
+            didOpen: () => {
+                fillOpts(); count();
+                $('tlxTeacher').onchange = $('tlxDone').onchange = () => { fillOpts(); count(); };
+                ['tlxSubject', 'tlxLevel', 'tlxGrade'].forEach(id => $(id).onchange = count);
+            },
+            preConfirm: () => {
+                const rows = pick();
+                if (!rows.length) { Swal.showValidationMessage('ไม่มีรายการตามตัวกรองนี้'); return false; }
+                const o = $('tlxTeacher').options[$('tlxTeacher').selectedIndex];
+                return { rows, teacher: $('tlxTeacher').value ? o.text : '' };
+            }
+        });
+        if (res.isConfirmed && res.value) tlDownload(res.value.rows, res.value.teacher);
+    }
+
     // ── UX v2: dropdown menus + settings tabs ──
     function closeMenus() { document.querySelectorAll('.menu-wrap.open').forEach(m => m.classList.remove('open')); }
     function toggleMenu(id, ev) {
