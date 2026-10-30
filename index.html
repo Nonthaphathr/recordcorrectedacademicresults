@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการข้อมูลแก้ไขผลการเรียน  -  โรงเรียนกระดุมทองวิทยา</title>
-    <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png">
+    <link rel="icon" type="image/png" href="https://nonthaphathr.github.io/uploadimg/logoschool.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -377,7 +377,7 @@
     <nav class="navbar no-print">
         <div class="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <img src="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png" class="w-8 h-8 object-contain" alt="logo">
+                <img src="https://nonthaphathr.github.io/uploadimg/logoschool.png" class="w-8 h-8 object-contain" alt="logo">
                 <span class="font-bold text-indigo-700 text-sm hidden sm:block">กระดุมทองวิทยา</span>
             </div>
             <div class="flex items-center gap-1">
@@ -416,7 +416,7 @@
             <div class="header-card p-8 mb-8 relative z-10">
                 <div class="flex flex-col items-center text-white">
                     <div class="logo-ring mb-4">
-                        <img src="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png" alt="โลโก้" class="w-16 h-16 object-contain">
+                        <img src="https://nonthaphathr.github.io/uploadimg/logoschool.png" alt="โลโก้" class="w-16 h-16 object-contain">
                     </div>
                     <h1 class="text-3xl md:text-4xl font-bold text-center mb-2 relative z-10">ระบบจัดการข้อมูลแก้ไขผลการเรียน</h1>
                     <p class="text-indigo-100 font-medium mb-1">โรงเรียนกระดุมทองวิทยา</p>
@@ -761,7 +761,7 @@
         <div id="page-check" class="page">
             <div class="header-card p-6 mb-6 relative z-10">
                 <div class="flex flex-col items-center text-white">
-                    <div class="logo-ring mb-3"><img src="https://img2.pic.in.th/pic/-2550a9c41e64e2eb.png" alt="โลโก้" class="w-14 h-14 object-contain"></div>
+                    <div class="logo-ring mb-3"><img src="https://nonthaphathr.github.io/uploadimg/logoschool.png" alt="โลโก้" class="w-14 h-14 object-contain"></div>
                     <h1 class="text-2xl md:text-3xl font-bold text-center mb-1 relative z-10">ตรวจสอบนักเรียนที่ติด 0 ร มส</h1>
                     <p class="text-indigo-100 text-sm">โรงเรียนกระดุมทองวิทยา · เลือกชื่อครูผู้สอนเพื่อดูรายวิชาที่รับผิดชอบ</p>
                 </div>
@@ -2835,7 +2835,7 @@
         };
         Swal.fire({
             title: '📜 ประวัติการดาวน์โหลดคำร้อง', width: 900, showConfirmButton: false, showCloseButton: true,
-            html: `<div style="text-align:left">${pf.logErr ? `<p style="color:#b91c1c;font-size:.82rem">อ่านประวัติไม่ได้: ${_esc(pf.logErr)}</p>` : ''}
+            html: `<div style="text-align:left">${pf.logErr ? `<p style="color:#b91c1c;font-size:.82rem">อ่านประวัติไม่ได้: ${_esc(pf.logErr)}</p>${/permission/i.test(pf.logErr) ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin:6px 0 10px;font-size:.8rem;color:#7f1d1d">ต้องเพิ่มสิทธิ์คอลเลกชัน <b>form_downloads</b> ใน Firebase Console &rarr; Firestore Database &rarr; Rules แล้วกด Publish<pre style="margin:6px 0 0;background:#fff;padding:8px;border-radius:6px;white-space:pre-wrap;font-size:.75rem;color:#111">match /form_downloads/{docId} {\n  allow read, write: if true;\n}</pre></div>` : ''}` : ''}
                 <input id="pfHistQ" class="swal2-input" placeholder="ค้นหาชื่อนักเรียน / วิชา" style="margin:0 0 8px;width:100%;height:38px;font-size:.9rem">
                 <div style="max-height:55vh;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem;text-align:center">
                 <thead><tr style="background:#e0e7ff;position:sticky;top:0"><th>ที่</th><th>วันเวลาที่ดาวน์โหลด</th><th>ฟอร์ม</th><th>นักเรียน</th><th>วิชา</th><th>ภาคเรียน</th><th>ครั้งที่</th></tr></thead>
