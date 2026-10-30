@@ -2542,7 +2542,8 @@
         const FONT = { ascii: FORM_TH, hAnsi: FORM_TH, cs: FORM_TH, eastAsia: FORM_TH };
         const RUN_DEF = { font: FONT, size: PT * 2, sizeComplexScript: PT * 2, language: { value: 'th-TH', eastAsia: 'th-TH', bidirectional: 'th-TH' } };
         const cl = s => String(s ?? '').replace(/ /g, ' ').replace(/‌/g, '').replace(/\s*[\r\n]+\s*/g, ' ').replace(/ {2,}/g, ' ');
-        const T = (text, o = {}) => new D.TextRun({ text: cl(text), ...o, ...(o.size ? { sizeComplexScript: o.size } : {}) });
+        const cur = { size: 0 };   // ขนาดตัวอักษรเริ่มต้นแบบกะทัดรัด (half-points); 0 = ใช้ค่าปกติของเอกสาร
+        const T = (text, o = {}) => { const sz = o.size || cur.size; return new D.TextRun({ text: cl(text), ...o, ...(sz ? { size: sz, sizeComplexScript: sz } : {}) }); };
         const DOT = { type: D.UnderlineType.DOTTED };
         const dots = n => T('.'.repeat(n));
         const val = (v, n = 20) => { const s = cl(v).trim(); return s ? T(' ' + s + ' ', { underline: DOT }) : dots(n); };
@@ -2572,9 +2573,11 @@
             borders: { top: B1, bottom: B1, left: B1, right: B1, insideHorizontal: B1, insideVertical: B1 }
         });
         const b64u8 = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
-        const logo = () => P([new D.ImageRun({ type: 'jpg', data: b64u8(FORM_LOGO_B64), transformation: { width: 66, height: 67 } })], { alignment: A.CENTER, spacing: { before: 0, after: 60 } });
+        const logo = (w = 66, h = 67) => P([new D.ImageRun({ type: 'jpg', data: b64u8(FORM_LOGO_B64), transformation: { width: w, height: h } })], { alignment: A.CENTER, spacing: { before: 0, after: 60 } });
         const section = children => ({
-            properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 700, bottom: 700, left: 1134, right: 1134 } } },
+            properties: { page: { size: { width: 11906, height: 16838 }, margin: children.narrow
+                ? { top: 720, bottom: 720, left: 720, right: 720, header: 360, footer: 360 }   // เค้าโครงหน้ากระดาษแบบแคบ
+                : { top: 700, bottom: 700, left: 1134, right: 1134 } } },
             children
         });
         const doc = (sections, title) => new D.Document({
@@ -2582,7 +2585,7 @@
             styles: { default: { document: { run: RUN_DEF, paragraph: { alignment: A.THAI_DISTRIBUTE, spacing: { before: 0, after: 0, line: 240, lineRule: 'auto' } } } } },
             sections
         });
-        return { D, A, T, P, val, dots, box, cell, row, table, logo, section, doc, BNONE, BALL, cl, DOT };
+        return { D, A, T, P, val, dots, box, cell, row, table, logo, section, doc, BNONE, BALL, cl, DOT, cur };
     }
 
     const _fmtCredit = v => (v === null || v === undefined || v === '') ? '' : String(v);
@@ -2598,11 +2601,16 @@
     function form101Children(d, k) {
         const { D, A, T, P, val, dots, box, cell, row, table, logo, BNONE } = k;
         const subs = d.subjects || [];
+        // ≤ 5 รายวิชา (และครูผู้อนุญาต ≤ 5 คน) → จัดให้พอดี 1 หน้า: ลดฟอนต์ ขยายตารางเต็มความกว้าง หน้ากระดาษแบบแคบ
+        const tList = [...new Set(subs.flatMap(s => formTeacherList(s.teacher)))];   // ครูผู้สอนของวิชาที่ติด (ไม่ซ้ำ) → ครูผู้อนุญาตให้สอบ
+        const compact = subs.length <= 5 && tList.length <= 5;
         const n = Math.max(3, subs.length);
         const out = [];
-        out.push(P([T('วก.กทว. 101', { size: 28 })], { alignment: A.RIGHT }));
-        out.push(logo());
-        out.push(P([T('แบบคำร้องขอสอบแก้ตัว', { bold: true, size: 36 })], { alignment: A.CENTER }));
+        if (compact) { out.narrow = true; k.cur.size = 26; } else k.cur.size = 0;
+        const sz = (big, small) => compact ? small : big;
+        out.push(P([T('วก.กทว. 101', { size: sz(28, 24) })], { alignment: A.RIGHT }));
+        out.push(logo(...(compact ? [40, 41] : [66, 67])));
+        out.push(P([T('แบบคำร้องขอสอบแก้ตัว', { bold: true, size: sz(36, 30) })], { alignment: A.CENTER }));
         out.push(P([T('ครั้งที่ '), val(d.times, 10)], { alignment: A.CENTER, spacing: { after: 120 } }));
         out.push(P([T('เรื่อง', { bold: true }), T('  ขออนุญาตสอบแก้ตัว')], { alignment: A.LEFT }));
         out.push(P([T('เรียน', { bold: true }), T('  ผู้อำนวยการ' + FORM_SCHOOL)], { alignment: A.LEFT, spacing: { after: 120 } }));
@@ -2612,7 +2620,7 @@
             T(' ปีการศึกษา'), val(d.year, 8), T(' ซึ่งมีรายวิชาที่ขอสอบ ดังนี้')
         ], { indent: { firstLine: 1134 }, spacing: { after: 120 }, alignment: A.THAI_DISTRIBUTE }));
 
-        const W1 = [560, 3450, 920, 1250, 2358, 1100];                   // = 9638
+        const W1 = compact ? [520, 2900, 1100, 1400, 3446, 1100] : [560, 3450, 920, 1250, 2358, 1100];   // compact = 10466, ปกติ = 9638
         const hc = (t, w, o = {}) => cell(t, w, { align: A.CENTER, run: { bold: true }, ...o });
         const rows1 = [
             row([hc('ที่', W1[0], { rowSpan: 2 }), hc('รหัสวิชา', W1[1], { rowSpan: 2 }), hc('หน่วยกิต', W1[2], { rowSpan: 2 }),
@@ -2628,7 +2636,7 @@
                 cell(s ? String(s.grade || '') : '', W1[3], { align: A.CENTER }),
                 cell(s ? formTeacherTitle(s.teacher) : '', W1[4]),
                 cell('', W1[5])
-            ], { h: 440 }));
+            ], { h: compact ? 360 : 440 }));
         }
         out.push(table(rows1, W1));
 
@@ -2637,16 +2645,39 @@
         out.push(P([T('ลงชื่อ'), dots(30), T('ผู้ยื่นคำร้อง')], { ...sig, spacing: { before: 120 } }));
         out.push(P([T('('), val(d.name, 30), T(')')], sig));
 
-        const W2 = [620, 2900, 3818, 2300];                               // = 9638
+        const W2 = compact ? [560, 3600, 3606, 2700] : [620, 2900, 3818, 2300];   // compact = 10466, ปกติ = 9638
         const rows2 = [row([hc('ที่', W2[0], { keepNext: true }), hc('ครูผู้อนุญาตให้สอบ', W2[1], { keepNext: true }), hc('กิจกรรม/ภาระงานที่มอบหมาย', W2[2], { keepNext: true }), hc('ระยะเวลาสิ้นสุดส่งงาน', W2[3], { keepNext: true })])];
-        const tList = [...new Set(subs.flatMap(s => formTeacherList(s.teacher)))];   // ครูผู้สอนของวิชาที่ติด (ไม่ซ้ำ) → ครูผู้อนุญาตให้สอบ
         const n2 = Math.max(n, tList.length);
-        for (let i = 0; i < n2; i++) { const kn = i < n2 - 1; rows2.push(row([cell(String(i + 1), W2[0], { align: A.CENTER, keepNext: kn }), cell(tList[i] || '', W2[1], { keepNext: kn }), cell('', W2[2], { keepNext: kn }), cell('', W2[3], { keepNext: kn })], { h: 440 })); }
-        out.push(P([T('')], { spacing: { before: 120 }, keepNext: true }));
+        for (let i = 0; i < n2; i++) { const kn = i < n2 - 1; rows2.push(row([cell(String(i + 1), W2[0], { align: A.CENTER, keepNext: kn }), cell(tList[i] || '', W2[1], { keepNext: kn }), cell('', W2[2], { keepNext: kn }), cell('', W2[3], { keepNext: kn })], { h: compact ? 360 : 440 })); }
+        out.push(P([T('')], { spacing: { before: compact ? 40 : 120 }, keepNext: true }));
         out.push(table(rows2, W2));
 
         // ความเห็น — หน้า 2
-        out.push(P([T('ความเห็น', { bold: true, underline: k.DOT })], { alignment: A.LEFT, spacing: { before: 240, after: 120 }, keepNext: true }));
+        out.push(P([T('ความเห็น', { bold: true, underline: k.DOT })], { alignment: A.LEFT, spacing: { before: compact ? 100 : 240, after: compact ? 60 : 120 }, keepNext: true }));
+        if (compact) {
+            // ความเห็น 4 ตำแหน่ง จัดเป็นตาราง 2 × 2 เพื่อให้พอดี 1 หน้า
+            const WC = [5233, 5233];
+            const oc = (role, opts, name) => cell([
+                P([T(role, { bold: true })], { alignment: A.LEFT }),
+                P([box(), T(' ' + opts[0]), T('     '), box(), T(' ' + opts[1])], { alignment: A.LEFT, spacing: { after: 40 } }),
+                P([T('ลงชื่อ'), dots(26)], { alignment: A.LEFT, spacing: { before: 80 } }),
+                P([T('(' + name + ')')], { alignment: A.LEFT, indent: { left: 500 } }),
+            ], WC[0], { borders: BNONE, v: D.VerticalAlign.TOP });
+            const rowC = (a, b) => new D.TableRow({ children: [a, b], cantSplit: true });
+            const nb = B0n(D);
+            out.push(new D.Table({
+                columnWidths: WC, layout: D.TableLayoutType.FIXED, width: { size: 10466, type: D.WidthType.DXA },
+                borders: { top: nb, bottom: nb, left: nb, right: nb, insideHorizontal: nb, insideVertical: nb },
+                rows: [
+                    rowC(oc('เจ้าหน้าที่ทะเบียนวัดผล', ['เห็นควรอนุญาต', 'ไม่ควรอนุญาต'], FORM_OFFICIALS.registrar),
+                         oc('หัวหน้ากลุ่มบริหารงานวิชาการ', ['เห็นควรอนุญาต', 'ไม่ควรอนุญาต'], FORM_OFFICIALS.academicHead)),
+                    rowC(oc('รองผู้อำนวยการโรงเรียน', ['เห็นควรอนุญาต', 'ไม่ควรอนุญาต'], FORM_OFFICIALS.deputy),
+                         oc('ผู้อำนวยการโรงเรียน', ['อนุญาต', 'ไม่อนุญาต'], FORM_OFFICIALS.director))
+                ]
+            }));
+            k.cur.size = 0;
+            return out;
+        }
         const WO = [3000, 6638];
         const opinion = (role, opts, name, extra) => {
             const lines = [
