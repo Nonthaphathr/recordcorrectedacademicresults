@@ -2177,27 +2177,39 @@
     let _groupSubjects = {};
 
     // ── ครูรายภาคเรียน: byTerm = { '1/2567': 'ครู ก, ครู ข', ... } เก็บในเอกสาร teacher_assignments ──
-    // ครูที่เกษียณ/ย้ายแล้ว → ผู้รับผิดชอบแก้ปัจจุบัน (เปลี่ยนได้ที่นี่)
-    const TEACHER_REPLACE = {
-        'ธนะสิทธิ์พรหมทอง': 'นางสาวปริมปภาพร บาอินทร์',   // เกษียณแล้ว
-        'จิระประภาดอกพอง': 'นางสาวปริมปภาพร บาอินทร์'       // ย้ายแล้ว
+    // ครูที่เกษียณ/ย้าย/ลาออกแล้ว (ไม่ใช่ผู้รับผิดชอบแก้) — เทียบจากชื่อต้น
+    const DEPARTED_KEYS = ['ธนะสิทธิ์', 'จิระประภา', 'พัทธนันท์', 'สุทธิชา'];
+    // ถ้ารหัสวิชานั้นไม่มีครูปัจจุบันในตารางสอนเลย → ผู้รับผิดชอบแก้ตามกลุ่มวิชา (แก้ได้ที่นี่)
+    const TEACHER_FALLBACK = {
+        social: 'นายวิทยา ใหม่คามิ',            // สังคมศึกษา (ก่อน 2/2568)
+        work: 'นายต้นกล้า เพชรเลื่อน',           // การงานอาชีพ
+        art: 'นายไกรสร จันทวี',                  // ศิลปะ
+        tech: 'นางสาวณิชารีย์ คำศรีทา'           // คอมพิวเตอร์/เทคโนโลยี/วิทยาการคำนวณ
     };
     const _rKey = n => String(n || '').replace(/\s+/g, '').replace(/^(นางสาว|นาง|นาย|ครู)/, '');
-    const _mapRepl = n => TEACHER_REPLACE[_rKey(n)] || n;
     const _termKey = t => { const m = String(t || '').match(/(\d)\s*\/\s*(\d{4})/); return m ? (+m[2]) * 10 + (+m[1]) : 0; };
     const _isFormer = n => /\(ครูเดิม\)/.test(n);
-    // ครูล่าสุดตามภาคเรียน (ข้ามครูเดิมที่ยังไม่มีผู้มาแทน)
-    function _latestTeachers(code) {
-        const bt = (teacherLibrary[code] || {}).byTerm || {};
-        const ks = Object.keys(bt).sort((a, b) => _termKey(b) - _termKey(a));
-        for (const k of ks) { const l = _splitTeachers(bt[k]).filter(n => !_isFormer(n)); if (l.length) return l; }
-        return [];
+    const _isDeparted = n => _isFormer(n) || DEPARTED_KEYS.some(k => _rKey(n).startsWith(k));
+    const _subjNameOf = code => (teacherLibrary[code] || {}).subjectName || ((allData || []).find(x => x.รหัสวิชา === code) || {}).ชื่อวิชา || '';
+    function _fallbackBySubject(code) {
+        const ch = String(code || '').charAt(0), nm = _subjNameOf(code);
+        if (/คอมพิวเตอร์|เทคโนโลยี|วิทยาการคำนวณ|ดิจิทัล|ออกแบบ/.test(nm)) return TEACHER_FALLBACK.tech;
+        return ({ 'ส': TEACHER_FALLBACK.social, 'ง': TEACHER_FALLBACK.work, 'ศ': TEACHER_FALLBACK.art })[ch] || '';
     }
-    // ผู้รับผิดชอบแก้ปัจจุบัน = ครูในคลังปัจจุบัน (ถ้าไม่มี ใช้ครูล่าสุดจากรายภาค) · แปลงครูที่ย้าย/เกษียณเป็นครูคนใหม่
+    // ผู้มาแทนครูที่ย้าย/เกษียณ: ครูปัจจุบันตามตารางสอน (ภาคล่าสุดก่อน) → ไม่มีก็ตามกลุ่มวิชา
+    function _successors(code) {
+        const bt = (teacherLibrary[code] || {}).byTerm || {};
+        for (const k of Object.keys(bt).sort((a, b) => _termKey(b) - _termKey(a))) {
+            const l = _splitTeachers(bt[k]).filter(n => !_isDeparted(n)); if (l.length) return l;
+        }
+        const f = _fallbackBySubject(code); return f ? [f] : [];
+    }
+    // ผู้รับผิดชอบแก้ปัจจุบัน: ครูในคลังที่ยังอยู่ · ถ้าเป็นครูที่ย้าย/เกษียณหรือยังไม่ได้ตั้ง → ผู้มาแทน
     const teacherNames = code => {
-        let l = String(teacherAssignments[code] || '').split(/\s*[,;]\s*/).filter(Boolean);
-        if (!l.length) l = _latestTeachers(code);
-        return [...new Set(l.map(_mapRepl))];
+        const raw = String(teacherAssignments[code] || '').split(/\s*[,;]\s*/).filter(Boolean);
+        const out = raw.filter(n => !_isDeparted(n));
+        if (!raw.length || out.length < raw.length) out.push(..._successors(code));
+        return [...new Set(out)];
     };
     const _respStr = code => teacherNames(code).join(', ');
     // ครูผู้สอนขณะนั้น (ตามภาคเรียนของแถว): ตรงภาค → ปีเดียวกัน → ภาคก่อนหน้าที่ใกล้สุด → ภาคถัดไป
