@@ -3912,6 +3912,50 @@
         const t = new URLSearchParams(location.search).get('t');
         if (t && idx.has(_tKey(t))) sel.value = _tKey(t);
         ckRender(true);
+        // ลิงก์กลาง (ยังไม่ได้เลือกชื่อ) ครั้งแรกของวัน → มืดรอบ ๆ แล้วโฟกัสที่ช่องเลือกชื่อครู
+        if (!sel.value && opts.length) {
+            try { if (localStorage.getItem('ktw_ck_focus_day') !== _todayIso()) { localStorage.setItem('ktw_ck_focus_day', _todayIso()); setTimeout(ckSpotlightOn, 500); } } catch (e) { setTimeout(ckSpotlightOn, 500); }
+        }
+    }
+
+    // ── Spotlight: tint ดำล้อมกรอบ โฟกัสที่ช่องเลือกชื่อครู ──
+    let _spot = null;
+    function ckSpotlightOn() {
+        const sel = document.getElementById('ckTeacher'); if (!sel || sel.value || _spot) return;
+        const mk = (id, css) => { const d = document.createElement('div'); d.id = id; d.style.cssText = css; document.body.appendChild(d); return d; };
+        const veil = mk('ckVeil', 'position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.72);cursor:pointer;opacity:0;transition:opacity .35s');
+        const ring = mk('ckRing', 'position:fixed;z-index:9991;pointer-events:none;border:3px solid #f59e0b;border-radius:12px;animation:ckRingPulse 1.4s ease-in-out infinite');
+        const tip = mk('ckTip', 'position:fixed;z-index:9992;max-width:300px;background:#fff;color:#1e1b4b;border-radius:12px;padding:10px 14px;font-size:.95rem;line-height:1.35;box-shadow:0 8px 28px rgba(0,0,0,.45);animation:ckTipBob 1.4s ease-in-out infinite');
+        tip.innerHTML = '<b style="color:#4f46e5">👆 เลือกชื่อของท่านที่ช่องนี้</b><br><span style="font-size:.82rem;color:#4b5563">เพื่อดูนักเรียนที่ติด 0 ร มส ในรายวิชาที่ท่านสอน</span><div style="margin-top:6px"><button id="ckTipOk" style="background:#4f46e5;color:#fff;border:0;border-radius:8px;padding:3px 12px;font-family:inherit;font-weight:600;cursor:pointer">รับทราบ</button></div>';
+        const place = () => {
+            if (!_spot) return;
+            const r = sel.getBoundingClientRect(), pad = 8, x = r.left - pad, y = r.top - pad, x2 = r.right + pad, y2 = r.bottom + pad;
+            veil.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x}px ${y}px, ${x}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y}px, ${x}px ${y}px)`;
+            Object.assign(ring.style, { left: x + 'px', top: y + 'px', width: (x2 - x) + 'px', height: (y2 - y) + 'px' });
+            const below = y2 + tip.offsetHeight + 16 < window.innerHeight;
+            tip.style.left = Math.max(12, Math.min(x, window.innerWidth - tip.offsetWidth - 12)) + 'px';
+            tip.style.top = (below ? y2 + 12 : Math.max(8, y - tip.offsetHeight - 12)) + 'px';
+        };
+        _spot = { veil, ring, tip, place };
+        if (!document.getElementById('ckSpotCss')) {
+            const st = document.createElement('style'); st.id = 'ckSpotCss';
+            st.textContent = '@keyframes ckRingPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.75)}50%{box-shadow:0 0 0 12px rgba(245,158,11,0)}}@keyframes ckTipBob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}';
+            document.head.appendChild(st);
+        }
+        sel.scrollIntoView({ block: 'center' });
+        place(); requestAnimationFrame(() => { veil.style.opacity = '1'; place(); });
+        window.addEventListener('scroll', place, true); window.addEventListener('resize', place);
+        _spot.off = ckSpotlightOff;
+        veil.onclick = ckSpotlightOff; document.getElementById('ckTipOk').onclick = ckSpotlightOff;
+        sel.addEventListener('change', ckSpotlightOff, { once: true });
+        document.addEventListener('keydown', _spotEsc);
+    }
+    const _spotEsc = e => { if (e.key === 'Escape') ckSpotlightOff(); };
+    function ckSpotlightOff() {
+        if (!_spot) return;
+        const s = _spot; _spot = null;
+        window.removeEventListener('scroll', s.place, true); window.removeEventListener('resize', s.place); document.removeEventListener('keydown', _spotEsc);
+        s.veil.style.opacity = '0'; setTimeout(() => { s.veil.remove(); s.ring.remove(); s.tip.remove(); }, 300);
     }
 
     function ckRender(resetSub) {
