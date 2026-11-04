@@ -833,8 +833,8 @@
                 <p class="mb-3 text-gray-700">ครู: <b id="spName"></b></p>
                 <p id="spMsg" class="text-sm text-gray-500 mb-3">กำลังตรวจสอบลิงก์...</p>
                 <div id="spForm" style="display:none">
-                    <label class="form-label">รหัสผ่าน 8 หลัก แบบ ววดดปปปป (วัน เดือน ปี พ.ศ.)</label>
-                    <input type="password" id="spPw" maxlength="8" inputmode="numeric" autocomplete="off" class="input-field mb-3" placeholder="เช่น 05031980">
+                    <label class="form-label">รหัสผ่าน 8 หลัก แบบ ววดดปปปป จากวัน-เดือน-ปีเกิด (พ.ศ.) เช่น 17052537</label>
+                    <input type="password" id="spPw" maxlength="8" inputmode="numeric" autocomplete="off" class="input-field mb-3" placeholder="เช่น 17052537">
                     <label class="form-label">ยืนยันรหัสผ่านอีกครั้ง</label>
                     <input type="password" id="spPw2" maxlength="8" inputmode="numeric" autocomplete="off" class="input-field mb-4">
                     <button onclick="spSubmit()" class="btn btn-primary">บันทึกรหัสผ่าน</button>
@@ -4291,34 +4291,61 @@
         await db.collection(COL_TAUTH).doc(t.key).set({ name: t.name, setupToken: tok, tokenExp: firebase.firestore.Timestamp.fromMillis(Date.now() + 7 * 86400000) }, { merge: true });
         return tok;
     }
+    const _setupMsg = (name, link) => `เรียน ${name}\nกรุณาตั้งรหัสผ่านสำหรับแก้ไขผลการเรียน โดยใช้ วัน-เดือน-ปีเกิด ของท่าน โดยตั้งเป็นเลขรหัส ววดดปปปป เช่น 17052537\n${link}\n(ลิงก์ตั้งรหัสนี้ใช้ได้ครั้งเดียว ให้รีบเข้าไปตั้งรหัสภายใน 7 วัน นับแต่ได้รับลิงก์)`;
     async function tpOpenLinks() {
         const ts = await _ensureTeachers();
         if (!ts.length) { Swal.fire({ icon: 'info', title: 'ยังไม่มีข้อมูลครูผู้สอน', confirmButtonColor: '#4f46e5' }); return; }
         const has = new Set();
         try { (await db.collection(COL_TAUTH).get()).docs.forEach(d => { if (d.data().hash) has.add(d.id); }); } catch (e) {}
         Swal.fire({
-            title: '🔗 ลิงก์ตั้งรหัสให้ครู', width: 720, showConfirmButton: false, showCloseButton: true,
-            html: `<div style="text-align:left;font-size:.88rem"><p style="color:#6b7280;margin-bottom:8px">กด "คัดลอกลิงก์" ที่ชื่อครูเพื่อสร้างลิงก์ตั้งรหัสแบบใช้ครั้งเดียว (หมดอายุ 7 วัน) แล้วส่งให้ครู หรือส่งออกทุกคนที่ยังไม่ตั้งรหัสเป็น .xlsx</p>
-            <button id="tpAll" class="swal2-confirm swal2-styled" style="background:#10b981;margin:0 0 8px">📊 ส่งออกลิงก์ครูที่ยังไม่ตั้งรหัส (.xlsx)</button>
-            <div style="max-height:340px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px">${ts.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f1f5f9">
+            title: '🔗 ลิงก์ตั้งรหัสให้ครู', width: 760, showConfirmButton: false, showCloseButton: true,
+            html: `<div style="text-align:left;font-size:.88rem"><p style="color:#6b7280;margin-bottom:8px">ติ๊กเลือกครู แล้วกด "คัดลอกข้อความรวม" (ระบบสร้างลิงก์ใช้ครั้งเดียว หมดอายุ 7 วัน ให้แต่ละคน) หรือกด "คัดลอก" ที่ชื่อครูเป็นรายคน</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+                <button id="tpSelAll" class="swal2-styled" style="background:#6b7280;margin:0;padding:6px 12px;font-size:.8rem">เลือกทั้งหมด</button>
+                <button id="tpSelNo" class="swal2-styled" style="background:#6b7280;margin:0;padding:6px 12px;font-size:.8rem">เลือกเฉพาะที่ยังไม่ตั้งรหัส</button>
+                <button id="tpSelClr" class="swal2-styled" style="background:#6b7280;margin:0;padding:6px 12px;font-size:.8rem">ล้างที่เลือก</button>
+                <span id="tpCnt" style="color:#4f46e5;font-weight:600"></span></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+                <button id="tpCopyAll" class="swal2-confirm swal2-styled" style="background:#4f46e5;margin:0">📋 คัดลอกข้อความรวม (คนที่เลือก)</button>
+                <button id="tpAll" class="swal2-confirm swal2-styled" style="background:#10b981;margin:0">📊 ส่งออกลิงก์คนที่เลือก (.xlsx)</button></div>
+            <div style="max-height:320px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px">${ts.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f1f5f9">
+                <input type="checkbox" class="tp-chk" value="${_esc(t.key)}">
                 <span style="flex:1">${_esc(t.name)} ${has.has(t.key) ? '<span style="color:#059669;font-size:.75rem">✓ ตั้งรหัสแล้ว</span>' : '<span style="color:#d97706;font-size:.75rem">ยังไม่ตั้ง</span>'}</span>
-                <button data-k="${_esc(t.key)}" class="tp-copy swal2-styled" style="background:#4f46e5;margin:0;padding:6px 12px;font-size:.8rem">คัดลอกลิงก์</button></div>`).join('')}</div></div>`,
+                <button data-k="${_esc(t.key)}" class="tp-copy swal2-styled" style="background:#4f46e5;margin:0;padding:6px 12px;font-size:.8rem">คัดลอก</button></div>`).join('')}</div></div>`,
             didOpen: () => {
+                const chks = () => [...document.querySelectorAll('.tp-chk')];
+                const picked = () => ts.filter(t => chks().some(c => c.checked && c.value === t.key));
+                const cnt = () => { document.getElementById('tpCnt').textContent = `เลือกแล้ว ${picked().length} คน`; };
+                chks().forEach(c => c.onchange = cnt); cnt();
+                document.getElementById('tpSelAll').onclick = () => { chks().forEach(c => c.checked = true); cnt(); };
+                document.getElementById('tpSelNo').onclick = () => { chks().forEach(c => c.checked = !has.has(c.value)); cnt(); };
+                document.getElementById('tpSelClr').onclick = () => { chks().forEach(c => c.checked = false); cnt(); };
                 document.querySelectorAll('.tp-copy').forEach(b => b.onclick = async () => {
                     const t = ts.find(x => x.key === b.dataset.k);
                     try {
-                        const tok = await _makeSetupToken(t), link = _setupLinkOf(t.name, tok);
-                        await _copyText(`เรียน ${t.name}\nกรุณาตั้งรหัสผ่านสำหรับแก้ไขผลการเรียน (รูปแบบ ววดดปปปป) ที่ลิงก์นี้ (ใช้ได้ครั้งเดียว ภายใน 7 วัน)\n${link}`);
-                        _toast('success', 'คัดลอกลิงก์ของ ' + t.name);
-                    } catch (e) { console.error(e); Swal.fire({ icon: 'error', title: 'สร้างลิงก์ไม่สำเร็จ', html: `<div style="font-size:.85rem">${_esc(e.code || '')} ${_esc(e.message || e)}${/permission/i.test(e.code + e.message) ? '<br><br>ต้องเพิ่มกฎ Firestore ให้เขียน teacher_auth ได้' : ''}</div>`, confirmButtonColor: '#ef4444' }); }
+                        const tok = await _makeSetupToken(t);
+                        await _copyText(_setupMsg(t.name, _setupLinkOf(t.name, tok)));
+                        _toast('success', 'คัดลอกข้อความของ ' + t.name);
+                    } catch (e) { console.error(e); Swal.fire({ icon: 'error', title: 'สร้างลิงก์ไม่สำเร็จ', html: `<div style="font-size:.85rem">${_esc(e.code || '')} ${_esc(e.message || e)}</div>`, confirmButtonColor: '#ef4444' }); }
                 });
+                document.getElementById('tpCopyAll').onclick = async () => {
+                    const sel = picked(); if (!sel.length) { _toast('info', 'ติ๊กเลือกครูก่อน'); return; }
+                    try {
+                        const parts = [];
+                        for (const t of sel) parts.push(_setupMsg(t.name, _setupLinkOf(t.name, await _makeSetupToken(t))));
+                        await _copyText(parts.join('\n\n──────────────\n\n'));
+                        _toast('success', `คัดลอกข้อความรวม ${sel.length} คนแล้ว`);
+                    } catch (e) { console.error(e); Swal.fire({ icon: 'error', title: 'คัดลอกไม่สำเร็จ', html: `<div style="font-size:.85rem">${_esc(e.code || '')} ${_esc(e.message || e)}</div>`, confirmButtonColor: '#ef4444' }); }
+                };
                 document.getElementById('tpAll').onclick = async () => {
-                    const todo = ts.filter(t => !has.has(t.key)); if (!todo.length) { _toast('info', 'ทุกคนตั้งรหัสแล้ว'); return; }
-                    const out = [];
-                    for (const t of todo) out.push([t.name, _setupLinkOf(t.name, await _makeSetupToken(t))]);
-                    const ws = XLSX.utils.aoa_to_sheet([['ชื่อครู', 'ลิงก์ตั้งรหัส (ใช้ครั้งเดียว 7 วัน)'], ...out]); ws['!cols'] = [{ wch: 32 }, { wch: 90 }];
-                    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'ลิงก์ตั้งรหัส'); XLSX.writeFile(wb, 'ลิงก์ตั้งรหัสครู_' + _todayIso() + '.xlsx');
-                    _toast('success', `ส่งออก ${out.length} ลิงก์`);
+                    const sel = picked(); if (!sel.length) { _toast('info', 'ติ๊กเลือกครูก่อน'); return; }
+                    try {
+                        const out = [];
+                        for (const t of sel) out.push([t.name, _setupLinkOf(t.name, await _makeSetupToken(t))]);
+                        const ws = XLSX.utils.aoa_to_sheet([['ชื่อครู', 'ลิงก์ตั้งรหัส (ใช้ครั้งเดียว 7 วัน)'], ...out]); ws['!cols'] = [{ wch: 32 }, { wch: 90 }];
+                        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'ลิงก์ตั้งรหัส'); XLSX.writeFile(wb, 'ลิงก์ตั้งรหัสครู_' + _todayIso() + '.xlsx');
+                        _toast('success', `ส่งออก ${out.length} ลิงก์`);
+                    } catch (e) { console.error(e); _toast('error', 'ส่งออกไม่สำเร็จ'); }
                 };
             }
         });
