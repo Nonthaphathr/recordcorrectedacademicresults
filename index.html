@@ -396,7 +396,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     <span class="hidden sm:inline">ตั้งค่า</span>
                 </button>
-                <button onclick="openGuide()" class="nav-link" id="nav-guide" title="คู่มือพิมพ์แบบฟอร์มคำร้อง">
+                <button onclick="openGuide()" class="nav-link" id="nav-guide" title="คู่มือการใช้งานระบบ">
                     <span>📘</span><span class="hidden sm:inline">คู่มือ</span>
                 </button>
                 <!-- QR button -->
@@ -937,7 +937,7 @@
     <!-- ══ GUIDE MODAL — คู่มือพิมพ์แบบฟอร์มคำร้อง ══ -->
     <div id="guideModal" class="modal-overlay" onclick="if(event.target===this)closeGuide()">
         <div class="modal-box" style="max-width:640px;display:flex;flex-direction:column;max-height:94vh;overflow:hidden">
-            <div class="modal-header" style="flex:none"><h3>📘 คู่มือ: พิมพ์แบบฟอร์มคำร้องขอสอบแก้ตัว (สำหรับครูวัดผล)</h3></div>
+            <div class="modal-header" style="flex:none"><h3>📘 คู่มือการใช้งานระบบ (สำหรับครูวัดผล / ผู้ดูแล)</h3></div>
             <div class="modal-body" style="overflow-y:auto;flex:1;padding:18px 24px">
                 <div class="gd-stage" id="gdStage">
 
@@ -948,13 +948,13 @@
                             <div style="padding:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
                                 <span class="gd-btn gd-b-p">ค้นหา</span><span class="gd-btn gd-b-g">ล้างตัวกรอง</span><span class="gd-btn gd-b-i">รีเฟรช</span>
                                 <span style="flex:1"></span>
-                                <span class="gd-btn gd-b-s">Export Excel</span>
-                                <span class="gd-btn gd-b-i gd-press gd-glow" id="gdTarget1">🖨️ แบบฟอร์มคำร้อง</span>
-                                <span class="gd-btn gd-b-w">พิมพ์</span>
+                                <span class="gd-btn gd-b-p gd-press gd-glow" id="gdTarget1">📄 เอกสาร &amp; รายงาน ▾</span>
+                                <span class="gd-btn gd-b-s">⬇ ส่งออก &amp; พิมพ์ ▾</span>
                             </div>
                             <div class="gd-row" style="font-weight:600;background:#f8fafc"><span style="flex:2">ชื่อ-สกุล</span><span style="flex:2">วิชา</span><span style="flex:1">ผล</span><span style="width:70px;text-align:right">จัดการ</span></div>
                             <div class="gd-row"><span style="flex:2">ด.ญ.ชลิตา ฝางคำ</span><span style="flex:2">พ22104 กรีฑา2</span><span style="flex:1">ร</span><span style="width:70px;text-align:right">⚡ ✏️ <b style="background:#e0f2fe;border-radius:4px;padding:0 3px">🖨️</b></span></div>
                             <div class="gd-row"><span style="flex:2">ด.ญ.ชลิตา ฝางคำ</span><span style="flex:2">ค22102 คณิตศาสตร์4</span><span style="flex:1">มส</span><span style="width:70px;text-align:right">⚡ ✏️ 🖨️</span></div>
+                            <div class="gd-win gd-pop" style="position:absolute;right:96px;top:68px;z-index:4;width:190px;padding:4px 0;animation-delay:1.6s;box-shadow:0 8px 24px rgba(0,0,0,.2)"><div style="padding:3px 10px;color:#6b7280">📄 รายงานผู้บริหาร</div><div class="gd-glow" style="padding:3px 10px;background:#eef2ff;color:#4338ca;font-weight:600">🖨️ แบบฟอร์มคำร้อง 101 / 102</div><div style="padding:3px 10px;color:#6b7280">🔗 ลิงก์ตรวจสอบสำหรับครู</div></div>
                             <div class="gd-cursor" style="--cx:440px;--cy:62px"><svg viewBox="0 0 24 24"><path d="M3 2l7 18 2.5-7.5L20 10z" fill="#111" stroke="#fff" stroke-width="1.5"/></svg></div>
                         </div>
                     </div>
@@ -1029,6 +1029,48 @@
                             <div class="gd-win gd-pop" style="padding:10px;animation-delay:.1s"><div style="font-size:22px">📄</div><b>แบบ 102</b><p style="color:#6b7280;margin-top:4px">แจ้งผลการสอบแก้ตัว แบบรายวิชา: เลือกวิชา แล้วติ๊กนักเรียนทั้งห้องได้ในใบเดียว</p></div>
                             <div class="gd-win gd-pop" style="padding:10px;animation-delay:.6s"><div style="font-size:22px">✍️</div><b>เปลี่ยนผู้ลงนาม</b><p style="color:#6b7280;margin-top:4px">ตั้งค่า → "ผู้ลงนามในแบบฟอร์ม" แก้ชื่อ ทะเบียน/หัวหน้า/รอง ผอ./ผอ. ได้เอง</p></div>
                             <div class="gd-win gd-pop" style="padding:10px;animation-delay:1.1s"><div style="font-size:22px">👩‍🏫</div><b>ครูผู้สอน</b><p style="color:#6b7280;margin-top:4px">ชื่อครูดึงจากเมนู "ระบุผู้สอน" — นำเข้าไฟล์ .xlsx ได้ที่นั่น</p></div>
+                        </div>
+                    </div>
+
+                    <!-- 7 -->
+                    <div class="gd-scene" data-t="7">
+                        <div style="display:flex;gap:10px;height:100%">
+                            <div class="gd-win gd-pop" style="flex:1;padding:10px;animation-delay:.1s">
+                                <b>🔗 ส่งให้ครูแก้เอง</b>
+                                <div style="margin-top:6px;color:#6b7280;line-height:1.5">เอกสาร &amp; รายงาน → ลิงก์ตรวจสอบสำหรับครู<br>ตั้งค่า → QR รายคน (ติดโต๊ะ) + คู่มือครู PDF</div>
+                                <span class="gd-input" style="margin-top:8px;display:block">🔑 รหัส = ววดดปปปป<br>เช่น 17052537</span>
+                            </div>
+                            <div class="gd-win" style="flex:1.6;position:relative">
+                                <div class="gd-bar">ตรวจสอบนักเรียนที่ติด 0 ร มส</div>
+                                <div class="gd-row"><span style="flex:2">ด.ญ.ชลิตา ฝางคำ</span><span style="flex:1">ค22102</span><span style="flex:1">ร</span></div>
+                                <div style="padding:6px 10px;display:flex;gap:6px;flex-wrap:wrap"><span class="gd-btn gd-b-i">📄 ออกใบขอแก้</span><span class="gd-btn gd-b-p gd-press gd-glow">✏️ แก้ผลการเรียนใหม่</span></div>
+                                <div class="gd-pop" style="animation-delay:1.3s;margin:2px 10px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:8px;padding:6px 8px;color:#166534">✅ บันทึกแล้ว → ถามให้โหลด กทว.102<br>🔔 แจ้งเตือนเข้ากลุ่ม LINE</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 8 -->
+                    <div class="gd-scene" data-t="8">
+                        <div class="gd-win" style="height:100%;position:relative">
+                            <div class="gd-bar">👪 สรุปผลรายบุคคล (มอบผู้ปกครอง) — ส่งออก &amp; พิมพ์</div>
+                            <div style="padding:8px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                                <div class="gd-pop gd-input" style="animation-delay:.2s;min-width:0">👤 <b>รายบุคคล</b><br>A4 เต็มแผ่น</div>
+                                <div class="gd-pop gd-input" style="animation-delay:.5s;min-width:0">🏫 <b>รายห้องเรียน</b><br>A4 เต็มแผ่น 1 คน/แผ่น</div>
+                                <div class="gd-pop gd-input" style="animation-delay:.8s;min-width:0">📚 <b>รายวิชา</b><br>A4 นอน 2 คน/แผ่น</div>
+                                <div class="gd-pop gd-input" style="animation-delay:1.1s;min-width:0">🧩 <b>กลุ่มสาระฯ</b><br>A4 นอน 2 คน/แผ่น</div>
+                            </div>
+                            <div class="gd-pop" style="animation-delay:1.5s;padding:2px 14px;color:#4b5563;line-height:1.5">ในแต่ละใบ: ติดทั้งหมดกี่วิชา · 0 / ร / มส · ครูผู้สอน · ติดเกิน 20 วิชาแบ่งเป็นหลายแผ่นให้เอง</div>
+                        </div>
+                    </div>
+
+                    <!-- 9 -->
+                    <div class="gd-scene" data-t="9">
+                        <div class="gd-win" style="height:100%">
+                            <div class="gd-bar">ครูผู้สอนรายภาคเรียน / ผู้รับผิดชอบแก้</div>
+                            <div class="gd-row gd-pop" style="animation-delay:.2s"><span style="flex:1.2">ส21101 · 1/2567</span><span style="flex:2">ครูผู้สอนขณะนั้น: ครูธนะสิทธิ์ (เกษียณ)</span></div>
+                            <div class="gd-row gd-pop" style="animation-delay:.8s;background:#eef2ff"><span style="flex:1.2">↳ ผู้รับผิดชอบแก้</span><span style="flex:2"><b style="color:#4338ca">ครูวิทยา</b> (สังคม ก่อน 2/2568)</span></div>
+                            <div class="gd-row gd-pop" style="animation-delay:1.4s"><span style="flex:1.2">ส21104 · 2/2568</span><span style="flex:2">ครูปริมปภาพร (ตามตารางสอน)</span></div>
+                            <div class="gd-pop" style="animation-delay:2s;padding:6px 14px;color:#4b5563;line-height:1.5">นำเข้า .xlsx ได้ที่เมนู "ระบุผู้สอน" → 📥 นำเข้าครูรายภาคเรียน</div>
                         </div>
                     </div>
                 </div>
@@ -3237,16 +3279,19 @@
 
 
     // ═══════════════════════════════════════════════════════
-    //  GUIDE — คู่มือพิมพ์แบบฟอร์มคำร้อง (เด้งครั้งแรกของวัน + ปุ่มบน navbar)
+    //  GUIDE — คู่มือการใช้งานระบบ (เด้งครั้งแรกของวัน + ปุ่มบน navbar)
     // ═══════════════════════════════════════════════════════
     const GUIDE_DAY_KEY = 'ktw_guide_day';
     const GUIDE_STEPS = [
-        { t: '① เปิดหน้าพิมพ์แบบฟอร์ม', d: 'ที่หน้าหลัก กดปุ่ม "🖨️ แบบฟอร์มคำร้อง" บนแถบเครื่องมือ หรือกดไอคอน 🖨️ ท้ายแถวของนักเรียนคนนั้น ระบบจะเลือกนักเรียนและวิชานั้นให้อัตโนมัติ' },
+        { t: '① เปิดหน้าพิมพ์แบบฟอร์ม', d: 'ที่หน้าหลัก กดเมนู "📄 เอกสาร & รายงาน ▾" → "แบบฟอร์มคำร้อง วก.กทว.101 / 102" หรือกดไอคอน 🖨️ ท้ายแถวของนักเรียนคนนั้น ระบบจะเลือกนักเรียนและวิชานั้นให้อัตโนมัติ' },
         { t: '② เลือกนักเรียน', d: 'พิมพ์ชื่อเพื่อค้นหา แล้วคลิกชื่อนักเรียนในรายการ (ใช้แบบ 101 สำหรับคำร้องรายคน) ระบบแสดงจำนวนวิชาที่ติดและสถานะแก้ไขแล้วให้ทุกคน' },
         { t: '③ ติ๊กวิชาที่ติด และตรวจข้อมูล', d: 'ระบบติ๊กวิชาที่ยังไม่แก้ไขไว้ให้ ปรับได้ตามต้องการ ตรวจหน่วยกิตและชื่อครูผู้สอน (แก้ได้) แล้วกรอก ชั้น / เลขที่ / สอบแก้ตัวครั้งที่ ถ้าติดต่างภาคเรียน ระบบแยกเป็นคนละฉบับให้เอง' },
         { t: '④ กด "สร้างเอกสาร (.docx)"', d: 'ปุ่มสร้างเอกสารอยู่ที่ท้ายหน้าต่างและเห็นตลอดไม่ต้องเลื่อน เมื่อสร้างเสร็จไฟล์ Word จะดาวน์โหลดอัตโนมัติ ภาษาไทยไม่เพี้ยน ไม่ขึ้นเส้นแดง' },
         { t: '⑤ เปิดใน Word → ตรวจ → พิมพ์ → ลงชื่อ', d: 'เปิดไฟล์ ตรวจความถูกต้อง สั่งพิมพ์ แล้วให้นักเรียนและครูผู้สอนลงชื่อ จากนั้นส่งต่อให้ผู้ลงความเห็นตามลำดับในหน้า 2 ของเอกสาร' },
-        { t: '⑥ เครื่องมือที่เกี่ยวข้อง', d: 'แบบ 102 แจ้งผลการสอบแก้ตัวแบบรายวิชา · เปลี่ยนชื่อผู้ลงนามได้ที่ ตั้งค่า → "ผู้ลงนามในแบบฟอร์ม" · ชื่อครูมาจากเมนู "ระบุผู้สอน" (นำเข้า .xlsx ได้) · เปิดคู่มือนี้ซ้ำได้จากปุ่ม "คู่มือ" บนแถบเมนู' }
+        { t: '⑥ แบบ 102 และเครื่องมือที่เกี่ยวข้อง', d: 'แบบ 102 แจ้งผลการสอบแก้ตัวแบบรายวิชา (ช่อง "ผลการสอบแก้ตัว" กรอกผลใหม่ตามระบบให้) · ประวัติการดาวน์โหลดแยกแท็บ รวม / 101 / 102 และแสดงชื่อผู้ดาวน์โหลด · เปลี่ยนผู้ลงนามที่ ตั้งค่า → "ผู้ลงนามในแบบฟอร์ม"' },
+        { t: '⑦ ให้ครูตรวจและแก้ผลการเรียนเอง', d: 'เมนู "เอกสาร & รายงาน" → "ลิงก์ตรวจสอบสำหรับครู" ส่งลิงก์กลาง หรือพิมพ์ QR รายคนไปติดโต๊ะ (ตั้งค่า → รหัสผ่านครู) ครูเลือกชื่อ กด "ออกใบขอแก้" หรือ "แก้ผลการเรียนใหม่" ใส่รหัสผ่าน ววดดปปปป (วัน-เดือน-ปีเกิด พ.ศ.) บันทึกแล้วระบบถามให้โหลด 102 และแจ้งเข้ากลุ่ม LINE · ตั้งรหัสให้ครูด้วยไฟล์ .xlsx หรือลิงก์ตั้งรหัสที่ใช้ได้ครั้งเดียวภายใน 7 วัน · มีคู่มือครู (PDF) ที่ปุ่ม "📘 คู่มือการใช้งาน" ในหน้าตรวจสอบ' },
+        { t: '⑧ สรุปผลรายบุคคลให้ผู้ปกครอง', d: 'เมนู "⬇ ส่งออก & พิมพ์" → "👪 สรุปผลรายบุคคล" เลือกรูปแบบ: รายบุคคล / รายห้องเรียน (A4 แนวตั้ง 1 คนต่อแผ่น) หรือ รายวิชา / กลุ่มสาระการเรียนรู้ (A4 แนวนอน 2 คนต่อแผ่น) แล้วเลือกรายการ · แต่ละใบบอกว่าติดกี่วิชา วิชาไหน ใครสอน · ติดมากกว่า 20 วิชา (แนวนอนเกิน 10) แบ่งเป็นหลายแผ่นอัตโนมัติ' },
+        { t: '⑨ ครูเปลี่ยนตามปี / ผู้รับผิดชอบแก้', d: 'วิชาที่ครูเปลี่ยนตามปีการศึกษา: เอกสารแสดง "ครูผู้สอนขณะนั้น" ตามภาคเรียนของนักเรียน ส่วนผู้รับผิดชอบแก้คือครูปัจจุบัน (ครูที่ย้าย/เกษียณ → ครูตามตารางสอนล่าสุด หรือตามกลุ่มวิชา) · นำเข้าข้อมูลที่เมนู "ระบุผู้สอน" → "📥 นำเข้าครูรายภาคเรียน (.xlsx)" · เปิดคู่มือนี้ซ้ำได้จากปุ่ม "คู่มือ" บนแถบเมนู' }
     ];
     let _gd = { i: 0, play: true, timer: null, raf: null };
     const GUIDE_MS = 7000;
@@ -3280,7 +3325,9 @@
         clearTimeout(_gd.timer);
         if (_gd.play) {
             void tb.offsetWidth; tb.style.transition = `width ${GUIDE_MS}ms linear`; tb.style.width = '100%';
-            _gd.timer = setTimeout(() => guideShow(_gd.i + 1), GUIDE_MS);
+            const ms = GUIDE_MS + Math.max(0, GUIDE_STEPS[_gd.i].d.length - 170) * 35;   // ข้อความยาวให้เวลาอ่านเพิ่ม
+            tb.style.transition = `width ${ms}ms linear`;
+            _gd.timer = setTimeout(() => guideShow(_gd.i + 1), ms);
         }
     }
     function guideGo(d) { guideShow(_gd.i + d); }
