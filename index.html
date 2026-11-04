@@ -1576,7 +1576,7 @@
             if (year    && r.ชั้นปี !== year) return false;
             if (sem     && r['ภาคเรียน/ปีการศึกษา'] !== sem) return false;
             if (grade   && g !== grade) return false;
-            if (teacher && !teacherNames(r.รหัสวิชา||'').includes(teacher)) return false;
+            if (teacher && !teacherNamesRow(r).includes(teacher)) return false;
             if (lsf === '__none' && r.LS_Status) return false;
             if (lsf && lsf !== '__none' && (r.LS_Status||'') !== lsf) return false;
             if (status === 'แก้ไขแล้ว'  && r.Correction_Status !== 'แก้ไขแล้ว') return false;
@@ -1609,7 +1609,7 @@
             let gradeBadge = 'badge-danger';
             if (grade==='ร') gradeBadge='badge-warning'; if (grade==='มส') gradeBadge='badge-purple';
             const fullName = `${row.คำนำหน้า||''} ${row.ชื่อ||''} ${row.สกุล||''}`.trim();
-            const teacher  = _respStr(row.รหัสวิชา||'');
+            const teacher  = _respStrRow(row);
             const ls = row.LS_Status || '';
             const lsBorder = ls==='ติดในระบบ LS' ? '#fca5a5' : ls ? '#60a5fa' : '#e0e7ff';
             const lsBg     = ls==='ติดในระบบ LS' ? '#fef2f2' : ls ? '#eff6ff' : '#fff';
@@ -2184,7 +2184,7 @@
                 r.ชั้นปี||'', r['ภาคเรียน/ปีการศึกษา']||'',
                 `${r.คำนำหน้า||''} ${r.ชื่อ||''} ${r.สกุล||''}`.trim(),
                 r.รหัสวิชา||'', r.ชื่อวิชา||'', r.ชั้น||'',
-                _respStr(r.รหัสวิชา||''),
+                _respStrRow(r),
                 r.ผลการเรียน||'', r.New_Result||'',
                 r.Editor||'', r.EditDate||'', r.EditTime||'', r.LS_Status||''
             ]);
@@ -2206,7 +2206,7 @@
             <td>${r.ชั้นปี||''}</td><td>${r['ภาคเรียน/ปีการศึกษา']||''}</td>
             <td>${r.คำนำหน้า||''} ${r.ชื่อ||''} ${r.สกุล||''}</td>
             <td>${r.รหัสวิชา||''}</td><td>${r.ชื่อวิชา||''}</td><td>${r.ชั้น||''}</td>
-            <td>${_respStr(r.รหัสวิชา||'')||'—'}</td>
+            <td>${_respStrRow(r)||'—'}</td>
             <td style="color:#b91c1c;font-weight:600">${r.ผลการเรียน||''}</td>
             <td style="color:#065f46;font-weight:600">${r.New_Result||'—'}</td>
             <td>${r.Editor||'—'}</td>
@@ -2249,7 +2249,7 @@
     // กำหนดผู้รับผิดชอบรายรหัสวิชา (ใช้เมื่อไม่มีครูปัจจุบันในตารางสอน)
     const TEACHER_CODE_FALLBACK = { 'อ22222': 'นางสาวปริมปภาพร บาอินทร์' };
     // ครูที่เปลี่ยนชื่อ: ชื่อเดิม(ไม่มีคำนำหน้า/ช่องว่าง) → ชื่อใหม่ · ใช้กับทุกที่ที่แสดง/จัดกลุ่มชื่อครู
-    const TEACHER_RENAME = { 'ณิชารีย์คำศรีทา': 'นางสาวอัญชุลี คำศรีทา' };
+    const TEACHER_RENAME = { 'ณิชารีย์คำศรีทา': 'นางสาวอัญชุลี คำศรีทา', 'วิไลจิตรจันแจ้ง': 'นางสาววิไลจิตร จันทร์แจ้ง' };
     const _renameT = n => TEACHER_RENAME[String(n || '').replace(/\s+/g, '').replace(/^(นางสาว|นาง|นาย|ครู)/, '')] || n;
     const _rKey = n => String(n || '').replace(/\s+/g, '').replace(/^(นางสาว|นาง|นาย|ครู)/, '');
     const _termKey = t => { const m = String(t || '').match(/(\d)\s*\/\s*(\d{4})/); return m ? (+m[2]) * 10 + (+m[1]) : 0; };
@@ -2278,6 +2278,20 @@
         return [...new Set(out.map(_renameT))];
     };
     const _respStr = code => teacherNames(code).join(', ');
+    // ผู้รับผิดชอบแก้ "รายแถว": ปีการศึกษา 2568–2569 → ครูที่สอนวิชานั้นตามตารางสอน (โรงเรียนแบ่งกันสอนช่วย)
+    // ครูที่ย้าย/เกษียณ (เช่น ธนะสิทธิ์) → ผู้มาแทน · ปีก่อนหน้านั้น/ไม่มีตารางสอน → ใช้กฎผู้รับผิดชอบรายวิชา (teacherNames)
+    function teacherNamesRow(r) {
+        const code = (r && r.รหัสวิชา) || '', term = r ? _semOf(r) : '', y = Math.floor(_termKey(term) / 10);
+        if (y === 2568 || y === 2569) {
+            const th = teacherAtTerm(code, term);
+            if (th.length) {
+                const good = th.filter(n => !_isDeparted(n));
+                return [...new Set((good.length ? good : _successors(code).map(_renameT)))];
+            }
+        }
+        return teacherNames(code);
+    }
+    const _respStrRow = r => teacherNamesRow(r).join(', ');
     // ครูผู้สอนขณะนั้น (ตามภาคเรียนของแถว): ตรงภาค → ปีเดียวกัน → ภาคก่อนหน้าที่ใกล้สุด → ภาคถัดไป
     function teacherAtTerm(code, term) {
         const bt = (teacherLibrary[code] || {}).byTerm || {}, ks = Object.keys(bt); if (!ks.length) return [];
@@ -2287,7 +2301,7 @@
         return _splitTeachers(bt[k]).map(_renameT);
     }
     function _thenDiff(r) {   // ครูขณะนั้น ≠ ผู้รับผิดชอบปัจจุบัน ?
-        const th = teacherAtTerm(r.รหัสวิชา || '', _semOf(r)), cur = teacherNames(r.รหัสวิชา || '');
+        const th = teacherAtTerm(r.รหัสวิชา || '', _semOf(r)), cur = teacherNamesRow(r);
         if (!th.length || !cur.length) return null;
         const a = th.map(_rKey).sort().join('|'), b = cur.map(_rKey).sort().join('|');
         return a === b ? null : { th, cur };
@@ -3213,7 +3227,7 @@
                     <p class="text-xs text-gray-500">ภาคเรียน ${_esc(r['ภาคเรียน/ปีการศึกษา'] || '—')} · <span class="badge ${gb}">${_esc(g)}</span>${done ? ' · <span style="color:#059669">แก้ไขแล้ว</span>' : ''}<span id="pfLg-${i}"></span></p>
                 </div>
                 <label class="text-xs text-gray-500">หน่วยกิต <input type="text" id="pfCr-${i}" value="${_esc(pfCredit(r.รหัสวิชา || '', ty.year))}" class="teacher-input" style="width:64px;min-width:0;text-align:center"></label>
-                <label class="text-xs text-gray-500">ครูผู้สอน <input type="text" id="pfTc-${i}" value="${_esc(_respStr(r.รหัสวิชา || ''))}" class="teacher-input" style="width:190px;min-width:0"></label>
+                <label class="text-xs text-gray-500">ครูผู้สอน <input type="text" id="pfTc-${i}" value="${_esc(_respStrRow(r))}" class="teacher-input" style="width:190px;min-width:0"></label>
             </div>`;
         }).join('');
         pfRenderBadges();
@@ -3821,10 +3835,17 @@
                 t.codes.add(code);
             });
         });
+        // ผู้รับผิดชอบรายแถว (ปี 2568–2569 ตามตารางสอน) — ให้ครูที่รับผิดชอบเฉพาะบางแถวอยู่ในรายการด้วย
+        _failRows(true, false).forEach(r => teacherNamesRow(r).forEach(n => {
+            const k = _tKey(n); if (!k) return;
+            let t = idx.get(k); if (!t) { t = { key: k, name: n, codes: new Set() }; idx.set(k, t); }
+            if (_TITLE_RE.test(n) && n.length >= t.name.length) t.name = n;
+            t.codes.add(r.รหัสวิชา || '');
+        }));
         return idx;
     }
     function _rowsOfTeacher(key, includeDone) {
-        return _failRows(includeDone).filter(r => teacherNames(r.รหัสวิชา || '').some(n => _tKey(n) === key));
+        return _failRows(includeDone).filter(r => teacherNamesRow(r).some(n => _tKey(n) === key));
     }
     function _copyText(text) {
         if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
@@ -3921,7 +3942,7 @@
         const idx = _teacherIndex();
         const groups = new Map(); const NONE = '__none';
         rows.forEach(r => {
-            const ns = teacherNames(r.รหัสวิชา || '');
+            const ns = teacherNamesRow(r);
             const keys = ns.length ? [...new Set(ns.map(_tKey))] : [NONE];
             keys.forEach(k => { if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
         });
@@ -4247,7 +4268,7 @@
         if (!rows.length) { _toast('info', 'ไม่มีรายการให้ส่งออก'); return false; }
         const data = [...rows].sort(_cmpRows).map((r, i) => [
             i + 1, _stuName(r), r.ชั้น || '', r.รหัสวิชา || '', r.ชื่อวิชา || '', _semOf(r),
-            String(r.ผลการเรียน || '').trim(), teacherNames(r.รหัสวิชา || '').join(', '),
+            String(r.ผลการเรียน || '').trim(), _respStrRow(r),
             r.Correction_Status === 'แก้ไขแล้ว' ? 'แก้ไขแล้ว' : 'รอดำเนินการ', r.New_Result || '', r.LS_Status || ''
         ]);
         const ws = XLSX.utils.aoa_to_sheet([TL_HEADERS, ...data]);
@@ -4343,7 +4364,7 @@
         }, { merge: true });
     }
     // ครูที่เปลี่ยนชื่อ: ถ้ายังไม่มีรหัสใต้ชื่อใหม่ ให้ใช้รหัสที่เคยตั้งไว้ใต้ชื่อเดิมได้ (hash ผูกกับ key เดิม)
-    const _KEY_ALIAS = { 'อัญชุลีคำศรีทา': 'ณิชารีย์คำศรีทา' };
+    const _KEY_ALIAS = { 'อัญชุลีคำศรีทา': 'ณิชารีย์คำศรีทา', 'วิไลจิตรจันทร์แจ้ง': 'วิไลจิตรจันแจ้ง' };
     async function _verifyTeacherPw(key, pw) {
         for (const k of [key, _KEY_ALIAS[key]].filter(Boolean)) {
             const s = await db.collection(COL_TAUTH).doc(k).get();
@@ -4455,7 +4476,7 @@
         try {
             await pfLoadLogs(); loadFormOfficialsRemote();
             const ty = pfTermYear(r), times = String(ask.value || '').trim(), fname = `แจ้งผลการสอบแก้ตัว วก.กทว.102 - ${r.รหัสวิชา || ''}`;
-            await formDownloadDocx('102', [{ subjectName: r.ชื่อวิชา || '', subjectCode: r.รหัสวิชา || '', term: ty.term, year: ty.year, times, teacher: _respStr(r.รหัสวิชา || '') || tName, students: [{ name: pfStuName(r), level: pfLevelOf(r), grade: String(r.ผลการเรียน || '').trim(), newResult: String(r.New_Result || '').trim() }] }], fname);
+            await formDownloadDocx('102', [{ subjectName: r.ชื่อวิชา || '', subjectCode: r.รหัสวิชา || '', term: ty.term, year: ty.year, times, teacher: _respStrRow(r) || tName, students: [{ name: pfStuName(r), level: pfLevelOf(r), grade: String(r.ผลการเรียน || '').trim(), newResult: String(r.New_Result || '').trim() }] }], fname);
             await pfSaveLogSafe('102', [{ r, level: pfLevelOf(r), times }], fname);
             ckRender(false);
         } catch (e) { Swal.fire({ icon: 'error', title: 'สร้างเอกสารไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
@@ -4474,7 +4495,7 @@
         try {
             await loadFormOfficialsRemote();
             const ty = pfTermYear(r), tName = _ckTeacherName();
-            await formDownloadDocx('102', [{ subjectName: r.ชื่อวิชา || '', subjectCode: r.รหัสวิชา || '', term: ty.term, year: ty.year, times: last.times || '', teacher: _respStr(r.รหัสวิชา || '') || tName, students }], `แจ้งผลการสอบแก้ตัว วก.กทว.102 - ${r.รหัสวิชา || ''}`);
+            await formDownloadDocx('102', [{ subjectName: r.ชื่อวิชา || '', subjectCode: r.รหัสวิชา || '', term: ty.term, year: ty.year, times: last.times || '', teacher: _respStrRow(r) || tName, students }], `แจ้งผลการสอบแก้ตัว วก.กทว.102 - ${r.รหัสวิชา || ''}`);
             _toast('success', `พิมพ์ 102 ซ้ำ (${students.length} คน ตามครั้งล่าสุด)`);
         } catch (e) { Swal.fire({ icon: 'error', title: 'สร้างเอกสารไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
     }
@@ -4859,7 +4880,7 @@
             const clsList = [...new Set(it.recs.map(_clsOf))].join(', ');
             const rows = recs.map((r, i) => {
                 const d = r.Correction_Status === 'แก้ไขแล้ว';
-                return `<tr${d ? ' class="dn"' : ''}><td>${base + i + 1}</td><td class="l">${e(r.รหัสวิชา || '')}</td><td class="l">${e(r.ชื่อวิชา || '')}</td><td>${e(_semOf(r))}</td><td>${e(_clsOf(r))}</td><td><b>${e(r.ผลการเรียน || '')}</b></td><td class="l tc">${(() => { const d = _thenDiff(r), nw = n => `<span style="white-space:nowrap">${e(n)}</span>`, th = d ? d.th : teacherNames(r.รหัสวิชา || ''); return (th.map(nw).join('<br>') || '—') + (d ? `<br><span class="ch">แก้ไขกับ ${d.cur.map(nw).join(', ')}</span>` : ''); })()}</td>${hasDone ? `<td>${d ? 'แก้ไขแล้ว' + (r.New_Result ? ' → ' + e(r.New_Result) : '') : 'รอแก้ไข'}</td>` : ''}</tr>`;
+                return `<tr${d ? ' class="dn"' : ''}><td>${base + i + 1}</td><td class="l">${e(r.รหัสวิชา || '')}</td><td class="l">${e(r.ชื่อวิชา || '')}</td><td>${e(_semOf(r))}</td><td>${e(_clsOf(r))}</td><td><b>${e(r.ผลการเรียน || '')}</b></td><td class="l tc">${(() => { const d = _thenDiff(r), nw = n => `<span style="white-space:nowrap">${e(n)}</span>`, th = d ? d.th : teacherNamesRow(r); return (th.map(nw).join('<br>') || '—') + (d ? `<br><span class="ch">แก้ไขกับ ${d.cur.map(nw).join(', ')}</span>` : ''); })()}</td>${hasDone ? `<td>${d ? 'แก้ไขแล้ว' + (r.New_Result ? ' → ' + e(r.New_Result) : '') : 'รอแก้ไข'}</td>` : ''}</tr>`;
             }).join('');
             return `<div class="card"><div class="hd"><img src="https://nonthaphathr.github.io/uploadimg/logoschool.png" alt=""><div><div class="sc">โรงเรียนกระดุมทองวิทยา</div><div class="tt">แจ้งผลการเรียนที่ยังไม่ผ่านเกณฑ์ (0 / ร / มส)${cn > 1 ? ` <small style="font-weight:400;font-size:.8em">(แผ่นที่ ${ci + 1}/${cn})</small>` : ''}</div></div></div>
                 <div class="to">เรียน ผู้ปกครองของ <b>${e(s.name)}</b></div>
