@@ -227,6 +227,9 @@
         .spinner { display:inline-block; width:22px; height:22px; border:3px solid rgba(79,70,229,.2); border-top-color:#4f46e5; border-radius:50%; animation:spin 0.7s linear infinite; }
         @keyframes spin { to{transform:rotate(360deg);} }
 
+        @keyframes nudgeBtn { 0%,100% { transform:scale(1) rotate(0); box-shadow:0 0 0 0 rgba(79,70,229,.55); } 40% { transform:scale(1.09) rotate(-1.5deg); box-shadow:0 0 0 14px rgba(79,70,229,0); } 60% { transform:scale(1.09) rotate(1.5deg); } 80% { transform:scale(1.04) rotate(0); } }
+        .swal2-styled.nudge { animation:nudgeBtn 1.6s ease-in-out infinite; font-weight:700; }
+        .swal2-styled.nudge:hover { animation:none; transform:scale(1.06); }
         .page-btn { padding:7px 14px; border-radius:8px; border:1.5px solid var(--border); background:#fff; color:var(--text); font-family:'Kanit',sans-serif; font-size:.85rem; cursor:pointer; transition:all .18s; }
         .page-btn:hover:not(:disabled) { background:#eef2ff; border-color:#4f46e5; color:#4f46e5; }
         .page-btn:disabled { opacity:.4; cursor:not-allowed; }
@@ -816,7 +819,7 @@
             <div class="glass overflow-hidden mb-6">
                 <div class="table-wrapper">
                     <table class="data-table roomy">
-                        <thead><tr><th>ที่</th><th>นักเรียน</th><th>ติดตอนเรียนชั้น</th><th>รายวิชา</th><th>ภาคเรียน</th><th style="text-align:center">ผลการเรียน</th><th>สถานะ</th><th style="text-align:center;min-width:250px">จัดการ</th></tr></thead>
+                        <thead><tr><th>ที่</th><th>นักเรียน</th><th>ติดตอนเรียนชั้น</th><th>รายวิชา</th><th>ภาคเรียน</th><th style="text-align:center">ผลการเรียน</th><th>สถานะ</th><th style="text-align:center;min-width:300px">จัดการ</th></tr></thead>
                         <tbody id="ckBody"><tr><td colspan="8" class="text-center text-gray-400" style="padding:48px 12px">กำลังโหลดข้อมูล...</td></tr></tbody>
                     </table>
                 </div>
@@ -2839,7 +2842,7 @@
         return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543} ${p(d.getHours())}:${p(d.getMinutes())} น.`;
     }
     async function pfLoadLogs() {
-        pf.logs = []; pf.logMap = new Map(); pf.logErr = '';
+        pf.logs = []; pf.logDocs = []; pf.logMap = new Map(); pf.logErr = '';
         try {
             const snap = await db.collection(COL_FORMLOG).get();
             snap.docs.forEach(doc => {
@@ -2847,7 +2850,8 @@
                 const k = (d.kind || '') + '|' + (d.studentKey || '') + '|' + (d.subjectCode || '') + '|' + (d.termKey || '');
                 if (!pf.logMap.has(k)) pf.logMap.set(k, []);
                 pf.logMap.get(k).push(ms);
-                pf.logs.push({ kind: d.kind || '', studentName: d.studentName || '', code: d.subjectCode || '', subjectName: d.subjectName || '', term: d.term || '', seq: d.seq || 0, ms, level: d.level || '' });
+                pf.logs.push({ kind: d.kind || '', studentName: d.studentName || '', code: d.subjectCode || '', subjectName: d.subjectName || '', term: d.term || '', seq: d.seq || 0, ms, level: d.level || '' , by: d.downloadedBy || '' });
+                pf.logDocs.push({ kind: d.kind || '', studentKey: d.studentKey || '', studentName: d.studentName || '', level: d.level || '', code: d.subjectCode || '', subjectName: d.subjectName || '', term: d.term || '', termKey: d.termKey || '', grade: d.grade || '', times: d.retakeTimes || '', batchId: d.batchId || '', by: d.downloadedBy || '', ms });
             });
         } catch (e) { console.warn('form download log load failed:', e); pf.logErr = e.message || String(e); }
     }
@@ -2878,6 +2882,8 @@
         return r.isConfirmed ? 'save' : r.isDenied ? 'nosave' : null;
     }
     // items = [{ r, level, times }]
+    // ชื่อผู้ดาวน์โหลด: หน้าครู = ชื่อครูที่เลือก, หน้าหลัก = งานทะเบียน
+    function pfWho() { try { if (_isCheckMode()) return _ckTeacherName() || 'ครูผู้สอน'; } catch (e) {} return 'งานทะเบียน (หน้าหลัก)'; }
     async function pfSaveLog(kind, items, fileName) {
         const now = Date.now(), batchId = 'b' + now.toString(36);
         const entries = items.map(({ r, level, times }) => {
@@ -2885,7 +2891,7 @@
             return { k, seq, data: {
                 kind, studentKey: pfStuKey(r), studentName: pfStuName(r), level: level || '', subjectCode: r.รหัสวิชา || '', subjectName: r.ชื่อวิชา || '',
                 term: r['ภาคเรียน/ปีการศึกษา'] || '', termKey: _nm(r['ภาคเรียน/ปีการศึกษา'] || ''), grade: String(r.ผลการเรียน || '').trim(),
-                retakeTimes: times || '', seq, fileName, batchId, docCount: items.length,
+                retakeTimes: times || '', seq, fileName, batchId, docCount: items.length, downloadedBy: pfWho(),
                 downloadedAt: firebase.firestore.FieldValue.serverTimestamp(), downloadedAtMs: now
             } };
         });
@@ -2897,7 +2903,9 @@
         entries.forEach(e => {
             if (!pf.logMap.has(e.k)) pf.logMap.set(e.k, []);
             pf.logMap.get(e.k).push(now);
-            pf.logs.push({ kind, studentName: e.data.studentName, code: e.data.subjectCode, subjectName: e.data.subjectName, term: e.data.term, seq: e.seq, ms: now, level: e.data.level });
+            pf.logs.push({ kind, studentName: e.data.studentName, code: e.data.subjectCode, subjectName: e.data.subjectName, term: e.data.term, seq: e.seq, ms: now, level: e.data.level, by: e.data.downloadedBy });
+            if (!pf.logDocs) pf.logDocs = [];
+            pf.logDocs.push({ kind, studentKey: e.data.studentKey, studentName: e.data.studentName, level: e.data.level, code: e.data.subjectCode, subjectName: e.data.subjectName, term: e.data.term, termKey: e.data.termKey, grade: e.data.grade, times: e.data.retakeTimes, batchId: e.data.batchId, by: e.data.downloadedBy, ms: now });
         });
     }
     // บันทึกประวัติหลังดาวน์โหลดสำเร็จ — ถ้าบันทึกไม่ได้ ไฟล์ยังคงโหลดแล้ว แต่แจ้งเตือนให้ทราบ
@@ -2910,19 +2918,35 @@
     }
     function pfShowHistory() {
         const rows = [...pf.logs].sort((a, b) => b.ms - a.ms);
+        let tab = 'all';
+        const cnt = k => k === 'all' ? rows.length : rows.filter(x => x.kind === k).length;
         const draw = q => {
-            const f = rows.filter(x => !q || (x.studentName + ' ' + x.code + ' ' + x.subjectName).toLowerCase().includes(q)).slice(0, 200);
-            return f.length ? f.map((x, i) => `<tr><td>${i + 1}</td><td>${_esc(pfFmtDT(x.ms))}</td><td>${x.kind}</td><td style="text-align:left">${_esc(x.studentName)}</td><td style="text-align:left">${_esc(x.code)} ${_esc(x.subjectName)}</td><td>${_esc(x.term)}</td><td><b>${x.seq || '-'}</b></td></tr>`).join('')
-                : '<tr><td colspan="7" style="padding:24px;color:#9ca3af">ยังไม่มีประวัติ</td></tr>';
+            const f = rows.filter(x => (tab === 'all' || x.kind === tab) && (!q || (x.studentName + ' ' + x.code + ' ' + x.subjectName + ' ' + (x.by || '')).toLowerCase().includes(q))).slice(0, 200);
+            return f.length ? f.map((x, i) => `<tr><td>${i + 1}</td><td>${_esc(pfFmtDT(x.ms))}</td><td>${x.kind}</td><td style="text-align:left">${_esc(x.studentName)}</td><td style="text-align:left">${_esc(x.code)} ${_esc(x.subjectName)}</td><td>${_esc(x.term)}</td><td><b>${x.seq || '-'}</b></td><td style="text-align:left">${_esc(x.by || '-')}</td></tr>`).join('')
+                : '<tr><td colspan="8" style="padding:24px;color:#9ca3af">ยังไม่มีประวัติ</td></tr>';
         };
+        const tabBtn = (k, lbl) => `<button type="button" data-t="${k}" class="pfh-tab" style="padding:6px 14px;border-radius:8px;border:1.5px solid #c7d2fe;font-weight:600;font-size:.85rem;cursor:pointer;margin-right:6px;font-family:inherit"></button>`;
         Swal.fire({
-            title: '📜 ประวัติการดาวน์โหลดคำร้อง', width: 900, showConfirmButton: false, showCloseButton: true,
-            html: `<div style="text-align:left">${pf.logErr ? `<p style="color:#b91c1c;font-size:.82rem">อ่านประวัติไม่ได้: ${_esc(pf.logErr)}</p>${/permission/i.test(pf.logErr) ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin:6px 0 10px;font-size:.8rem;color:#7f1d1d">ต้องเพิ่มสิทธิ์คอลเลกชัน <b>form_downloads</b> ใน Firebase Console &rarr; Firestore Database &rarr; Rules แล้วกด Publish<pre style="margin:6px 0 0;background:#fff;padding:8px;border-radius:6px;white-space:pre-wrap;font-size:.75rem;color:#111">match /form_downloads/{docId} {\n  allow read, write: if true;\n}</pre></div>` : ''}` : ''}
-                <input id="pfHistQ" class="swal2-input" placeholder="ค้นหาชื่อนักเรียน / วิชา" style="margin:0 0 8px;width:100%;height:38px;font-size:.9rem">
-                <div style="max-height:55vh;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem;text-align:center">
-                <thead><tr style="background:#e0e7ff;position:sticky;top:0"><th>ที่</th><th>วันเวลาที่ดาวน์โหลด</th><th>ฟอร์ม</th><th>นักเรียน</th><th>วิชา</th><th>ภาคเรียน</th><th>ครั้งที่</th></tr></thead>
-                <tbody id="pfHistBody">${draw('')}</tbody></table></div><p style="font-size:.75rem;color:#9ca3af;margin-top:6px">แสดงล่าสุดไม่เกิน 200 รายการ · รวมทั้งหมด ${rows.length} รายการ</p></div>`,
-            didOpen: () => { document.getElementById('pfHistQ').oninput = e => { document.getElementById('pfHistBody').innerHTML = draw(e.target.value.trim().toLowerCase()); }; }
+            title: '📜 ประวัติการดาวน์โหลดคำร้อง', width: 980, showConfirmButton: false, showCloseButton: true,
+            html: `<div style="text-align:left">${pf.logErr ? `<p style="color:#b91c1c;font-size:.82rem">อ่านประวัติไม่ได้: ${_esc(pf.logErr)}</p>` : ''}
+                <div style="margin-bottom:8px">${tabBtn('all')}${tabBtn('101')}${tabBtn('102')}</div>
+                <input id="pfHistQ" class="swal2-input" placeholder="ค้นหาชื่อนักเรียน / วิชา / ผู้ดาวน์โหลด" style="margin:0 0 8px;width:100%;height:38px;font-size:.9rem">
+                <div style="max-height:52vh;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem;text-align:center">
+                <thead><tr style="background:#e0e7ff;position:sticky;top:0"><th>ที่</th><th>วันเวลาที่ดาวน์โหลด</th><th>ฟอร์ม</th><th>นักเรียน</th><th>วิชา</th><th>ภาคเรียน</th><th>ครั้งที่</th><th>ผู้ดาวน์โหลด</th></tr></thead>
+                <tbody id="pfHistBody">${draw('')}</tbody></table></div><p id="pfHistNote" style="font-size:.75rem;color:#9ca3af;margin-top:6px"></p></div>`,
+            didOpen: () => {
+                const lbl = { all: 'รวม', '101': 'วก.กทว.101', '102': 'วก.กทว.102' };
+                const paint = () => {
+                    document.querySelectorAll('.pfh-tab').forEach(b => {
+                        const on = b.dataset.t === tab; b.textContent = `${lbl[b.dataset.t]} (${cnt(b.dataset.t)})`;
+                        b.style.background = on ? '#4f46e5' : '#fff'; b.style.color = on ? '#fff' : '#4338ca';
+                    });
+                    document.getElementById('pfHistBody').innerHTML = draw(document.getElementById('pfHistQ').value.trim().toLowerCase());
+                    document.getElementById('pfHistNote').textContent = `แสดงล่าสุดไม่เกิน 200 รายการ · ในแท็บนี้ ${cnt(tab)} รายการ`;
+                };
+                document.querySelectorAll('.pfh-tab').forEach(b => b.onclick = () => { tab = b.dataset.t; paint(); });
+                document.getElementById('pfHistQ').oninput = paint; paint();
+            }
         });
     }
 
@@ -3874,6 +3898,7 @@
         try {
             await loadData(true);
             if (!Object.keys(teacherAssignments).length) { try { await loadTeacherData(); } catch (e) {} }
+            await pfLoadLogs();
         } catch (e) { console.warn(e); }
         st.textContent = '';
         const idx = _teacherIndex();
@@ -3924,7 +3949,7 @@
             const done = r.Correction_Status === 'แก้ไขแล้ว';
             return `<tr class="${done ? 'edited-row' : ''}"><td>${i + 1}</td><td><div class="stu-name">${_esc(_stuName(r))}</div><span class="chip-class" title="ชั้นปีปัจจุบัน">ชั้นปัจจุบัน ${_esc(r.ชั้นปี || '—')}</span></td><td>เรียนชั้น ${_esc(r.ชั้น || '—')}</td><td>${_esc(_subjLabel(r))}</td><td>${_esc(_semOf(r))}</td>
                 <td style="text-align:center"><span class="badge ${cls}">${_esc(g)}</span></td><td>${done ? `<span class="pill pill-done">แก้ไขแล้ว${r.New_Result ? ' → ' + _esc(r.New_Result) : ''}</span>` : '<span class="pill pill-pending">รอดำเนินการ</span>'}</td>
-                <td style="text-align:center;white-space:nowrap"><button onclick="ckForm101(${i})" class="btn btn-sm btn-info" title="ออกคำร้องขอสอบแก้ตัว วก.กทว.101 (รายคน)">📄 ออกใบขอแก้</button> <button onclick="ckEdit(${i})" class="btn btn-sm btn-primary">✏️ แก้ผลการเรียนใหม่</button></td></tr>`;
+                <td style="text-align:center;white-space:nowrap"><button onclick="ckForm101(${i})" class="btn btn-sm btn-info" title="ออกคำร้องขอสอบแก้ตัว วก.กทว.101 (รายคน)">📄 ออกใบขอแก้</button> <button onclick="ckEdit(${i})" class="btn btn-sm btn-primary">✏️ แก้ผลการเรียนใหม่</button>${(done && _has102(r)) ? ` <button onclick="ckReprint102(${i})" class="btn btn-sm btn-warning" style="padding:7px 10px" title="พิมพ์ วก.กทว.102 ซ้ำ (ตามค่าที่เลือกไว้ครั้งล่าสุดที่ดาวน์โหลด)" aria-label="พิมพ์ 102">🖨️</button>` : ''}</td></tr>`;
         }).join('');
     }
 
@@ -4206,7 +4231,7 @@
             html: `<div style="font-size:.9rem">${_esc(_stuName(r))} · ${_esc(r.รหัสวิชา || '')}<br>${_esc(r.ผลการเรียน || '')} → <b>${_esc(newResult)}</b><br><br>ต้องการดาวน์โหลดแบบ <b>วก.กทว.102</b> (แจ้งผลการสอบแก้ตัว) ที่ติ๊กชื่อนักเรียนคนนี้ให้เลยหรือไม่?</div>`,
             input: 'text', inputPlaceholder: 'สอบแก้ตัวครั้งที่ (เช่น 1) — เว้นว่างได้',
             showDenyButton: true, showCancelButton: true,
-            confirmButtonText: '⬇️ ดาวน์โหลด 102 ทันที', denyButtonText: 'เลือกนักเรียนเพิ่มก่อน', cancelButtonText: 'ไม่ต้อง', confirmButtonColor: '#4f46e5', denyButtonColor: '#6b7280'
+            confirmButtonText: '⬇️ ดาวน์โหลด 102 ทันที', denyButtonText: 'เลือกนักเรียนเพิ่มก่อน', cancelButtonText: 'ไม่ต้อง', confirmButtonColor: '#4f46e5', denyButtonColor: '#6b7280', customClass: { confirmButton: 'nudge' }
         });
         if (ask.isDenied) { openPrintForm({ mode: '102', rows: _rowsOfTeacher(key, true), row: r }); return; }
         if (!ask.isConfirmed) return;
@@ -4215,6 +4240,24 @@
             const ty = pfTermYear(r), times = String(ask.value || '').trim(), fname = `แจ้งผลการสอบแก้ตัว วก.กทว.102 - ${r.รหัสวิชา || ''}`;
             await formDownloadDocx('102', [{ subjectName: r.ชื่อวิชา || '', subjectCode: r.รหัสวิชา || '', term: ty.term, year: ty.year, times, teacher: teacherAssignments[r.รหัสวิชา || ''] || tName, students: [{ name: pfStuName(r), level: pfLevelOf(r), grade: String(r.ผลการเรียน || '').trim() }] }], fname);
             await pfSaveLogSafe('102', [{ r, level: pfLevelOf(r), times }], fname);
+            ckRender(false);
+        } catch (e) { Swal.fire({ icon: 'error', title: 'สร้างเอกสารไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
+    }
+
+    const _has102 = r => !!(pf.logMap && pf.logMap.get(pfLogKey('102', r)));
+    async function ckReprint102(i) {
+        const r = _ckRows[i]; if (!r) return;
+        const sk = pfStuKey(r), tk = _nm(r['ภาคเรียน/ปีการศึกษา'] || '');
+        const mine = (pf.logDocs || []).filter(d => d.kind === '102' && d.studentKey === sk && d.code === (r.รหัสวิชา || '') && d.termKey === tk);
+        if (!mine.length) { _toast('info', 'ไม่พบประวัติการดาวน์โหลด 102'); return; }
+        const last = mine.reduce((a, b) => (b.ms > a.ms ? b : a));
+        const batch = (pf.logDocs || []).filter(d => d.kind === '102' && d.batchId === last.batchId && d.code === last.code);
+        const students = batch.sort((a, b) => a.studentName.localeCompare(b.studentName, 'th')).map(d => ({ name: d.studentName, level: d.level, grade: d.grade }));
+        try {
+            await loadFormOfficialsRemote();
+            const ty = pfTermYear(r), tName = _ckTeacherName();
+            await formDownloadDocx('102', [{ subjectName: r.ชื่อวิชา || '', subjectCode: r.รหัสวิชา || '', term: ty.term, year: ty.year, times: last.times || '', teacher: teacherAssignments[r.รหัสวิชา || ''] || tName, students }], `แจ้งผลการสอบแก้ตัว วก.กทว.102 - ${r.รหัสวิชา || ''}`);
+            _toast('success', `พิมพ์ 102 ซ้ำ (${students.length} คน ตามครั้งล่าสุด)`);
         } catch (e) { Swal.fire({ icon: 'error', title: 'สร้างเอกสารไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
     }
 
