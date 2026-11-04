@@ -4145,16 +4145,16 @@
         catch (e) { _lineCfg = {}; }
         return _lineCfg;
     }
-    async function _lineSend(text) {
+    async function _lineSend(text, item) {
         const c = await _getLineCfg();
         if (!c.enabled || !c.url) return false;
-        await fetch(c.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: c.key || '', text }) });
+        await fetch(c.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: c.key || '', text, item: item || null }) });
         return true;
     }
     function notifyLine(info) {       // info: {studentName, level, code, subjectName, term, oldResult, newResult, editor, via}
         const d = new Date(), p = n => String(n).padStart(2, '0');
         const text = `✏️ แก้ไขผลการเรียน\nนักเรียน: ${info.studentName}${info.level ? ' (' + info.level + ')' : ''}\nวิชา: ${info.code} ${info.subjectName}${info.term ? ' · ' + info.term : ''}\nผลการเรียน: ${info.oldResult} → ${info.newResult}\nผู้แก้ไข: ${info.editor}\nช่องทาง: ${info.via}\nเวลา: ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear() + 543} ${p(d.getHours())}:${p(d.getMinutes())}`;
-        _lineSend(text).catch(e => console.warn('LINE notify failed:', e));
+        _lineSend(text, { student: info.studentName, level: info.level, code: info.code, subject: info.subjectName, term: info.term, oldResult: info.oldResult, newResult: info.newResult, editor: info.editor, via: info.via }).catch(e => console.warn('LINE notify failed:', e));
     }
     function notifyLineRec(record, newResult, editor, via) {
         notifyLine({ studentName: _stuName(record), level: record.ชั้น || '', code: record.รหัสวิชา || '', subjectName: record.ชื่อวิชา || '', term: _semOf(record), oldResult: record.ผลการเรียน || '', newResult, editor, via });
