@@ -806,7 +806,6 @@
                     <span id="ckStatus" class="text-sm text-gray-400"></span>
                     <div class="flex-1"></div>
                     <button onclick="ckCopyMyLink()" class="btn btn-secondary btn-sm">🔗 คัดลอกลิงก์นี้</button>
-                    <button onclick="ckOpenForms()" class="btn btn-info ck-act" disabled data-tooltip="พิมพ์คำร้องสอบแก้ตัว 101 รายคน / 102 รายวิชา">📄 ออกเอกสาร กทว.101/102</button>
                     <button onclick="ckExcel()" class="btn btn-success ck-act" disabled>📊 ส่งออก Excel</button>
                     <button onclick="ckTlExport()" class="btn btn-primary ck-act" disabled data-tooltip="ไฟล์ที่นำเข้าระบบ Teaching Log เพื่อมอบภาระงานแก้ 0 ร มส">⬇️ ไฟล์สำหรับ Teaching Log</button>
                     <button onclick="ckPrint()" class="btn btn-warning ck-act" disabled>🖨️ พิมพ์</button>
@@ -816,7 +815,7 @@
             <div class="glass overflow-hidden mb-6">
                 <div class="table-wrapper">
                     <table class="data-table roomy">
-                        <thead><tr><th>ที่</th><th>นักเรียน</th><th>ติดตอนเรียนชั้น</th><th>รายวิชา</th><th>ภาคเรียน</th><th style="text-align:center">ผลการเรียน</th><th>สถานะ</th><th style="text-align:center">จัดการ</th></tr></thead>
+                        <thead><tr><th>ที่</th><th>นักเรียน</th><th>ติดตอนเรียนชั้น</th><th>รายวิชา</th><th>ภาคเรียน</th><th style="text-align:center">ผลการเรียน</th><th>สถานะ</th><th style="text-align:center;min-width:250px">จัดการ</th></tr></thead>
                         <tbody id="ckBody"><tr><td colspan="8" class="text-center text-gray-400" style="padding:48px 12px">กำลังโหลดข้อมูล...</td></tr></tbody>
                     </table>
                 </div>
@@ -3924,7 +3923,7 @@
             const done = r.Correction_Status === 'แก้ไขแล้ว';
             return `<tr class="${done ? 'edited-row' : ''}"><td>${i + 1}</td><td><div class="stu-name">${_esc(_stuName(r))}</div><span class="chip-class" title="ชั้นปีปัจจุบัน">ชั้นปัจจุบัน ${_esc(r.ชั้นปี || '—')}</span></td><td>เรียนชั้น ${_esc(r.ชั้น || '—')}</td><td>${_esc(_subjLabel(r))}</td><td>${_esc(_semOf(r))}</td>
                 <td style="text-align:center"><span class="badge ${cls}">${_esc(g)}</span></td><td>${done ? `<span class="pill pill-done">แก้ไขแล้ว${r.New_Result ? ' → ' + _esc(r.New_Result) : ''}</span>` : '<span class="pill pill-pending">รอดำเนินการ</span>'}</td>
-                <td style="text-align:center"><button onclick="ckEdit(${i})" class="btn btn-sm btn-primary">✏️ ${done ? 'แก้ไขซ้ำ' : 'แก้ไข'}</button></td></tr>`;
+                <td style="text-align:center;white-space:nowrap"><button onclick="ckForm101(${i})" class="btn btn-sm btn-info" title="ออกคำร้องขอสอบแก้ตัว วก.กทว.101 (รายคน)">📄 ออกใบขอแก้</button> <button onclick="ckEdit(${i})" class="btn btn-sm btn-primary">✏️ แก้ผลการเรียนใหม่</button></td></tr>`;
         }).join('');
     }
 
@@ -4217,11 +4216,10 @@
         } catch (e) { Swal.fire({ icon: 'error', title: 'สร้างเอกสารไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
     }
 
-    function ckOpenForms() {
-        const key = document.getElementById('ckTeacher').value; if (!key) return;
-        const rows = _rowsOfTeacher(key, true);
-        if (!rows.length) { _toast('info', 'ไม่มีรายการในรายวิชาของท่าน'); return; }
-        openPrintForm({ rows });
+    function ckForm101(i) {
+        const r = _ckRows[i]; if (!r) return;
+        const key = document.getElementById('ckTeacher').value;
+        openPrintForm({ mode: '101', rows: _rowsOfTeacher(key, true), row: r });
     }
 
     // ── หน้าตั้งรหัสสำหรับครู (?page=setpw&t=ชื่อ&k=โทเคน) ──
