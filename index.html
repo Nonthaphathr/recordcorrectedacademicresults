@@ -4310,7 +4310,7 @@
                         const tok = await _makeSetupToken(t), link = _setupLinkOf(t.name, tok);
                         await _copyText(`เรียน ${t.name}\nกรุณาตั้งรหัสผ่านสำหรับแก้ไขผลการเรียน (รูปแบบ ววดดปปปป) ที่ลิงก์นี้ (ใช้ได้ครั้งเดียว ภายใน 7 วัน)\n${link}`);
                         _toast('success', 'คัดลอกลิงก์ของ ' + t.name);
-                    } catch (e) { _toast('error', 'สร้างลิงก์ไม่สำเร็จ'); }
+                    } catch (e) { console.error(e); Swal.fire({ icon: 'error', title: 'สร้างลิงก์ไม่สำเร็จ', html: `<div style="font-size:.85rem">${_esc(e.code || '')} ${_esc(e.message || e)}${/permission/i.test(e.code + e.message) ? '<br><br>ต้องเพิ่มกฎ Firestore ให้เขียน teacher_auth ได้' : ''}</div>`, confirmButtonColor: '#ef4444' }); }
                 });
                 document.getElementById('tpAll').onclick = async () => {
                     const todo = ts.filter(t => !has.has(t.key)); if (!todo.length) { _toast('info', 'ทุกคนตั้งรหัสแล้ว'); return; }
