@@ -730,6 +730,33 @@
                 </div>
             </div>
 
+            <!-- Section: รหัสครู / QR / LINE -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header"><span style="font-size:1.1rem">🔑</span><h3 class="font-semibold text-gray-700">รหัสผ่านครู (แก้ไขผลการเรียนในหน้าตรวจสอบ) &amp; QR รายคน</h3></div>
+                <div class="settings-section-body">
+                    <p class="text-sm text-gray-500 mb-4">ครูแก้ไขผลการเรียนในหน้าตรวจสอบได้ต้องใส่รหัส 8 หลักแบบ ววดดปปปป — นำเข้าทีละมากด้วยไฟล์ .xlsx หรือออกลิงก์ให้ครูตั้งรหัสเอง</p>
+                    <div class="flex gap-3 flex-wrap">
+                        <button onclick="tpDownloadTemplate()" class="btn btn-secondary">⬇️ ไฟล์ต้นแบบ .xlsx</button>
+                        <button onclick="document.getElementById('tpFile').click()" class="btn btn-primary">📥 นำเข้ารหัสครู (.xlsx)</button>
+                        <input type="file" id="tpFile" accept=".xlsx,.xls" style="display:none" onchange="tpImportFile(event)">
+                        <button onclick="tpOpenLinks()" class="btn btn-success">🔗 ลิงก์ตั้งรหัสให้ครูรายคน</button>
+                        <button onclick="openTeacherQr()" class="btn btn-warning">🖨️ ส่งออก QR รายคน (ติดโต๊ะ)</button>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-section mb-6">
+                <div class="settings-section-header"><span style="font-size:1.1rem">💬</span><h3 class="font-semibold text-gray-700">แจ้งเตือน LINE กลุ่ม "ระบบแจ้งเตือนแก้ไขผลการเรียน"</h3></div>
+                <div class="settings-section-body">
+                    <p class="text-sm text-gray-500 mb-4">ใส่ URL ของ Google Apps Script (Web app) ที่ส่งต่อไป LINE — ทุกครั้งที่มีการแก้ไขผลการเรียนจะส่งข้อความเข้ากลุ่มอัตโนมัติ</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                        <label class="text-sm text-gray-600">URL Web app (.../exec)<input type="text" id="lnUrl" class="teacher-input w-full" style="width:100%"></label>
+                        <label class="text-sm text-gray-600">รหัสลับ (KEY ตรงกับในสคริปต์)<input type="text" id="lnKey" class="teacher-input w-full" style="width:100%"></label>
+                    </div>
+                    <label class="flex items-center gap-2 text-sm text-gray-600 mb-3"><input type="checkbox" id="lnOn"> เปิดใช้การแจ้งเตือน</label>
+                    <div class="flex gap-3 flex-wrap"><button onclick="saveLineSettings()" class="btn btn-primary">บันทึก</button><button onclick="testLine()" class="btn btn-secondary">บันทึก + ส่งข้อความทดสอบ</button></div>
+                </div>
+            </div>
+
             <!-- Section: ผู้ลงนามในแบบฟอร์ม -->
             <div class="settings-section mb-6">
                 <div class="settings-section-header">
@@ -778,6 +805,7 @@
                     <span id="ckStatus" class="text-sm text-gray-400"></span>
                     <div class="flex-1"></div>
                     <button onclick="ckCopyMyLink()" class="btn btn-secondary btn-sm">🔗 คัดลอกลิงก์นี้</button>
+                    <button onclick="ckOpenForms()" class="btn btn-info ck-act" disabled data-tooltip="พิมพ์คำร้องสอบแก้ตัว 101 รายคน / 102 รายวิชา">📄 ออกเอกสาร กทว.101/102</button>
                     <button onclick="ckExcel()" class="btn btn-success ck-act" disabled>📊 ส่งออก Excel</button>
                     <button onclick="ckTlExport()" class="btn btn-primary ck-act" disabled data-tooltip="ไฟล์ที่นำเข้าระบบ Teaching Log เพื่อมอบภาระงานแก้ 0 ร มส">⬇️ ไฟล์สำหรับ Teaching Log</button>
                     <button onclick="ckPrint()" class="btn btn-warning ck-act" disabled>🖨️ พิมพ์</button>
@@ -787,13 +815,32 @@
             <div class="glass overflow-hidden mb-6">
                 <div class="table-wrapper">
                     <table class="data-table roomy">
-                        <thead><tr><th>ที่</th><th>นักเรียน</th><th>ชั้น</th><th>รายวิชา</th><th>ภาคเรียน</th><th style="text-align:center">ผลการเรียน</th><th>สถานะ</th></tr></thead>
-                        <tbody id="ckBody"><tr><td colspan="7" class="text-center text-gray-400" style="padding:48px 12px">กำลังโหลดข้อมูล...</td></tr></tbody>
+                        <thead><tr><th>ที่</th><th>นักเรียน</th><th>ชั้น</th><th>รายวิชา</th><th>ภาคเรียน</th><th style="text-align:center">ผลการเรียน</th><th>สถานะ</th><th style="text-align:center">จัดการ</th></tr></thead>
+                        <tbody id="ckBody"><tr><td colspan="8" class="text-center text-gray-400" style="padding:48px 12px">กำลังโหลดข้อมูล...</td></tr></tbody>
                     </table>
                 </div>
             </div>
             <p class="text-center text-xs text-gray-400 mb-8">หากพบรายการที่ต้องแก้ไข กรุณาติดต่องานทะเบียนและเทียบโอนผลการเรียน · ระบบพัฒนาโดย ครูนนทพัทธ์ หิรัญเรือง</p>
         </div><!-- /page-check -->
+
+        <!-- PAGE: SETPW — ครูตั้งรหัสผ่านเอง (?page=setpw&t=ชื่อ&k=โทเคน) -->
+        <div id="page-setpw" class="page">
+            <div class="header-card p-6 mb-6 relative z-10"><div class="flex flex-col items-center text-white">
+                <div class="logo-ring mb-3"><img src="https://nonthaphathr.github.io/uploadimg/logoschool.png" alt="โลโก้" class="w-14 h-14 object-contain"></div>
+                <h1 class="text-2xl font-bold text-center mb-1 relative z-10">ตั้งรหัสผ่านสำหรับแก้ไขผลการเรียน</h1>
+                <p class="text-indigo-100 text-sm">โรงเรียนกระดุมทองวิทยา</p></div></div>
+            <div class="glass p-6 mb-6" style="max-width:480px;margin:0 auto">
+                <p class="mb-3 text-gray-700">ครู: <b id="spName"></b></p>
+                <p id="spMsg" class="text-sm text-gray-500 mb-3">กำลังตรวจสอบลิงก์...</p>
+                <div id="spForm" style="display:none">
+                    <label class="form-label">รหัสผ่าน 8 หลัก แบบ ววดดปปปป (วัน เดือน ปี พ.ศ.)</label>
+                    <input type="password" id="spPw" maxlength="8" inputmode="numeric" autocomplete="off" class="input-field mb-3" placeholder="เช่น 05031980">
+                    <label class="form-label">ยืนยันรหัสผ่านอีกครั้ง</label>
+                    <input type="password" id="spPw2" maxlength="8" inputmode="numeric" autocomplete="off" class="input-field mb-4">
+                    <button onclick="spSubmit()" class="btn btn-primary">บันทึกรหัสผ่าน</button>
+                </div>
+            </div>
+        </div><!-- /page-setpw -->
 
     </div><!-- /container -->
 
@@ -1190,6 +1237,7 @@
     //  INIT
     // ═══════════════════════════════════════════════════════
     document.addEventListener('DOMContentLoaded', async () => {
+        if (_isSetPwMode()) { await initSetPwMode(); return; }
         if (_isCheckMode()) { await initCheckMode(); return; }   // หน้าตรวจสอบสำหรับครู (?page=check)
         // Test Firestore connection
         try {
@@ -1886,6 +1934,7 @@
                 });
             }
             saveEditorName(editor);
+            notifyLineRec(record, newResult, editor, 'หน้าหลัก (แก้ไขด่วน)');
 
             const upd = o => { o.New_Result=newResult; o.Correction_Status='แก้ไขแล้ว'; o.Editor=editor; o.EditDate=editDate; o.EditTime=editTime; };
             const oi = allData.findIndex(r=>r._docId===record._docId || r.rowIndex===record.rowIndex);
@@ -1975,6 +2024,7 @@
 
             // Save editor name
             saveEditorName(editor);
+            notifyLineRec(record, newResult, editor, 'หน้าหลัก (แก้ไขผลการเรียน)');
 
             // Update local state
             const upd = obj => { obj.New_Result=newResult; obj.Correction_Status='แก้ไขแล้ว'; obj.Editor=editor; obj.EditDate=editDate; obj.EditTime=editTime; };
@@ -2911,7 +2961,7 @@
     }
 
     async function openPrintForm(opts = {}) {
-        pf.rows = filterFailedGrades(allData);
+        pf.rows = opts.rows || filterFailedGrades(allData);
         if (!pf.rows.length) { Swal.fire({ icon: 'info', title: 'ยังไม่มีข้อมูลผลการเรียนที่ไม่ผ่าน', confirmButtonColor: '#4f46e5' }); return; }
         loadFormOfficialsRemote();
         if (!Object.keys(teacherLibrary).length) { try { await loadTeacherData(); } catch (e) { console.warn('teacher data (print form):', e); } }
@@ -2921,7 +2971,12 @@
         document.getElementById('pfStuSearch').value = ''; document.getElementById('pfSubSearch').value = '';
         pfSetMode(opts.mode || '101');
         document.getElementById('printFormModal').classList.add('show');
-        if (opts.row) {
+        if (opts.row && opts.mode === '102') {
+            const tk = (opts.row.รหัสวิชา || '') + '|' + (opts.row['ภาคเรียน/ปีการศึกษา'] || '');
+            document.getElementById('pfSubSelect').value = tk;
+            pfPickSubject(tk);
+            (pf.subSorted || []).forEach((r, i) => { const c = document.getElementById('pfSChk-' + i); if (c) c.checked = (r === opts.row); });
+        } else if (opts.row) {
             const key = pfStuKey(opts.row);
             document.getElementById('pfStuSelect').value = key;
             pfPickStudent(key, opts.row);
@@ -3115,6 +3170,7 @@
         renderEditorTags();
         renderFormOfficialsSettings();
         loadFormOfficialsRemote().then(renderFormOfficialsSettings);
+        renderLineSettings();
         refreshFirestoreStats();
     }
 
@@ -3865,7 +3921,8 @@
             const g = r.ผลการเรียน, cls = g === 'ร' ? 'badge-warning' : g === 'มส' ? 'badge-purple' : 'badge-danger';
             const done = r.Correction_Status === 'แก้ไขแล้ว';
             return `<tr class="${done ? 'edited-row' : ''}"><td>${i + 1}</td><td>${_esc(_stuName(r))}</td><td>${_esc(r.ชั้น || '')}</td><td>${_esc(_subjLabel(r))}</td><td>${_esc(_semOf(r))}</td>
-                <td style="text-align:center"><span class="badge ${cls}">${_esc(g)}</span></td><td>${done ? `<span class="pill pill-done">แก้ไขแล้ว${r.New_Result ? ' → ' + _esc(r.New_Result) : ''}</span>` : '<span class="pill pill-pending">รอดำเนินการ</span>'}</td></tr>`;
+                <td style="text-align:center"><span class="badge ${cls}">${_esc(g)}</span></td><td>${done ? `<span class="pill pill-done">แก้ไขแล้ว${r.New_Result ? ' → ' + _esc(r.New_Result) : ''}</span>` : '<span class="pill pill-pending">รอดำเนินการ</span>'}</td>
+                <td style="text-align:center"><button onclick="ckEdit(${i})" class="btn btn-sm btn-primary">✏️ ${done ? 'แก้ไขซ้ำ' : 'แก้ไข'}</button></td></tr>`;
         }).join('');
     }
 
@@ -4014,6 +4071,323 @@
             }
         });
         if (res.isConfirmed && res.value) tlDownload(res.value.rows, res.value.teacher);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  [ใหม่] ครูแก้ไขผลการเรียนบนหน้าตรวจสอบ + รหัสครู + 101/102 + แจ้ง LINE + QR รายคน
+    // ═══════════════════════════════════════════════════════
+    const COL_TAUTH = 'teacher_auth';   // รหัสครูรายคน (เก็บเป็น SHA-256 + salt) doc id = ชื่อไม่มีคำนำหน้า/ช่องว่าง
+    const _GRADE_CHOICES = ['0', '1', '1.5', '2', '2.5', '3', '3.5', '4', 'ร', 'มส'];
+    const _rndHex = n => [...crypto.getRandomValues(new Uint8Array(n))].map(b => b.toString(16).padStart(2, '0')).join('');
+    async function _pwHash(key, salt, pw) {
+        const buf = new TextEncoder().encode(salt + '|' + key + '|' + pw);
+        return [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    // ววดดปปปป: วัน(01-31) เดือน(01-12) ปี พ.ศ. 4 หลัก
+    function _validPw(pw) {
+        if (!/^\d{8}$/.test(pw)) return false;
+        const d = +pw.slice(0, 2), m = +pw.slice(2, 4);
+        return d >= 1 && d <= 31 && m >= 1 && m <= 12;
+    }
+    function _normPw(v) {
+        let s = String(v ?? '').replace(/\D/g, '');
+        if (s.length === 7) s = '0' + s;      // Excel ตัดเลข 0 หน้า
+        return s;
+    }
+    async function _setTeacherPw(key, name, pw) {
+        const salt = _rndHex(8), hash = await _pwHash(key, salt, pw);
+        await db.collection(COL_TAUTH).doc(key).set({
+            name, salt, hash, hasPw: true,
+            setupToken: firebase.firestore.FieldValue.delete(), tokenExp: firebase.firestore.FieldValue.delete(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+    }
+    async function _verifyTeacherPw(key, pw) {
+        const s = await db.collection(COL_TAUTH).doc(key).get();
+        if (!s.exists || !s.data().hash) return 'nopw';
+        const d = s.data();
+        return (await _pwHash(key, d.salt, pw)) === d.hash ? 'ok' : 'bad';
+    }
+
+    // ── แจ้งเตือน LINE (ผ่าน Google Apps Script relay → LINE Messaging API push เข้ากลุ่ม) ──
+    let _lineCfg = null;
+    async function _getLineCfg(force) {
+        if (_lineCfg !== null && !force) return _lineCfg;
+        try { const s = await db.collection(COL_APP_SETTINGS).doc('line_notify').get(); _lineCfg = s.exists ? s.data() : {}; }
+        catch (e) { _lineCfg = {}; }
+        return _lineCfg;
+    }
+    async function _lineSend(text) {
+        const c = await _getLineCfg();
+        if (!c.enabled || !c.url) return false;
+        await fetch(c.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: c.key || '', text }) });
+        return true;
+    }
+    function notifyLine(info) {       // info: {studentName, level, code, subjectName, term, oldResult, newResult, editor, via}
+        const d = new Date(), p = n => String(n).padStart(2, '0');
+        const text = `✏️ แก้ไขผลการเรียน\nนักเรียน: ${info.studentName}${info.level ? ' (' + info.level + ')' : ''}\nวิชา: ${info.code} ${info.subjectName}${info.term ? ' · ' + info.term : ''}\nผลการเรียน: ${info.oldResult} → ${info.newResult}\nผู้แก้ไข: ${info.editor}\nช่องทาง: ${info.via}\nเวลา: ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear() + 543} ${p(d.getHours())}:${p(d.getMinutes())}`;
+        _lineSend(text).catch(e => console.warn('LINE notify failed:', e));
+    }
+    function notifyLineRec(record, newResult, editor, via) {
+        notifyLine({ studentName: _stuName(record), level: record.ชั้น || '', code: record.รหัสวิชา || '', subjectName: record.ชื่อวิชา || '', term: _semOf(record), oldResult: record.ผลการเรียน || '', newResult, editor, via });
+    }
+    async function renderLineSettings() {
+        const c = await _getLineCfg(true);
+        const $ = id => document.getElementById(id); if (!$('lnUrl')) return;
+        $('lnUrl').value = c.url || ''; $('lnKey').value = c.key || ''; $('lnOn').checked = !!c.enabled;
+    }
+    async function saveLineSettings() {
+        const o = { url: document.getElementById('lnUrl').value.trim(), key: document.getElementById('lnKey').value.trim(), enabled: document.getElementById('lnOn').checked };
+        try {
+            await db.collection(COL_APP_SETTINGS).doc('line_notify').set({ ...o, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            _lineCfg = o; Swal.fire({ icon: 'success', title: 'บันทึกการตั้งค่า LINE แล้ว', confirmButtonColor: '#4f46e5' });
+        } catch (e) { Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
+    }
+    async function testLine() {
+        await saveLineSettings();
+        try { const ok = await _lineSend('✅ ทดสอบระบบแจ้งเตือนแก้ไขผลการเรียน (กระดุมทองวิทยา)'); _toast(ok ? 'success' : 'warning', ok ? 'ส่งข้อความทดสอบแล้ว ตรวจในกลุ่ม LINE' : 'ยังไม่ได้เปิดใช้/ใส่ URL'); }
+        catch (e) { _toast('error', 'ส่งไม่สำเร็จ'); }
+    }
+
+    // ── บันทึกการแก้ไข (ใช้กับหน้าตรวจสอบของครู) ──
+    async function _saveCorrection(record, newResult, editor, via) {
+        const studentName = `${record.คำนำหน้า || ''} ${record.ชื่อ || ''} ${record.สกุล || ''}`.trim();
+        const now = new Date(), editDate = now.toLocaleDateString('th-TH'), editTime = now.toLocaleTimeString('th-TH');
+        await db.collection(COL_LOGS).add({
+            studentName, subjectCode: record.รหัสวิชา || '', subjectName: record.ชื่อวิชา || '',
+            oldResult: record.ผลการเรียน || '', newResult, editor,
+            year: record.ชั้นปี || '', semester: record['ภาคเรียน/ปีการศึกษา'] || '',
+            class: record.ชั้น || '', editDate, editTime, imageUrl: '', teacherEdit: true,
+            editedAt: firebase.firestore.FieldValue.serverTimestamp(), gradeDocId: record._docId || null
+        });
+        if (record._docId) {
+            await db.collection(COL_GRADES).doc(record._docId).update({ New_Result: newResult, Correction_Status: 'แก้ไขแล้ว', Editor: editor, EditDate: editDate, EditTime: editTime });
+        }
+        record.New_Result = newResult; record.Correction_Status = 'แก้ไขแล้ว'; record.Editor = editor; record.EditDate = editDate; record.EditTime = editTime;
+        notifyLineRec(record, newResult, editor, via);
+    }
+
+    async function ckEdit(i) {
+        const r = _ckRows[i]; if (!r) return;
+        const key = document.getElementById('ckTeacher').value, tName = _ckTeacherName();
+        const pw = await Swal.fire({
+            title: '🔒 ยืนยันตัวตนครู', html: `ครู <b>${_esc(tName)}</b><br><span style="font-size:.85rem;color:#6b7280">กรอกรหัสผ่าน 8 หลัก (ววดดปปปป)</span>`,
+            input: 'password', inputAttributes: { maxlength: 8, inputmode: 'numeric', autocomplete: 'off', placeholder: 'ววดดปปปป' },
+            showCancelButton: true, confirmButtonText: 'ยืนยัน', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5', showLoaderOnConfirm: true,
+            preConfirm: async v => {
+                try {
+                    const res = await _verifyTeacherPw(key, String(v || '').trim());
+                    if (res === 'nopw') { Swal.showValidationMessage('ครูท่านนี้ยังไม่ได้ตั้งรหัส — ติดต่องานทะเบียนเพื่อขอลิงก์ตั้งรหัส'); return false; }
+                    if (res === 'bad') { Swal.showValidationMessage('รหัสผ่านไม่ถูกต้อง'); return false; }
+                    return true;
+                } catch (e) { Swal.showValidationMessage('ตรวจรหัสไม่สำเร็จ: ' + e.message); return false; }
+            }
+        });
+        if (!pw.isConfirmed) return;
+        const pick = await Swal.fire({
+            title: '✏️ แก้ไขผลการเรียน',
+            html: `<div style="text-align:left;font-size:.9rem;line-height:1.7"><b>${_esc(_stuName(r))}</b> (${_esc(r.ชั้น || '')})<br>${_esc(_subjLabel(r))} · ${_esc(_semOf(r))}<br>ผลการเรียนเดิม: <b style="color:#dc2626">${_esc(r.ผลการเรียน || '')}</b></div>`,
+            input: 'select', inputOptions: Object.fromEntries(_GRADE_CHOICES.map(g => [g, g])), inputPlaceholder: 'เลือกผลการเรียนใหม่',
+            showCancelButton: true, confirmButtonText: 'บันทึกการแก้ไข', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#10b981',
+            inputValidator: v => !v && 'กรุณาเลือกผลการเรียนใหม่'
+        });
+        if (!pick.isConfirmed) return;
+        const newResult = pick.value;
+        try {
+            Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            await _saveCorrection(r, newResult, tName, 'หน้าครูตรวจสอบ');
+        } catch (e) { Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); return; }
+        ckRender(false);
+        const ask = await Swal.fire({
+            icon: 'success', title: 'บันทึกแล้ว',
+            html: `<div style="font-size:.9rem">${_esc(_stuName(r))} · ${_esc(r.รหัสวิชา || '')}<br>${_esc(r.ผลการเรียน || '')} → <b>${_esc(newResult)}</b><br><br>ต้องการดาวน์โหลดแบบ <b>วก.กทว.102</b> (แจ้งผลการสอบแก้ตัว) ที่ติ๊กชื่อนักเรียนคนนี้ให้เลยหรือไม่?</div>`,
+            input: 'text', inputPlaceholder: 'สอบแก้ตัวครั้งที่ (เช่น 1) — เว้นว่างได้',
+            showDenyButton: true, showCancelButton: true,
+            confirmButtonText: '⬇️ ดาวน์โหลด 102 ทันที', denyButtonText: 'เลือกนักเรียนเพิ่มก่อน', cancelButtonText: 'ไม่ต้อง', confirmButtonColor: '#4f46e5', denyButtonColor: '#6b7280'
+        });
+        if (ask.isDenied) { openPrintForm({ mode: '102', rows: _rowsOfTeacher(key, true), row: r }); return; }
+        if (!ask.isConfirmed) return;
+        try {
+            await pfLoadLogs(); loadFormOfficialsRemote();
+            const ty = pfTermYear(r), times = String(ask.value || '').trim(), fname = `แจ้งผลการสอบแก้ตัว วก.กทว.102 - ${r.รหัสวิชา || ''}`;
+            await formDownloadDocx('102', [{ subjectName: r.ชื่อวิชา || '', subjectCode: r.รหัสวิชา || '', term: ty.term, year: ty.year, times, teacher: teacherAssignments[r.รหัสวิชา || ''] || tName, students: [{ name: pfStuName(r), level: pfLevelOf(r), grade: String(r.ผลการเรียน || '').trim() }] }], fname);
+            await pfSaveLogSafe('102', [{ r, level: pfLevelOf(r), times }], fname);
+        } catch (e) { Swal.fire({ icon: 'error', title: 'สร้างเอกสารไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
+    }
+
+    function ckOpenForms() {
+        const key = document.getElementById('ckTeacher').value; if (!key) return;
+        const rows = _rowsOfTeacher(key, true);
+        if (!rows.length) { _toast('info', 'ไม่มีรายการในรายวิชาของท่าน'); return; }
+        openPrintForm({ rows });
+    }
+
+    // ── หน้าตั้งรหัสสำหรับครู (?page=setpw&t=ชื่อ&k=โทเคน) ──
+    const _isSetPwMode = () => new URLSearchParams(location.search).get('page') === 'setpw';
+    async function initSetPwMode() {
+        document.body.classList.add('check-mode');
+        document.title = 'ตั้งรหัสผ่านครู — กระดุมทองวิทยา';
+        document.getElementById('page-setpw').classList.add('active');
+        const q = new URLSearchParams(location.search), name = q.get('t') || '', tok = q.get('k') || '', key = _tKey(name);
+        const msg = document.getElementById('spMsg'), form = document.getElementById('spForm');
+        document.getElementById('spName').textContent = name || '—';
+        try {
+            const s = await db.collection(COL_TAUTH).doc(key).get(), d = s.exists ? s.data() : null;
+            const exp = d && d.tokenExp && d.tokenExp.toMillis ? d.tokenExp.toMillis() : 0;
+            if (!key || !d || !d.setupToken || d.setupToken !== tok || exp < Date.now()) { msg.innerHTML = '❌ ลิงก์นี้ไม่ถูกต้องหรือหมดอายุ/ใช้ไปแล้ว กรุณาขอลิงก์ใหม่จากงานทะเบียน'; return; }
+            form.style.display = ''; msg.textContent = '';
+        } catch (e) { msg.textContent = 'เชื่อมต่อไม่ได้: ' + e.message; }
+    }
+    async function spSubmit() {
+        const q = new URLSearchParams(location.search), name = q.get('t') || '', key = _tKey(name), tok = q.get('k') || '';
+        const p1 = document.getElementById('spPw').value.trim(), p2 = document.getElementById('spPw2').value.trim();
+        if (!_validPw(p1)) return Swal.fire({ icon: 'warning', title: 'รูปแบบรหัสไม่ถูกต้อง', text: 'ต้องเป็นตัวเลข 8 หลักแบบ ววดดปปปป เช่น 05031980 (วัน เดือน ปี พ.ศ.)', confirmButtonColor: '#4f46e5' });
+        if (p1 !== p2) return Swal.fire({ icon: 'warning', title: 'รหัสทั้งสองช่องไม่ตรงกัน', confirmButtonColor: '#4f46e5' });
+        try {
+            const s = await db.collection(COL_TAUTH).doc(key).get();
+            if (!s.exists || s.data().setupToken !== tok) throw new Error('ลิงก์หมดอายุหรือถูกใช้แล้ว');
+            await _setTeacherPw(key, name, p1);
+            document.getElementById('spForm').style.display = 'none';
+            document.getElementById('spMsg').innerHTML = '✅ ตั้งรหัสผ่านเรียบร้อยแล้ว ใช้รหัสนี้เมื่อแก้ไขผลการเรียนในหน้าตรวจสอบ';
+        } catch (e) { Swal.fire({ icon: 'error', title: 'ตั้งรหัสไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
+    }
+
+    // ── แอดมิน: นำเข้ารหัสครูจาก .xlsx / ออกลิงก์ตั้งรหัส ──
+    async function _ensureTeachers() { if (!Object.keys(teacherAssignments).length) { try { await loadTeacherData(); } catch (e) {} } return [..._teacherIndex().values()].sort((a, b) => a.name.localeCompare(b.name, 'th')); }
+    async function tpDownloadTemplate() {
+        const ts = await _ensureTeachers();
+        const ws = XLSX.utils.aoa_to_sheet([['ชื่อครู', 'รหัสผ่าน (ววดดปปปป)'], ...ts.map(t => [t.name, ''])]);
+        ws['!cols'] = [{ wch: 32 }, { wch: 22 }];
+        for (let r = 1; r <= ts.length; r++) { const c = ws[XLSX.utils.encode_cell({ r, c: 1 })]; if (c) c.t = 's'; }
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'รหัสครู');
+        XLSX.writeFile(wb, 'ต้นแบบ_รหัสครู.xlsx');
+    }
+    async function tpImportFile(ev) {
+        const f = ev.target.files[0]; ev.target.value = ''; if (!f) return;
+        try {
+            const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' }).slice(1);
+            const ok = [], bad = [];
+            rows.forEach(r => {
+                const name = String(r[0] || '').replace(/\s+/g, ' ').trim(); if (!name) return;
+                const pw = _normPw(r[1]);
+                if (!pw) return;
+                (_validPw(pw) ? ok : bad).push({ name, key: _tKey(name), pw, raw: r[1] });
+            });
+            if (!ok.length) { Swal.fire({ icon: 'info', title: 'ไม่พบรายการที่นำเข้าได้', html: bad.length ? `รหัสไม่ถูกต้อง ${bad.length} รายการ (ต้อง ววดดปปปป 8 หลัก)` : 'ไฟล์ไม่มีข้อมูล', confirmButtonColor: '#4f46e5' }); return; }
+            const c = await Swal.fire({
+                title: 'ยืนยันนำเข้ารหัสครู', icon: 'question', showCancelButton: true, confirmButtonText: `นำเข้า ${ok.length} คน`, cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5',
+                html: `<div style="text-align:left;font-size:.88rem">นำเข้าได้ <b>${ok.length}</b> คน (รหัสเดิมของครูกลุ่มนี้จะถูกเขียนทับ)${bad.length ? `<br><span style="color:#dc2626">ข้าม ${bad.length} รายการ รหัสไม่ถูกต้อง: ${bad.slice(0, 8).map(b => _esc(b.name)).join(', ')}</span>` : ''}</div>`
+            });
+            if (!c.isConfirmed) return;
+            Swal.fire({ title: 'กำลังนำเข้า...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            for (const o of ok) await _setTeacherPw(o.key, o.name, o.pw);
+            Swal.fire({ icon: 'success', title: `นำเข้ารหัสแล้ว ${ok.length} คน`, confirmButtonColor: '#4f46e5' });
+        } catch (e) { Swal.fire({ icon: 'error', title: 'นำเข้าไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
+    }
+    const _setupLinkOf = (name, tok) => location.origin + location.pathname + '?page=setpw&t=' + encodeURIComponent(name) + '&k=' + tok;
+    async function _makeSetupToken(t) {
+        const tok = _rndHex(12);
+        await db.collection(COL_TAUTH).doc(t.key).set({ name: t.name, setupToken: tok, tokenExp: firebase.firestore.Timestamp.fromMillis(Date.now() + 7 * 86400000) }, { merge: true });
+        return tok;
+    }
+    async function tpOpenLinks() {
+        const ts = await _ensureTeachers();
+        if (!ts.length) { Swal.fire({ icon: 'info', title: 'ยังไม่มีข้อมูลครูผู้สอน', confirmButtonColor: '#4f46e5' }); return; }
+        const has = new Set();
+        try { (await db.collection(COL_TAUTH).get()).docs.forEach(d => { if (d.data().hash) has.add(d.id); }); } catch (e) {}
+        Swal.fire({
+            title: '🔗 ลิงก์ตั้งรหัสให้ครู', width: 720, showConfirmButton: false, showCloseButton: true,
+            html: `<div style="text-align:left;font-size:.88rem"><p style="color:#6b7280;margin-bottom:8px">กด "คัดลอกลิงก์" ที่ชื่อครูเพื่อสร้างลิงก์ตั้งรหัสแบบใช้ครั้งเดียว (หมดอายุ 7 วัน) แล้วส่งให้ครู หรือส่งออกทุกคนที่ยังไม่ตั้งรหัสเป็น .xlsx</p>
+            <button id="tpAll" class="swal2-confirm swal2-styled" style="background:#10b981;margin:0 0 8px">📊 ส่งออกลิงก์ครูที่ยังไม่ตั้งรหัส (.xlsx)</button>
+            <div style="max-height:340px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px">${ts.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f1f5f9">
+                <span style="flex:1">${_esc(t.name)} ${has.has(t.key) ? '<span style="color:#059669;font-size:.75rem">✓ ตั้งรหัสแล้ว</span>' : '<span style="color:#d97706;font-size:.75rem">ยังไม่ตั้ง</span>'}</span>
+                <button data-k="${_esc(t.key)}" class="tp-copy swal2-styled" style="background:#4f46e5;margin:0;padding:6px 12px;font-size:.8rem">คัดลอกลิงก์</button></div>`).join('')}</div></div>`,
+            didOpen: () => {
+                document.querySelectorAll('.tp-copy').forEach(b => b.onclick = async () => {
+                    const t = ts.find(x => x.key === b.dataset.k);
+                    try {
+                        const tok = await _makeSetupToken(t), link = _setupLinkOf(t.name, tok);
+                        await _copyText(`เรียน ${t.name}\nกรุณาตั้งรหัสผ่านสำหรับแก้ไขผลการเรียน (รูปแบบ ววดดปปปป) ที่ลิงก์นี้ (ใช้ได้ครั้งเดียว ภายใน 7 วัน)\n${link}`);
+                        _toast('success', 'คัดลอกลิงก์ของ ' + t.name);
+                    } catch (e) { _toast('error', 'สร้างลิงก์ไม่สำเร็จ'); }
+                });
+                document.getElementById('tpAll').onclick = async () => {
+                    const todo = ts.filter(t => !has.has(t.key)); if (!todo.length) { _toast('info', 'ทุกคนตั้งรหัสแล้ว'); return; }
+                    const out = [];
+                    for (const t of todo) out.push([t.name, _setupLinkOf(t.name, await _makeSetupToken(t))]);
+                    const ws = XLSX.utils.aoa_to_sheet([['ชื่อครู', 'ลิงก์ตั้งรหัส (ใช้ครั้งเดียว 7 วัน)'], ...out]); ws['!cols'] = [{ wch: 32 }, { wch: 90 }];
+                    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'ลิงก์ตั้งรหัส'); XLSX.writeFile(wb, 'ลิงก์ตั้งรหัสครู_' + _todayIso() + '.xlsx');
+                    _toast('success', `ส่งออก ${out.length} ลิงก์`);
+                };
+            }
+        });
+    }
+
+    // ── QR Code รายคนสำหรับติดโต๊ะครู ──
+    let _qrLibP = null;
+    function _qrLoad() {
+        if (window.QRCode) return Promise.resolve();
+        if (!_qrLibP) _qrLibP = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; s.onload = res; s.onerror = () => rej(new Error('โหลดตัวสร้าง QR ไม่ได้')); document.head.appendChild(s); });
+        return _qrLibP;
+    }
+    async function _qrDataUrl(text, size) {
+        await _qrLoad();
+        const tmp = document.createElement('div'); tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+        document.body.appendChild(tmp);
+        new QRCode(tmp, { text, width: size, height: size, colorDark: '#1e1b4b', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+        await new Promise(r => setTimeout(r, 60));
+        const cv = tmp.querySelector('canvas'), im = tmp.querySelector('img');
+        let url = cv ? cv.toDataURL('image/png') : (im ? im.src : '');
+        if (im && !url) { await new Promise(r => setTimeout(r, 120)); url = im.src; }
+        document.body.removeChild(tmp);
+        return url;
+    }
+    async function openTeacherQr() {
+        const ts = await _ensureTeachers();
+        if (!ts.length) { Swal.fire({ icon: 'info', title: 'ยังไม่มีข้อมูลครูผู้สอน', confirmButtonColor: '#4f46e5' }); return; }
+        const res = await Swal.fire({
+            title: '🖨️ QR Code รายคน (ติดโต๊ะครู)', width: 560, showCancelButton: true, confirmButtonText: 'สร้างหน้าพิมพ์', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5',
+            html: `<div style="text-align:left;font-size:.88rem">
+                <label style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" id="tqAll" checked> เลือกทั้งหมด (${ts.length} คน)</label>
+                <div style="max-height:260px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;padding:6px 10px">${ts.map(t => `<label style="display:flex;gap:6px;align-items:center;padding:2px 0"><input type="checkbox" class="tq-c" value="${_esc(t.key)}" checked> ${_esc(t.name)}</label>`).join('')}</div>
+                <label style="display:block;margin-top:10px;font-size:.78rem;color:#6b7280">ขนาดป้าย</label>
+                <select id="tqSize" class="swal2-select" style="margin:4px 0;width:100%;height:40px;font-size:.9rem"><option value="4">4 ป้าย/หน้า A4 (ใหญ่ ติดโต๊ะ)</option><option value="8">8 ป้าย/หน้า A4 (เล็ก)</option><option value="1">1 ป้าย/หน้า A4 (ตั้งโต๊ะ)</option></select></div>`,
+            didOpen: () => {
+                const all = document.getElementById('tqAll'), cs = [...document.querySelectorAll('.tq-c')];
+                all.onchange = () => cs.forEach(c => c.checked = all.checked);
+            },
+            preConfirm: () => {
+                const keys = [...document.querySelectorAll('.tq-c:checked')].map(c => c.value);
+                if (!keys.length) { Swal.showValidationMessage('เลือกครูอย่างน้อย 1 คน'); return false; }
+                return { keys, per: +document.getElementById('tqSize').value, win: window.open('', '_blank') };
+            }
+        });
+        if (!res.isConfirmed) return;
+        const { keys, per, win } = res.value;
+        if (!win) { Swal.fire({ icon: 'warning', title: 'เบราว์เซอร์บล็อกหน้าต่างใหม่', text: 'อนุญาตป๊อปอัปแล้วลองใหม่', confirmButtonColor: '#4f46e5' }); return; }
+        win.document.write('<p style="font-family:sans-serif;padding:20px">กำลังสร้าง QR...</p>');
+        try {
+            const sel = ts.filter(t => keys.includes(t.key)), base = _checkBaseUrl(), px = per === 1 ? 420 : per === 4 ? 300 : 200;
+            const cards = [];
+            for (const t of sel) {
+                const link = base + '&t=' + encodeURIComponent(t.name);
+                cards.push(`<div class="card"><img class="logo" src="https://nonthaphathr.github.io/uploadimg/logoschool.png" alt=""><div class="s">โรงเรียนกระดุมทองวิทยา</div><div class="h">ตรวจสอบนักเรียนที่ติด 0 ร มส</div><div class="n">${_esc(t.name)}</div><img class="qr" src="${await _qrDataUrl(link, px)}" alt="QR"><div class="d">สแกนเพื่อดูรายวิชาที่รับผิดชอบ<br>แก้ไขผลการเรียน · ออกเอกสาร วก.กทว.101/102</div></div>`);
+            }
+            const cols = per === 1 ? 1 : 2;
+            win.document.open();
+            win.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>QR ครูผู้สอน</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+            <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Sarabun',sans-serif;background:#e5e7eb}
+            .bar{position:sticky;top:0;background:#312e81;color:#fff;padding:8px 14px;z-index:3}.bar button{padding:6px 14px;border:0;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit}
+            .sheet{width:210mm;height:297mm;margin:10px auto;background:#fff;display:grid;grid-template-columns:repeat(${cols},1fr);grid-auto-rows:${297 / Math.ceil(per / cols)}mm;page-break-after:always;break-after:page}
+            .card{border:1px dashed #94a3b8;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:${per === 8 ? 4 : 8}mm}
+            .logo{width:${per === 8 ? 12 : 18}mm;height:auto}.s{font-size:${per === 8 ? 10 : 13}pt;color:#475569}.h{font-size:${per === 8 ? 12 : 16}pt;font-weight:700;color:#312e81;margin-bottom:2mm}
+            .n{font-size:${per === 8 ? 15 : per === 1 ? 30 : 20}pt;font-weight:700;margin:2mm 0}.qr{width:${per === 8 ? 40 : per === 1 ? 110 : 70}mm;height:auto}.d{font-size:${per === 8 ? 9 : 12}pt;color:#334155;margin-top:2mm}
+            @media print{@page{size:A4;margin:0}body{background:#fff}.bar{display:none}.sheet{margin:0}}</style></head><body>
+            <div class="bar"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button> &nbsp; ${sel.length} ป้าย · ตัดตามเส้นประ</div>
+            ${Array.from({ length: Math.ceil(cards.length / per) }, (_, i) => `<div class="sheet">${cards.slice(i * per, (i + 1) * per).join('')}</div>`).join('')}</body></html>`);
+            win.document.close();
+        } catch (e) { win.document.body.innerHTML = '<p style="font-family:sans-serif;padding:20px;color:#b91c1c">สร้าง QR ไม่สำเร็จ: ' + _esc(e.message) + '</p>'; }
     }
 
     // ── UX v2: dropdown menus + settings tabs ──
