@@ -4596,26 +4596,29 @@
             list = [...pick.values()].sort((a, b) => a.ord.localeCompare(b.ord, 'th', { numeric: true }) || a.s.name.localeCompare(b.s.name, 'th')).map(x => x.s);
         }
         const half = o.mode === 'subject', off = FORM_OFFICIALS.registrar || '';
-        const card = s => {
+        const MAXR = half ? 10 : 20;
+        const card = (s, recs, ci, cn, base) => {
             const pend = s.recs.filter(r => r.Correction_Status !== 'แก้ไขแล้ว'), doneN = s.recs.length - pend.length;
             const c = k => pend.filter(r => String(r.ผลการเรียน).trim() === k).length, hasDone = doneN > 0;
             const clsList = [...new Set(s.recs.map(_clsOf))].join(', ');
-            const rows = s.recs.map((r, i) => {
+            const rows = recs.map((r, i) => {
                 const d = r.Correction_Status === 'แก้ไขแล้ว';
-                return `<tr${d ? ' class="dn"' : ''}><td>${i + 1}</td><td class="l">${e(r.รหัสวิชา || '')}</td><td class="l">${e(r.ชื่อวิชา || '')}</td><td>${e(_semOf(r))}</td><td>${e(_clsOf(r))}</td><td><b>${e(r.ผลการเรียน || '')}</b></td><td class="l">${e(teacherNames(r.รหัสวิชา || '').join(', ') || '—')}</td>${hasDone ? `<td>${d ? 'แก้ไขแล้ว' + (r.New_Result ? ' → ' + e(r.New_Result) : '') : 'รอแก้ไข'}</td>` : ''}</tr>`;
+                return `<tr${d ? ' class="dn"' : ''}><td>${base + i + 1}</td><td class="l">${e(r.รหัสวิชา || '')}</td><td class="l">${e(r.ชื่อวิชา || '')}</td><td>${e(_semOf(r))}</td><td>${e(_clsOf(r))}</td><td><b>${e(r.ผลการเรียน || '')}</b></td><td class="l tc">${teacherNames(r.รหัสวิชา || '').map(n => `<span style="white-space:nowrap">${e(n)}</span>`).join('<br>') || '—'}</td>${hasDone ? `<td>${d ? 'แก้ไขแล้ว' + (r.New_Result ? ' → ' + e(r.New_Result) : '') : 'รอแก้ไข'}</td>` : ''}</tr>`;
             }).join('');
-            return `<div class="card"><div class="hd"><img src="https://nonthaphathr.github.io/uploadimg/logoschool.png" alt=""><div><div class="sc">โรงเรียนกระดุมทองวิทยา</div><div class="tt">แจ้งผลการเรียนที่ยังไม่ผ่านเกณฑ์ (0 / ร / มส)</div></div></div>
+            return `<div class="card"><div class="hd"><img src="https://nonthaphathr.github.io/uploadimg/logoschool.png" alt=""><div><div class="sc">โรงเรียนกระดุมทองวิทยา</div><div class="tt">แจ้งผลการเรียนที่ยังไม่ผ่านเกณฑ์ (0 / ร / มส)${cn > 1 ? ` <small style="font-weight:400;font-size:.8em">(แผ่นที่ ${ci + 1}/${cn})</small>` : ''}</div></div></div>
                 <div class="to">เรียน ผู้ปกครองของ <b>${e(s.name)}</b></div>
                 <div class="info">เรียนชั้น ${e(clsList)} · ข้อมูล ณ วันที่ ${e(o.date)}</div>
                 <div class="sum"><div class="big"><span>ติดทั้งหมด</span><b>${pend.length}</b><span>วิชา</span></div><div class="mini z"><span>ผล 0</span><b>${c('0')}</b></div><div class="mini r"><span>ผล ร</span><b>${c('ร')}</b></div><div class="mini m"><span>ผล มส</span><b>${c('มส')}</b></div></div>
-                <table><thead><tr><th style="width:5%">ที่</th><th style="width:13%">รหัสวิชา</th><th>ชื่อวิชา</th><th style="width:11%">ภาคเรียน</th><th style="width:9%">ชั้น</th><th style="width:7%">ผล</th><th style="width:22%">ครูผู้สอน</th>${hasDone ? '<th style="width:13%">สถานะ</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>
-                <div class="note"><b>ความหมาย</b> 0 = ผลการเรียนไม่ผ่านเกณฑ์ · ร = ยังไม่สมบูรณ์ (รอการตัดสินผล) · มส = ไม่มีสิทธิ์รับการประเมินผล (เวลาเรียนไม่ครบตามเกณฑ์)<br>
+                <table><thead><tr><th style="width:5%">ที่</th><th style="width:13%">รหัสวิชา</th><th style="width:28%">ชื่อวิชา</th><th style="width:11%">ภาคเรียน</th><th style="width:9%">ชั้น</th><th style="width:7%">ผล</th><th>ครูผู้สอน</th>${hasDone ? '<th style="width:13%">สถานะ</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>
+                ${ci < cn - 1 ? '<div class="note" style="text-align:right">ต่อแผ่นถัดไป ►</div>' : `<div class="note"><b>ความหมาย</b> 0 = ผลการเรียนไม่ผ่านเกณฑ์ · ร = ยังไม่สมบูรณ์ (รอการตัดสินผล) · มส = ไม่มีสิทธิ์รับการประเมินผล (เวลาเรียนไม่ครบตามเกณฑ์)<br>
                 โรงเรียนจึงขอความอนุเคราะห์ให้ผู้ปกครองแจ้งนักเรียนติดต่อครูผู้สอนตามรายวิชาข้างต้น เพื่อดำเนินการแก้ไขผลการเรียนให้เรียบร้อย หากมีข้อสงสัยสอบถามได้ที่งานทะเบียนและเทียบโอนผลการเรียน</div>
-                <div class="sign">ลงชื่อ ..............................................<br>(${e(off)})<br>เจ้าหน้าที่ทะเบียนวัดผล</div></div>`;
+                <div class="sign">ลงชื่อ ..............................................<br>(${e(off)})<br>เจ้าหน้าที่ทะเบียนวัดผล</div>`}</div>`;
         };
+        const cardsOf = s => { const n = Math.max(1, Math.ceil(s.recs.length / MAXR)), per = Math.ceil(s.recs.length / n); return Array.from({ length: n }, (_, i) => card(s, s.recs.slice(i * per, (i + 1) * per), i, n, i * per)); };
+        const cards = list.flatMap(cardsOf);
         let sheets = '';
-        if (half) { for (let i = 0; i < list.length; i += 2) sheets += `<div class="sheet">${card(list[i])}${list[i + 1] ? card(list[i + 1]) : '<div class="card empty"></div>'}</div>`; }
-        else sheets = list.map(s => `<div class="sheet">${card(s)}</div>`).join('');
+        if (half) { for (let i = 0; i < cards.length; i += 2) sheets += `<div class="sheet">${cards[i]}${cards[i + 1] || '<div class="card empty"></div>'}</div>`; }
+        else sheets = cards.map(c => `<div class="sheet">${c}</div>`).join('');
         const w = half ? 297 : 210, h = half ? 210 : 297, cw = half ? 148.5 : 210, pad = half ? 8 : 15, fs = half ? 9.5 : 12.5;
         o.win.document.open();
         o.win.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>สรุปผลรายบุคคล - ผู้ปกครอง</title>
@@ -4628,11 +4631,11 @@
         .to{font-size:1.1em}.info{color:#475569;font-size:.95em;margin-top:-.2em}
         .sum{display:flex;gap:.5em}.big{flex:1.6;display:flex;align-items:baseline;justify-content:center;gap:.4em;border:.4mm solid #312e81;border-radius:.6em;padding:.3em;background:#eef2ff}.big b{font-size:2.2em;line-height:1;color:#312e81}
         .mini{flex:1;text-align:center;border-radius:.6em;padding:.3em;border:.3mm solid}.mini span{display:block;font-size:.85em}.mini b{font-size:1.5em;line-height:1.1}.z{color:#b91c1c;border-color:#fca5a5;background:#fef2f2}.r{color:#b45309;border-color:#fcd34d;background:#fffbeb}.m{color:#6d28d9;border-color:#c4b5fd;background:#f5f3ff}
-        table{width:100%;border-collapse:collapse;font-size:.92em}th,td{border:.25mm solid #333;padding:.25em .4em;text-align:center;vertical-align:top}th{background:#e0e7ff}td.l{text-align:left}tr.dn td{color:#6b7280;background:#f0fdf4}
+        table{width:100%;border-collapse:collapse;font-size:.92em}th,td{border:.25mm solid #333;padding:.25em .4em;text-align:center;vertical-align:top}th{background:#e0e7ff}td.l{text-align:left}td.tc{white-space:nowrap}tr.dn td{color:#6b7280;background:#f0fdf4}
         .note{font-size:.82em;color:#374151;border:.25mm dashed #94a3b8;border-radius:.5em;padding:.4em .6em;background:#f8fafc}
         .sign{margin-top:auto;text-align:center;font-size:.95em;line-height:1.5;padding-left:45%}
         @media print{@page{size:A4 ${half ? 'landscape' : 'portrait'};margin:0}body{background:#fff}.bar{display:none}.sheet{margin:0;box-shadow:none}}</style></head><body>
-        <div class="bar"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button><span>${list.length} คน · ${half ? 'A4 แนวนอน 2 คน/แผ่น (' + Math.ceil(list.length / 2) + ' แผ่น)' : 'A4 แนวตั้ง 1 คน/แผ่น (' + list.length + ' แผ่น)'} · ถ้าตัวหนังสือแน่น ระบบย่อขนาดให้พอดี 1 ใบ</span></div>
+        <div class="bar"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button><span>${list.length} คน · ${half ? 'A4 แนวนอน 2 ใบ/แผ่น (' + Math.ceil(cards.length / 2) + ' แผ่น)' : 'A4 แนวตั้ง (' + cards.length + ' แผ่น)'} · ติดเกิน ${MAXR} วิชา แบ่งเป็นหลายใบ · ถ้าตัวหนังสือแน่น ระบบย่อขนาดให้พอดี 1 ใบ</span></div>
         ${sheets}
         <script>document.fonts.ready.then(function(){document.querySelectorAll('.card:not(.empty)').forEach(function(c){var f=parseFloat(getComputedStyle(c).fontSize),g=0;while(c.scrollHeight>c.clientHeight+1&&f>5&&g++<120){f-=.25;c.style.fontSize=f+'px';}});});<\/script></body></html>`);
         o.win.document.close();
