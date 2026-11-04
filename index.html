@@ -4515,6 +4515,8 @@
     //  รายบุคคล/รายห้อง = A4 แนวตั้งเต็มแผ่น · รายวิชา = A4 แนวนอน 2 คน/แผ่น
     // ═══════════════════════════════════════════════════════
     const _semKey = r => { const m = _semOf(r).match(/(\d)\s*\/\s*(\d{4})/); return m ? (+m[2]) * 10 + (+m[1]) : 0; };
+    const _AREA_BY_CH = { 'ท': 'ภาษาไทย', 'ค': 'คณิตศาสตร์', 'ว': 'วิทยาศาสตร์และเทคโนโลยี', 'ส': 'สังคมศึกษา ศาสนา และวัฒนธรรม', 'พ': 'สุขศึกษาและพลศึกษา', 'ศ': 'ศิลปะ', 'ง': 'การงานอาชีพ', 'อ': 'ภาษาต่างประเทศ', 'จ': 'ภาษาต่างประเทศ', 'ญ': 'ภาษาต่างประเทศ', 'ก': 'กิจกรรมพัฒนาผู้เรียน', 'ล': 'กิจกรรมพัฒนาผู้เรียน' };
+    const _areaOf = r => _AREA_BY_CH[String(r.รหัสวิชา || '').trim().charAt(0)] || 'อื่น ๆ';
     const _clsOf = r => String(r.ชั้น || '').trim() || 'ไม่ระบุชั้น';
     function psStudents(inclDone) {
         const map = new Map();
@@ -4543,6 +4545,10 @@
             const m = new Map();
             stus.forEach(s => s.recs.forEach(r => { const c = _clsOf(r); if (!m.has(c)) m.set(c, new Set()); m.get(c).add(s.key); }));
             [...m.keys()].sort((a, b) => a.localeCompare(b, 'th', { numeric: true })).forEach(c => { if (q && !_nm(c).toLowerCase().includes(q)) return; opts.push([c, `${c} · ${m.get(c).size} คน`]); });
+        } else if (mode === 'area') {
+            const m = new Map();
+            stus.forEach(s => s.recs.forEach(r => { const c = _areaOf(r); if (!m.has(c)) m.set(c, new Set()); m.get(c).add(s.key); }));
+            [...m.keys()].sort((a, b) => a.localeCompare(b, 'th')).forEach(c => { if (q && !_nm(c).toLowerCase().includes(q)) return; opts.push([c, `${c} · ${m.get(c).size} คน`]); });
         } else {
             const m = new Map();
             stus.forEach(s => s.recs.forEach(r => { const c = r.รหัสวิชา || ''; if (!m.has(c)) m.set(c, { l: _subjLabel(r), s: new Set() }); m.get(c).s.add(s.key); }));
@@ -4550,7 +4556,7 @@
         }
         g('psSel').innerHTML = opts.map(([v, t]) => `<option value="${_esc(v)}">${_esc(t)}</option>`).join('');
         g('psCount').textContent = `${opts.length} รายการ${mode === 'person' ? ' (เลือกได้หลายคน: Ctrl/Shift หรือกด "เลือกทั้งหมด")' : ' (เลือกได้หลายรายการ)'} · นักเรียนที่ติดทั้งหมด ${stus.size} คน`;
-        g('psHint').textContent = mode === 'subject' ? 'รายวิชา: A4 แนวนอน เรียง 2 คน/แผ่น (ในใบของนักเรียนแต่ละคนจะแสดงทุกวิชาที่ติด)' : 'A4 แนวตั้ง 1 คน/แผ่น เต็มหน้า';
+        g('psHint').textContent = (mode === 'subject' || mode === 'area') ? 'A4 แนวนอน 2 คน/แผ่น · จัดเป็นกลุ่ม แต่ละใบแสดงเฉพาะวิชาในกลุ่มที่เลือก · เปลี่ยนวิชา/กลุ่มสาระฯ ขึ้นแผ่นใหม่' : 'A4 แนวตั้ง 1 คน/แผ่น เต็มหน้า (แสดงทุกวิชาที่ติด)';
     }
     async function openParentSummary() {
         if (!allData.length) { Swal.fire({ icon: 'info', title: 'ยังไม่มีข้อมูล', text: 'รอให้ระบบโหลดข้อมูลผลการเรียนก่อน', confirmButtonColor: '#4f46e5' }); return; }
@@ -4562,7 +4568,8 @@
                 <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
                   <label><input type="radio" name="psMode" value="person" checked onchange="psRefill()"> <b>รายบุคคล</b> — เลือกนักเรียน (A4 เต็มแผ่น 1 คน)</label>
                   <label><input type="radio" name="psMode" value="class" onchange="psRefill()"> <b>รายห้องเรียน</b> — ทั้งห้องที่เลือก (A4 เต็มแผ่น 1 คน/แผ่น)</label>
-                  <label><input type="radio" name="psMode" value="subject" onchange="psRefill()"> <b>รายวิชา</b> — นักเรียนที่ติดวิชานั้น (A4 แนวนอน 2 คน/แผ่น)</label>
+                  <label><input type="radio" name="psMode" value="subject" onchange="psRefill()"> <b>รายวิชา</b> — เฉพาะวิชาที่เลือก จัดกลุ่มตามวิชา (A4 แนวนอน 2 คน/แผ่น)</label>
+                  <label><input type="radio" name="psMode" value="area" onchange="psRefill()"> <b>กลุ่มสาระการเรียนรู้</b> — เฉพาะวิชาในกลุ่มสาระฯ ที่เลือก (A4 แนวนอน 2 คน/แผ่น)</label>
                 </div>
                 <input id="psSearch" type="search" class="swal2-input" style="margin:0 0 6px;width:100%;font-size:14px;height:38px" placeholder="ค้นหา..." oninput="psRefill()" autocomplete="off">
                 <select id="psSel" multiple size="8" style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:4px;font-size:14px"></select>
@@ -4584,41 +4591,50 @@
     }
     function psPrint(o) {
         const e = _esc, stus = psStudents(o.done), keySet = new Set(o.keys);
-        // เลือกนักเรียนตามโหมด
-        let list = [];
-        if (o.mode === 'person') list = o.keys.map(k => stus.get(k)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'th'));
-        else {
+        // สร้างรายการใบ (item) ตามโหมด — รายวิชา/กลุ่มสาระฯ จัดเป็นกลุ่ม แต่ละใบแสดงเฉพาะวิชาในกลุ่มนั้น
+        const items = [], byName = (x, y) => x.s.name.localeCompare(y.s.name, 'th');
+        if (o.mode === 'person') o.keys.map(k => stus.get(k)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'th')).forEach(s => items.push({ s, recs: s.recs, gt: '', tot: s.recs.length, g: '' }));
+        else if (o.mode === 'class') {
             const pick = new Map();
-            stus.forEach(s => s.recs.forEach(r => {
-                const hit = o.mode === 'class' ? keySet.has(_clsOf(r)) : keySet.has(r.รหัสวิชา || '');
-                if (hit && !pick.has(s.key)) pick.set(s.key, { s, ord: o.mode === 'class' ? _clsOf(r) : _clsOf(s.recs[s.recs.length - 1]) });
-            }));
-            list = [...pick.values()].sort((a, b) => a.ord.localeCompare(b.ord, 'th', { numeric: true }) || a.s.name.localeCompare(b.s.name, 'th')).map(x => x.s);
+            stus.forEach(s => s.recs.forEach(r => { if (keySet.has(_clsOf(r)) && !pick.has(s.key)) pick.set(s.key, { s, recs: s.recs, gt: '', tot: s.recs.length, g: '', ord: _clsOf(r) }); }));
+            [...pick.values()].sort((a, b) => a.ord.localeCompare(b.ord, 'th', { numeric: true }) || byName(a, b)).forEach(x => items.push(x));
+        } else {
+            const isSub = o.mode === 'subject', gk = r => isSub ? (r.รหัสวิชา || '') : _areaOf(r), groups = new Map();
+            stus.forEach(s => {
+                const by = new Map();
+                s.recs.forEach(r => { const k = gk(r); if (keySet.has(k)) { if (!by.has(k)) by.set(k, []); by.get(k).push(r); } });
+                by.forEach((recs, k) => { if (!groups.has(k)) groups.set(k, []); groups.get(k).push({ s, recs, tot: s.recs.length, g: k, gt: (isSub ? 'วิชา ' + _subjLabel(recs[0]) : 'กลุ่มสาระการเรียนรู้ ' + k.replace(/^กลุ่มสาระการเรียนรู้/, '')), ord: _clsOf(recs[0]) }); });
+            });
+            [...groups.keys()].sort((a, b) => a.localeCompare(b, 'th')).forEach(k => groups.get(k).sort((a, b) => a.ord.localeCompare(b.ord, 'th', { numeric: true }) || byName(a, b)).forEach(x => items.push(x)));
         }
-        const half = o.mode === 'subject', off = FORM_OFFICIALS.registrar || '';
+        const list = items;
+        const half = o.mode === 'subject' || o.mode === 'area', off = FORM_OFFICIALS.registrar || '';
         const MAXR = half ? 10 : 20;
-        const card = (s, recs, ci, cn, base) => {
-            const pend = s.recs.filter(r => r.Correction_Status !== 'แก้ไขแล้ว'), doneN = s.recs.length - pend.length;
+        const card = (it, recs, ci, cn, base) => {
+            const s = it.s, pend = it.recs.filter(r => r.Correction_Status !== 'แก้ไขแล้ว'), doneN = it.recs.length - pend.length;
             const c = k => pend.filter(r => String(r.ผลการเรียน).trim() === k).length, hasDone = doneN > 0;
-            const clsList = [...new Set(s.recs.map(_clsOf))].join(', ');
+            const clsList = [...new Set(it.recs.map(_clsOf))].join(', ');
             const rows = recs.map((r, i) => {
                 const d = r.Correction_Status === 'แก้ไขแล้ว';
                 return `<tr${d ? ' class="dn"' : ''}><td>${base + i + 1}</td><td class="l">${e(r.รหัสวิชา || '')}</td><td class="l">${e(r.ชื่อวิชา || '')}</td><td>${e(_semOf(r))}</td><td>${e(_clsOf(r))}</td><td><b>${e(r.ผลการเรียน || '')}</b></td><td class="l tc">${teacherNames(r.รหัสวิชา || '').map(n => `<span style="white-space:nowrap">${e(n)}</span>`).join('<br>') || '—'}</td>${hasDone ? `<td>${d ? 'แก้ไขแล้ว' + (r.New_Result ? ' → ' + e(r.New_Result) : '') : 'รอแก้ไข'}</td>` : ''}</tr>`;
             }).join('');
             return `<div class="card"><div class="hd"><img src="https://nonthaphathr.github.io/uploadimg/logoschool.png" alt=""><div><div class="sc">โรงเรียนกระดุมทองวิทยา</div><div class="tt">แจ้งผลการเรียนที่ยังไม่ผ่านเกณฑ์ (0 / ร / มส)${cn > 1 ? ` <small style="font-weight:400;font-size:.8em">(แผ่นที่ ${ci + 1}/${cn})</small>` : ''}</div></div></div>
                 <div class="to">เรียน ผู้ปกครองของ <b>${e(s.name)}</b></div>
-                <div class="info">เรียนชั้น ${e(clsList)} · ข้อมูล ณ วันที่ ${e(o.date)}</div>
+                <div class="info">เรียนชั้น ${e(clsList)} · ข้อมูล ณ วันที่ ${e(o.date)}${it.tot > it.recs.length ? ` · ติดรวมทุกวิชา ${it.tot} วิชา` : ''}</div>${it.gt ? `<div class="grp">${e(it.gt)}</div>` : ''}
                 <div class="sum"><div class="big"><span>ติดทั้งหมด</span><b>${pend.length}</b><span>วิชา</span></div><div class="mini z"><span>ผล 0</span><b>${c('0')}</b></div><div class="mini r"><span>ผล ร</span><b>${c('ร')}</b></div><div class="mini m"><span>ผล มส</span><b>${c('มส')}</b></div></div>
                 <table><thead><tr><th style="width:5%">ที่</th><th style="width:13%">รหัสวิชา</th><th style="width:28%">ชื่อวิชา</th><th style="width:11%">ภาคเรียน</th><th style="width:9%">ชั้น</th><th style="width:7%">ผล</th><th>ครูผู้สอน</th>${hasDone ? '<th style="width:13%">สถานะ</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>
                 ${ci < cn - 1 ? '<div class="note" style="text-align:right">ต่อแผ่นถัดไป ►</div>' : `<div class="note"><b>ความหมาย</b> 0 = ผลการเรียนไม่ผ่านเกณฑ์ · ร = ยังไม่สมบูรณ์ (รอการตัดสินผล) · มส = ไม่มีสิทธิ์รับการประเมินผล (เวลาเรียนไม่ครบตามเกณฑ์)<br>
                 โรงเรียนจึงขอความอนุเคราะห์ให้ผู้ปกครองแจ้งนักเรียนติดต่อครูผู้สอนตามรายวิชาข้างต้น เพื่อดำเนินการแก้ไขผลการเรียนให้เรียบร้อย หากมีข้อสงสัยสอบถามได้ที่งานทะเบียนและเทียบโอนผลการเรียน</div>
                 <div class="sign">ลงชื่อ ..............................................<br>(${e(off)})<br>เจ้าหน้าที่ทะเบียนวัดผล</div>`}</div>`;
         };
-        const cardsOf = s => { const n = Math.max(1, Math.ceil(s.recs.length / MAXR)), per = Math.ceil(s.recs.length / n); return Array.from({ length: n }, (_, i) => card(s, s.recs.slice(i * per, (i + 1) * per), i, n, i * per)); };
+        const cardsOf = it => { const n = Math.max(1, Math.ceil(it.recs.length / MAXR)), per = Math.ceil(it.recs.length / n); return Array.from({ length: n }, (_, i) => ({ g: it.g, h: card(it, it.recs.slice(i * per, (i + 1) * per), i, n, i * per) })); };
         const cards = list.flatMap(cardsOf);
         let sheets = '';
-        if (half) { for (let i = 0; i < cards.length; i += 2) sheets += `<div class="sheet">${cards[i]}${cards[i + 1] || '<div class="card empty"></div>'}</div>`; }
-        else sheets = cards.map(c => `<div class="sheet">${c}</div>`).join('');
+        let nSheets = cards.length;
+        if (half) {
+            nSheets = 0; const gs = []; cards.forEach(c => { if (!gs.length || gs[gs.length - 1].g !== c.g) gs.push({ g: c.g, c: [] }); gs[gs.length - 1].c.push(c.h); });
+            gs.forEach(G => { for (let i = 0; i < G.c.length; i += 2) { nSheets++; sheets += `<div class="sheet">${G.c[i]}${G.c[i + 1] || '<div class="card empty"></div>'}</div>`; } });
+        } else sheets = cards.map(c => `<div class="sheet">${c.h}</div>`).join('');
         const w = half ? 297 : 210, h = half ? 210 : 297, cw = half ? 148.5 : 210, pad = half ? 8 : 15, fs = half ? 9.5 : 12.5;
         o.win.document.open();
         o.win.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>สรุปผลรายบุคคล - ผู้ปกครอง</title>
@@ -4628,14 +4644,14 @@
         .sheet{width:${w}mm;height:${h}mm;margin:8mm auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25);display:flex;overflow:hidden;page-break-after:always;break-after:page}
         .card{width:${cw}mm;height:${h}mm;padding:${pad}mm;font-size:${fs}pt;line-height:1.3;overflow:hidden;display:flex;flex-direction:column;gap:.45em}${half ? '.card:first-child{border-right:.4mm dashed #94a3b8}' : ''}
         .hd{display:flex;align-items:center;gap:.7em;border-bottom:.35mm solid #312e81;padding-bottom:.5em}.hd img{width:3.4em;height:3.4em;object-fit:contain}.sc{font-size:1.05em;color:#475569}.tt{font-size:1.25em;font-weight:700;color:#312e81}
-        .to{font-size:1.1em}.info{color:#475569;font-size:.95em;margin-top:-.2em}
+        .grp{font-weight:700;color:#312e81;background:#eef2ff;border-radius:.4em;padding:.15em .6em;font-size:1.05em}.to{font-size:1.1em}.info{color:#475569;font-size:.95em;margin-top:-.2em}
         .sum{display:flex;gap:.5em}.big{flex:1.6;display:flex;align-items:baseline;justify-content:center;gap:.4em;border:.4mm solid #312e81;border-radius:.6em;padding:.3em;background:#eef2ff}.big b{font-size:2.2em;line-height:1;color:#312e81}
         .mini{flex:1;text-align:center;border-radius:.6em;padding:.3em;border:.3mm solid}.mini span{display:block;font-size:.85em}.mini b{font-size:1.5em;line-height:1.1}.z{color:#b91c1c;border-color:#fca5a5;background:#fef2f2}.r{color:#b45309;border-color:#fcd34d;background:#fffbeb}.m{color:#6d28d9;border-color:#c4b5fd;background:#f5f3ff}
         table{width:100%;border-collapse:collapse;font-size:.92em}th,td{border:.25mm solid #333;padding:.25em .4em;text-align:center;vertical-align:top}th{background:#e0e7ff}td.l{text-align:left}td.tc{white-space:nowrap}tr.dn td{color:#6b7280;background:#f0fdf4}
         .note{font-size:.82em;color:#374151;border:.25mm dashed #94a3b8;border-radius:.5em;padding:.4em .6em;background:#f8fafc}
         .sign{margin-top:auto;text-align:center;font-size:.95em;line-height:1.5;padding-left:45%}
         @media print{@page{size:A4 ${half ? 'landscape' : 'portrait'};margin:0}body{background:#fff}.bar{display:none}.sheet{margin:0;box-shadow:none}}</style></head><body>
-        <div class="bar"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button><span>${list.length} คน · ${half ? 'A4 แนวนอน 2 ใบ/แผ่น (' + Math.ceil(cards.length / 2) + ' แผ่น)' : 'A4 แนวตั้ง (' + cards.length + ' แผ่น)'} · ติดเกิน ${MAXR} วิชา แบ่งเป็นหลายใบ · ถ้าตัวหนังสือแน่น ระบบย่อขนาดให้พอดี 1 ใบ</span></div>
+        <div class="bar"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button><span>${list.length} คน · ${half ? 'A4 แนวนอน 2 ใบ/แผ่น (' + nSheets + ' แผ่น · เริ่มแผ่นใหม่เมื่อเปลี่ยนวิชา/กลุ่มสาระฯ)' : 'A4 แนวตั้ง (' + cards.length + ' แผ่น)'} · ติดเกิน ${MAXR} วิชา แบ่งเป็นหลายใบ · ถ้าตัวหนังสือแน่น ระบบย่อขนาดให้พอดี 1 ใบ</span></div>
         ${sheets}
         <script>document.fonts.ready.then(function(){document.querySelectorAll('.card:not(.empty)').forEach(function(c){var f=parseFloat(getComputedStyle(c).fontSize),g=0;while(c.scrollHeight>c.clientHeight+1&&f>5&&g++<120){f-=.25;c.style.fontSize=f+'px';}});});<\/script></body></html>`);
         o.win.document.close();
