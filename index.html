@@ -2184,8 +2184,11 @@
         social: 'นายวิทยา ใหม่คามิ',            // สังคมศึกษา (ก่อน 2/2568)
         work: 'นายต้นกล้า เพชรเลื่อน',           // การงานอาชีพ
         art: 'นายไกรสร จันทวี',                  // ศิลปะ
-        tech: 'นางสาวณิชารีย์ คำศรีทา'           // คอมพิวเตอร์/เทคโนโลยี/วิทยาการคำนวณ
+        tech: 'นางสาวอัญชุลี คำศรีทา'            // คอมพิวเตอร์/เทคโนโลยี/วิทยาการคำนวณ
     };
+    // ครูที่เปลี่ยนชื่อ: ชื่อเดิม(ไม่มีคำนำหน้า/ช่องว่าง) → ชื่อใหม่ · ใช้กับทุกที่ที่แสดง/จัดกลุ่มชื่อครู
+    const TEACHER_RENAME = { 'ณิชารีย์คำศรีทา': 'นางสาวอัญชุลี คำศรีทา' };
+    const _renameT = n => TEACHER_RENAME[String(n || '').replace(/\s+/g, '').replace(/^(นางสาว|นาง|นาย|ครู)/, '')] || n;
     const _rKey = n => String(n || '').replace(/\s+/g, '').replace(/^(นางสาว|นาง|นาย|ครู)/, '');
     const _termKey = t => { const m = String(t || '').match(/(\d)\s*\/\s*(\d{4})/); return m ? (+m[2]) * 10 + (+m[1]) : 0; };
     const _isFormer = n => /\(ครูเดิม\)/.test(n);
@@ -2209,7 +2212,7 @@
         const raw = String(teacherAssignments[code] || '').split(/\s*[,;]\s*/).filter(Boolean);
         const out = raw.filter(n => !_isDeparted(n));
         if (!raw.length || out.length < raw.length) out.push(..._successors(code));
-        return [...new Set(out)];
+        return [...new Set(out.map(_renameT))];
     };
     const _respStr = code => teacherNames(code).join(', ');
     // ครูผู้สอนขณะนั้น (ตามภาคเรียนของแถว): ตรงภาค → ปีเดียวกัน → ภาคก่อนหน้าที่ใกล้สุด → ภาคถัดไป
@@ -2218,7 +2221,7 @@
         const t = _termKey(term); let k = ks.find(x => _termKey(x) === t);
         if (!k) { const y = Math.floor(t / 10); k = ks.find(x => Math.floor(_termKey(x) / 10) === y); }
         if (!k) { const e = ks.filter(x => _termKey(x) < t).sort((a, b) => _termKey(b) - _termKey(a)); k = e[0] || ks.sort((a, b) => _termKey(a) - _termKey(b))[0]; }
-        return _splitTeachers(bt[k]);
+        return _splitTeachers(bt[k]).map(_renameT);
     }
     function _thenDiff(r) {   // ครูขณะนั้น ≠ ผู้รับผิดชอบปัจจุบัน ?
         const th = teacherAtTerm(r.รหัสวิชา || '', _semOf(r)), cur = teacherNames(r.รหัสวิชา || '');
@@ -4006,7 +4009,7 @@
         }).join('');
         if (!opts.length) st.textContent = 'ยังไม่มีข้อมูลครูผู้สอนในระบบ';
         const t = new URLSearchParams(location.search).get('t');
-        if (t && idx.has(_tKey(t))) sel.value = _tKey(t);
+        { const tk = _tKey(_renameT(t)); if (t && idx.has(tk)) sel.value = tk; }   // ลิงก์/QR เดิมของครูที่เปลี่ยนชื่อยังใช้ได้
         ckRender(true);
         // ลิงก์กลาง (ยังไม่ได้เลือกชื่อ) ครั้งแรกของวัน → มืดรอบ ๆ แล้วโฟกัสที่ช่องเลือกชื่อครู
         if (!sel.value && opts.length) {
@@ -4270,11 +4273,16 @@
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
     }
+    // ครูที่เปลี่ยนชื่อ: ถ้ายังไม่มีรหัสใต้ชื่อใหม่ ให้ใช้รหัสที่เคยตั้งไว้ใต้ชื่อเดิมได้ (hash ผูกกับ key เดิม)
+    const _KEY_ALIAS = { 'อัญชุลีคำศรีทา': 'ณิชารีย์คำศรีทา' };
     async function _verifyTeacherPw(key, pw) {
-        const s = await db.collection(COL_TAUTH).doc(key).get();
-        if (!s.exists || !s.data().hash) return 'nopw';
-        const d = s.data();
-        return (await _pwHash(key, d.salt, pw)) === d.hash ? 'ok' : 'bad';
+        for (const k of [key, _KEY_ALIAS[key]].filter(Boolean)) {
+            const s = await db.collection(COL_TAUTH).doc(k).get();
+            if (!s.exists || !s.data().hash) continue;
+            const d = s.data();
+            return (await _pwHash(k, d.salt, pw)) === d.hash ? 'ok' : 'bad';
+        }
+        return 'nopw';
     }
 
     // ── แจ้งเตือน LINE (ผ่าน Google Apps Script relay → LINE Messaging API push เข้ากลุ่ม) ──
