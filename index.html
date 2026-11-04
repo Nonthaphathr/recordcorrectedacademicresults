@@ -763,6 +763,23 @@
                 </div>
             </div>
 
+            <!-- Section: ผู้ลงนามเอกสารสรุปผลผู้ปกครอง + ลายเซ็นดิจิทัล -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <span style="font-size:1.1rem">🖊️</span>
+                    <h3 class="font-semibold text-gray-700">ผู้ลงนามเอกสารสรุปผลรายบุคคล (มอบผู้ปกครอง) + ลายเซ็นดิจิทัล</h3>
+                </div>
+                <div class="settings-section-body">
+                    <p class="text-sm text-gray-500 mb-3">ผู้ลงนาม 2 คนที่พิมพ์ท้ายเอกสารสรุปผล อัปโหลดรูปลายเซ็น (PNG/JPG) ได้ ระบบจะวางทับเส้นลงชื่ออัตโนมัติ · แนะนำเซ็นบนกระดาษขาวด้วยปากกาสีเข้มแล้วถ่ายรูปให้ชัด</p>
+                    <label class="flex items-center gap-2 text-sm text-gray-600 mb-3"><input type="checkbox" id="psSigWhite" checked> ลบพื้นหลังสีขาวของรูปลายเซ็นให้โปร่งใสอัตโนมัติ</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="border border-indigo-100 rounded-xl p-3" id="psCard0"></div>
+                        <div class="border border-indigo-100 rounded-xl p-3" id="psCard1"></div>
+                    </div>
+                    <div class="flex gap-3 flex-wrap"><button onclick="savePsSigners()" class="btn btn-primary">บันทึกผู้ลงนาม/ลายเซ็น</button></div>
+                </div>
+            </div>
+
             <!-- Section: ผู้ลงนามในแบบฟอร์ม -->
             <div class="settings-section mb-6">
                 <div class="settings-section-header">
@@ -816,6 +833,7 @@
                     <button onclick="ckExcel()" class="btn btn-success ck-act" disabled>📊 ส่งออก Excel</button>
                     <button onclick="ckTlExport()" class="btn btn-primary ck-act" disabled data-tooltip="ไฟล์ที่นำเข้าระบบ Teaching Log เพื่อมอบภาระงานแก้ 0 ร มส">⬇️ ไฟล์สำหรับ Teaching Log</button>
                     <button onclick="ckPrint()" class="btn btn-warning ck-act" disabled>🖨️ พิมพ์</button>
+                    <button onclick="openParentSummary({ modes: ['person', 'class'] })" class="btn btn-primary" data-tooltip="สรุปผลรายบุคคลให้ผู้ปกครอง: ติดกี่วิชา วิชาไหน ใครสอน (รายบุคคล / รายห้องเรียน) A4 1 คน/แผ่น">👪 สรุปผลผู้ปกครอง</button>
                 </div>
             </div>
             <div id="ckSummary" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
@@ -3290,7 +3308,7 @@
         { t: '⑤ เปิดใน Word → ตรวจ → พิมพ์ → ลงชื่อ', d: 'เปิดไฟล์ ตรวจความถูกต้อง สั่งพิมพ์ แล้วให้นักเรียนและครูผู้สอนลงชื่อ จากนั้นส่งต่อให้ผู้ลงความเห็นตามลำดับในหน้า 2 ของเอกสาร' },
         { t: '⑥ แบบ 102 และเครื่องมือที่เกี่ยวข้อง', d: 'แบบ 102 แจ้งผลการสอบแก้ตัวแบบรายวิชา (ช่อง "ผลการสอบแก้ตัว" กรอกผลใหม่ตามระบบให้) · ประวัติการดาวน์โหลดแยกแท็บ รวม / 101 / 102 และแสดงชื่อผู้ดาวน์โหลด · เปลี่ยนผู้ลงนามที่ ตั้งค่า → "ผู้ลงนามในแบบฟอร์ม"' },
         { t: '⑦ ให้ครูตรวจและแก้ผลการเรียนเอง', d: 'เมนู "เอกสาร & รายงาน" → "ลิงก์ตรวจสอบสำหรับครู" ส่งลิงก์กลาง หรือพิมพ์ QR รายคนไปติดโต๊ะ (ตั้งค่า → รหัสผ่านครู) ครูเลือกชื่อ กด "ออกใบขอแก้" หรือ "แก้ผลการเรียนใหม่" ใส่รหัสผ่าน ววดดปปปป (วัน-เดือน-ปีเกิด พ.ศ.) บันทึกแล้วระบบถามให้โหลด 102 และแจ้งเข้ากลุ่ม LINE · ตั้งรหัสให้ครูด้วยไฟล์ .xlsx หรือลิงก์ตั้งรหัสที่ใช้ได้ครั้งเดียวภายใน 7 วัน · มีคู่มือครู (PDF) ที่ปุ่ม "📘 คู่มือการใช้งาน" ในหน้าตรวจสอบ' },
-        { t: '⑧ สรุปผลรายบุคคลให้ผู้ปกครอง', d: 'เมนู "⬇ ส่งออก & พิมพ์" → "👪 สรุปผลรายบุคคล" เลือกรูปแบบ: รายบุคคล / รายห้องเรียน (A4 แนวตั้ง 1 คนต่อแผ่น) หรือ รายวิชา / กลุ่มสาระการเรียนรู้ (A4 แนวนอน 2 คนต่อแผ่น) แล้วเลือกรายการ · แต่ละใบบอกว่าติดกี่วิชา วิชาไหน ใครสอน · ติดมากกว่า 20 วิชา (แนวนอนเกิน 10) แบ่งเป็นหลายแผ่นอัตโนมัติ' },
+        { t: '⑧ สรุปผลรายบุคคลให้ผู้ปกครอง', d: 'เมนู "⬇ ส่งออก & พิมพ์" → "👪 สรุปผลรายบุคคล" เลือกรูปแบบ: รายบุคคล / รายห้องเรียน (A4 แนวตั้ง 1 คนต่อแผ่น) หรือ รายวิชา / กลุ่มสาระการเรียนรู้ (A4 แนวนอน 2 คนต่อแผ่น) แล้วเลือกรายการ · แต่ละใบบอกว่าติดกี่วิชา วิชาไหน ใครสอน · ติดมากกว่า 20 วิชา (แนวนอนเกิน 10) แบ่งเป็นหลายแผ่นอัตโนมัติ · ผู้ลงนาม 2 คนและลายเซ็นดิจิทัลตั้งที่ ตั้งค่า → ผู้ลงนามเอกสารสรุปผล · ครูพิมพ์เองได้ที่หน้าตรวจสอบ (รายบุคคล/รายห้อง)' },
         { t: '⑨ ครูเปลี่ยนตามปี / ผู้รับผิดชอบแก้', d: 'วิชาที่ครูเปลี่ยนตามปีการศึกษา: เอกสารแสดง "ครูผู้สอนขณะนั้น" ตามภาคเรียนของนักเรียน ส่วนผู้รับผิดชอบแก้คือครูปัจจุบัน (ครูที่ย้าย/เกษียณ → ครูตามตารางสอนล่าสุด หรือตามกลุ่มวิชา) · นำเข้าข้อมูลที่เมนู "ระบุผู้สอน" → "📥 นำเข้าครูรายภาคเรียน (.xlsx)" · เปิดคู่มือนี้ซ้ำได้จากปุ่ม "คู่มือ" บนแถบเมนู' }
     ];
     let _gd = { i: 0, play: true, timer: null, raf: null };
@@ -3344,6 +3362,7 @@
         renderEditorTags();
         renderFormOfficialsSettings();
         loadFormOfficialsRemote().then(renderFormOfficialsSettings);
+        renderPsSignersSettings(); loadPsSignersRemote().then(renderPsSignersSettings);
         renderLineSettings();
         refreshFirestoreStats();
     }
@@ -4667,6 +4686,79 @@
     //  สรุปผลรายบุคคลสำหรับผู้ปกครอง (ติด 0 ร มส กี่วิชา วิชาไหน ใครสอน) — 1 คน = 1 ใบ
     //  รายบุคคล/รายห้อง = A4 แนวตั้งเต็มแผ่น · รายวิชา = A4 แนวนอน 2 คน/แผ่น
     // ═══════════════════════════════════════════════════════
+    // ── ผู้ลงนามเอกสารสรุปผลผู้ปกครอง (2 คน) + ลายเซ็นดิจิทัล: เก็บในเครื่อง + Firestore app_settings/parent_summary_signers ──
+    const PS_SIGNERS_KEY = 'ktw_ps_signers';
+    const PS_SIGNERS_DEFAULT = [
+        { name: 'นายนนทพัทธ์ หิรัญเรือง', role: 'งานทะเบียนและเทียบโอนผลการเรียน', sig: '' },
+        { name: 'นางสาวยุพา ทองคำ', role: 'งานวัดและประเมินผล', sig: '' }
+    ];
+    let PS_SIGNERS = JSON.parse(JSON.stringify(PS_SIGNERS_DEFAULT));
+    function _applyPsSigners(o) {
+        if (!o || !Array.isArray(o.list)) return;
+        PS_SIGNERS = PS_SIGNERS_DEFAULT.map((d, i) => { const x = o.list[i] || {}; return { name: x.name || d.name, role: x.role || d.role, sig: x.sig || '' }; });
+    }
+    try { _applyPsSigners(JSON.parse(localStorage.getItem(PS_SIGNERS_KEY) || 'null')); } catch (e) {}
+    async function loadPsSignersRemote() {
+        try {
+            const sn = await db.collection(COL_APP_SETTINGS).doc('parent_summary_signers').get();
+            if (sn.exists) { _applyPsSigners(sn.data()); try { localStorage.setItem(PS_SIGNERS_KEY, JSON.stringify({ list: PS_SIGNERS })); } catch (e) {} }
+        } catch (e) { console.warn('parent_summary_signers load skipped:', e.message); }
+    }
+    function renderPsSignersSettings() {
+        PS_SIGNERS.forEach((g, i) => {
+            const c = document.getElementById('psCard' + i); if (!c) return;
+            c.innerHTML = `<p class="text-xs text-gray-400 mb-2">ผู้ลงนามคนที่ ${i + 1}</p>
+                <label class="text-sm text-gray-600">ชื่อ-สกุล<input type="text" id="ps-name-${i}" class="teacher-input w-full" style="width:100%" value="${_esc(g.name)}"></label>
+                <label class="text-sm text-gray-600 block mt-2">ตำแหน่ง/งาน<input type="text" id="ps-role-${i}" class="teacher-input w-full" style="width:100%" value="${_esc(g.role)}"></label>
+                <div class="mt-3 flex items-center gap-3 flex-wrap">
+                    <div id="ps-prev-${i}" style="width:170px;height:70px;border:1px dashed #c7d2fe;border-radius:8px;display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#f3f4f6 0 25%,#fff 0 50%) 0 0/14px 14px;font-size:12px;color:#9ca3af">${g.sig ? `<img src="${g.sig}" alt="ลายเซ็น" style="max-width:100%;max-height:100%">` : 'ยังไม่มีลายเซ็น'}</div>
+                    <div class="flex flex-col gap-2"><input type="file" id="ps-file-${i}" accept="image/*" style="display:none" onchange="psSigPick(${i},event)">
+                        <button onclick="document.getElementById('ps-file-${i}').click()" class="btn btn-secondary btn-sm">📤 อัปโหลดลายเซ็น</button>
+                        <button onclick="psSigClear(${i})" class="btn btn-secondary btn-sm">🗑️ ลบลายเซ็น</button></div>
+                </div>`;
+        });
+    }
+    function _psSigProcess(file) {
+        return new Promise((res, rej) => {
+            const fr = new FileReader();
+            fr.onerror = rej;
+            fr.onload = () => {
+                const im = new Image(); im.onerror = rej;
+                im.onload = () => {
+                    const sc = Math.min(1, 480 / im.width), c = document.createElement('canvas');
+                    c.width = Math.max(1, Math.round(im.width * sc)); c.height = Math.max(1, Math.round(im.height * sc));
+                    const x = c.getContext('2d'); x.drawImage(im, 0, 0, c.width, c.height);
+                    if ((document.getElementById('psSigWhite') || {}).checked) {
+                        const d = x.getImageData(0, 0, c.width, c.height), a = d.data;
+                        for (let k = 0; k < a.length; k += 4) { const l = .299 * a[k] + .587 * a[k + 1] + .114 * a[k + 2]; if (l > 225) a[k + 3] = 0; else if (l > 170) a[k + 3] = Math.round(255 * (225 - l) / 55); }
+                        x.putImageData(d, 0, 0);
+                    }
+                    res(c.toDataURL('image/png'));
+                };
+                im.src = fr.result;
+            };
+            fr.readAsDataURL(file);
+        });
+    }
+    async function psSigPick(i, ev) {
+        const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!f) return;
+        try {
+            const url = await _psSigProcess(f);
+            if (url.length > 600000) { Swal.fire({ icon: 'warning', title: 'รูปใหญ่เกินไป', text: 'กรุณาใช้รูปที่เล็กลง', confirmButtonColor: '#4f46e5' }); return; }
+            PS_SIGNERS[i].sig = url;
+            document.getElementById('ps-prev-' + i).innerHTML = `<img src="${url}" alt="ลายเซ็น" style="max-width:100%;max-height:100%">`;
+        } catch (e) { Swal.fire({ icon: 'error', title: 'อ่านรูปไม่สำเร็จ', confirmButtonColor: '#4f46e5' }); }
+    }
+    function psSigClear(i) { PS_SIGNERS[i].sig = ''; document.getElementById('ps-prev-' + i).textContent = 'ยังไม่มีลายเซ็น'; }
+    async function savePsSigners() {
+        PS_SIGNERS.forEach((g, i) => { g.name = (document.getElementById('ps-name-' + i) || {}).value.trim() || PS_SIGNERS_DEFAULT[i].name; g.role = (document.getElementById('ps-role-' + i) || {}).value.trim() || PS_SIGNERS_DEFAULT[i].role; });
+        try { localStorage.setItem(PS_SIGNERS_KEY, JSON.stringify({ list: PS_SIGNERS })); } catch (e) {}
+        let remote = true;
+        try { await db.collection(COL_APP_SETTINGS).doc('parent_summary_signers').set({ list: PS_SIGNERS, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+        catch (e) { remote = false; console.warn('parent_summary_signers save failed:', e.message); }
+        Swal.fire({ icon: remote ? 'success' : 'warning', title: remote ? 'บันทึกผู้ลงนามแล้ว' : 'บันทึกในเครื่องนี้เท่านั้น', text: remote ? 'ใช้กับเอกสารสรุปผลผู้ปกครองทุกเครื่อง รวมถึงหน้าตรวจสอบของครู' : 'บันทึกขึ้นระบบกลางไม่สำเร็จ (ตรวจสิทธิ์ Firestore)', confirmButtonColor: '#4f46e5' });
+    }
+
     const _semKey = r => { const m = _semOf(r).match(/(\d)\s*\/\s*(\d{4})/); return m ? (+m[2]) * 10 + (+m[1]) : 0; };
     const _AREA_BY_CH = { 'ท': 'ภาษาไทย', 'ค': 'คณิตศาสตร์', 'ว': 'วิทยาศาสตร์และเทคโนโลยี', 'ส': 'สังคมศึกษา ศาสนา และวัฒนธรรม', 'พ': 'สุขศึกษาและพลศึกษา', 'ศ': 'ศิลปะ', 'ง': 'การงานอาชีพ', 'อ': 'ภาษาต่างประเทศ', 'จ': 'ภาษาต่างประเทศ', 'ญ': 'ภาษาต่างประเทศ', 'ก': 'กิจกรรมพัฒนาผู้เรียน', 'ล': 'กิจกรรมพัฒนาผู้เรียน' };
     const _areaOf = r => _AREA_BY_CH[String(r.รหัสวิชา || '').trim().charAt(0)] || 'อื่น ๆ';
@@ -4711,19 +4803,17 @@
         g('psCount').textContent = `${opts.length} รายการ${mode === 'person' ? ' (เลือกได้หลายคน: Ctrl/Shift หรือกด "เลือกทั้งหมด")' : ' (เลือกได้หลายรายการ)'} · นักเรียนที่ติดทั้งหมด ${stus.size} คน`;
         g('psHint').textContent = (mode === 'subject' || mode === 'area') ? 'A4 แนวนอน 2 คน/แผ่น · จัดเป็นกลุ่ม แต่ละใบแสดงเฉพาะวิชาในกลุ่มที่เลือก · เปลี่ยนวิชา/กลุ่มสาระฯ ขึ้นแผ่นใหม่' : 'A4 แนวตั้ง 1 คน/แผ่น เต็มหน้า (แสดงทุกวิชาที่ติด)';
     }
-    async function openParentSummary() {
+    async function openParentSummary(opts) {
+        const allowed = (opts && opts.modes) || ['person', 'class', 'subject', 'area'];
         if (!allData.length) { Swal.fire({ icon: 'info', title: 'ยังไม่มีข้อมูล', text: 'รอให้ระบบโหลดข้อมูลผลการเรียนก่อน', confirmButtonColor: '#4f46e5' }); return; }
         if (!Object.keys(teacherAssignments).length) { try { await loadTeacherData(); } catch (e) { console.warn(e); } }
-        loadFormOfficialsRemote();
+        await loadPsSignersRemote();
+        const MODE_DEF = { person: '<b>รายบุคคล</b> — เลือกนักเรียน (A4 เต็มแผ่น 1 คน)', class: '<b>รายห้องเรียน</b> — ทั้งห้องที่เลือก (A4 เต็มแผ่น 1 คน/แผ่น)', subject: '<b>รายวิชา</b> — เฉพาะวิชาที่เลือก จัดกลุ่มตามวิชา (A4 แนวนอน 2 คน/แผ่น)', area: '<b>กลุ่มสาระการเรียนรู้</b> — เฉพาะวิชาในกลุ่มสาระฯ ที่เลือก (A4 แนวนอน 2 คน/แผ่น)' };
+        const modeHtml = allowed.map((m, k) => `<label><input type="radio" name="psMode" value="${m}"${k ? '' : ' checked'} onchange="psRefill()"> ${MODE_DEF[m]}</label>`).join('');
         const r = await Swal.fire({
             title: '👪 สรุปผลรายบุคคล (มอบผู้ปกครอง)', width: 640, showCancelButton: true, confirmButtonText: 'สร้างเอกสาร', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5',
             html: `<div style="text-align:left;font-size:14px">
-                <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
-                  <label><input type="radio" name="psMode" value="person" checked onchange="psRefill()"> <b>รายบุคคล</b> — เลือกนักเรียน (A4 เต็มแผ่น 1 คน)</label>
-                  <label><input type="radio" name="psMode" value="class" onchange="psRefill()"> <b>รายห้องเรียน</b> — ทั้งห้องที่เลือก (A4 เต็มแผ่น 1 คน/แผ่น)</label>
-                  <label><input type="radio" name="psMode" value="subject" onchange="psRefill()"> <b>รายวิชา</b> — เฉพาะวิชาที่เลือก จัดกลุ่มตามวิชา (A4 แนวนอน 2 คน/แผ่น)</label>
-                  <label><input type="radio" name="psMode" value="area" onchange="psRefill()"> <b>กลุ่มสาระการเรียนรู้</b> — เฉพาะวิชาในกลุ่มสาระฯ ที่เลือก (A4 แนวนอน 2 คน/แผ่น)</label>
-                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">${modeHtml}</div>
                 <input id="psSearch" type="search" class="swal2-input" style="margin:0 0 6px;width:100%;font-size:14px;height:38px" placeholder="ค้นหา..." oninput="psRefill()" autocomplete="off">
                 <select id="psSel" multiple size="8" style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:4px;font-size:14px"></select>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 8px"><span id="psCount" style="font-size:12px;color:#6b7280"></span><a href="#" onclick="Array.from(document.getElementById('psSel').options).forEach(o=>o.selected=true);return false" style="font-size:12px;color:#4f46e5">เลือกทั้งหมด</a></div>
@@ -4761,7 +4851,7 @@
             [...groups.keys()].sort((a, b) => a.localeCompare(b, 'th')).forEach(k => groups.get(k).sort((a, b) => a.ord.localeCompare(b.ord, 'th', { numeric: true }) || byName(a, b)).forEach(x => items.push(x)));
         }
         const list = items;
-        const half = o.mode === 'subject' || o.mode === 'area', off = FORM_OFFICIALS.registrar || '';
+        const half = o.mode === 'subject' || o.mode === 'area';
         const MAXR = half ? 10 : 20;
         const card = (it, recs, ci, cn, base) => {
             const s = it.s, pend = it.recs.filter(r => r.Correction_Status !== 'แก้ไขแล้ว'), doneN = it.recs.length - pend.length;
@@ -4778,7 +4868,7 @@
                 <table><thead><tr><th style="width:5%">ที่</th><th style="width:13%">รหัสวิชา</th><th style="width:28%">ชื่อวิชา</th><th style="width:11%">ภาคเรียน</th><th style="width:9%">ชั้น</th><th style="width:7%">ผล</th><th>ครูผู้สอน</th>${hasDone ? '<th style="width:13%">สถานะ</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>
                 ${ci < cn - 1 ? '<div class="note" style="text-align:right">ต่อแผ่นถัดไป ►</div>' : `<div class="note"><b>ความหมาย</b> 0 = ผลการเรียนไม่ผ่านเกณฑ์ · ร = ยังไม่สมบูรณ์ (รอการตัดสินผล) · มส = ไม่มีสิทธิ์รับการประเมินผล (เวลาเรียนไม่ครบตามเกณฑ์)<br>
                 โรงเรียนจึงขอความอนุเคราะห์ให้ผู้ปกครองแจ้งนักเรียนติดต่อครูผู้สอนตามรายวิชาข้างต้น เพื่อดำเนินการแก้ไขผลการเรียนให้เรียบร้อย หากมีข้อสงสัยสอบถามได้ที่งานทะเบียนและเทียบโอนผลการเรียน</div>
-                <div class="sign">ลงชื่อ ..............................................<br>(${e(off)})<br>เจ้าหน้าที่ทะเบียนวัดผล</div>`}</div>`;
+                <div class="signs">${PS_SIGNERS.map(g => `<div class="sg2"><div class="sgi">${g.sig ? `<img src="${g.sig}" alt="">` : ''}</div><div>ลงชื่อ ..................................</div><div>(${e(g.name)})</div><div>${e(g.role)}</div></div>`).join('')}</div>`}</div>`;
         };
         const cardsOf = it => { const n = Math.max(1, Math.ceil(it.recs.length / MAXR)), per = Math.ceil(it.recs.length / n); return Array.from({ length: n }, (_, i) => ({ g: it.g, h: card(it, it.recs.slice(i * per, (i + 1) * per), i, n, i * per) })); };
         const cards = list.flatMap(cardsOf);
@@ -4802,7 +4892,7 @@
         .mini{flex:1;text-align:center;border-radius:.6em;padding:.3em;border:.3mm solid}.mini span{display:block;font-size:.85em}.mini b{font-size:1.5em;line-height:1.1}.z{color:#b91c1c;border-color:#fca5a5;background:#fef2f2}.r{color:#b45309;border-color:#fcd34d;background:#fffbeb}.m{color:#6d28d9;border-color:#c4b5fd;background:#f5f3ff}
         table{width:100%;border-collapse:collapse;font-size:.92em}th,td{border:.25mm solid #333;padding:.25em .4em;text-align:center;vertical-align:top}th{background:#e0e7ff}td.l{text-align:left}td.tc{white-space:nowrap}.ch{font-size:.85em;color:#4338ca}tr.dn td{color:#6b7280;background:#f0fdf4}
         .note{font-size:.82em;color:#374151;border:.25mm dashed #94a3b8;border-radius:.5em;padding:.4em .6em;background:#f8fafc}
-        .sign{margin-top:auto;text-align:center;font-size:.95em;line-height:1.5;padding-left:45%}
+        .signs{margin-top:auto;display:flex;gap:3%;text-align:center;font-size:.88em;line-height:1.4}.sg2{flex:1}.sgi{height:2.8em;margin-bottom:-1em;position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:center}.sgi img{max-height:2.8em;max-width:92%;object-fit:contain}
         @media print{@page{size:A4 ${half ? 'landscape' : 'portrait'};margin:0}body{background:#fff}.bar{display:none}.sheet{margin:0;box-shadow:none}}</style></head><body>
         <div class="bar"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button><span>${list.length} คน · ${half ? 'A4 แนวนอน 2 ใบ/แผ่น (' + nSheets + ' แผ่น · เริ่มแผ่นใหม่เมื่อเปลี่ยนวิชา/กลุ่มสาระฯ)' : 'A4 แนวตั้ง (' + cards.length + ' แผ่น)'} · ติดเกิน ${MAXR} วิชา แบ่งเป็นหลายใบ · ถ้าตัวหนังสือแน่น ระบบย่อขนาดให้พอดี 1 ใบ</span></div>
         ${sheets}
