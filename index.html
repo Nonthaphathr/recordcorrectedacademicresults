@@ -499,6 +499,7 @@
                             <button class="menu-item" onclick="closeMenus();exportExcel()"><span class="mi">📊</span><span>Export Excel</span></button>
                             <button class="menu-item" onclick="closeMenus();openTlExport()"><span class="mi">⬇️</span><span>ส่งออกให้ Teaching Log<small>นักเรียนที่ติด 0 ร มส ของครูแต่ละคน (กรองได้)</small></span></button>
                             <button class="menu-item" onclick="closeMenus();printData()"><span class="mi">🖨️</span><span>พิมพ์ตารางนี้</span></button>
+                            <button class="menu-item" onclick="closeMenus();openParentSummary()"><span class="mi">👪</span><span>สรุปผลรายบุคคล (มอบผู้ปกครอง)<small>ติด 0 ร มส กี่วิชา วิชาไหน ใครสอน · 1 คน/ใบ A4</small></span></button>
                         </div>
                     </div>
                 </div>
@@ -4509,6 +4510,134 @@
     }
 
     // ── UX v2: dropdown menus + settings tabs ──
+    // ═══════════════════════════════════════════════════════
+    //  สรุปผลรายบุคคลสำหรับผู้ปกครอง (ติด 0 ร มส กี่วิชา วิชาไหน ใครสอน) — 1 คน = 1 ใบ
+    //  รายบุคคล/รายห้อง = A4 แนวตั้งเต็มแผ่น · รายวิชา = A4 แนวนอน 2 คน/แผ่น
+    // ═══════════════════════════════════════════════════════
+    const _semKey = r => { const m = _semOf(r).match(/(\d)\s*\/\s*(\d{4})/); return m ? (+m[2]) * 10 + (+m[1]) : 0; };
+    const _clsOf = r => String(r.ชั้น || '').trim() || 'ไม่ระบุชั้น';
+    function psStudents(inclDone) {
+        const map = new Map();
+        _failRows(!!inclDone).forEach(r => {
+            const k = pfStuKey(r); if (!k) return;
+            if (!map.has(k)) map.set(k, { key: k, name: _stuName(r), recs: [] });
+            map.get(k).recs.push(r);
+        });
+        map.forEach(s => {
+            s.recs.sort((a, b) => _semKey(a) - _semKey(b) || String(a.รหัสวิชา || '').localeCompare(String(b.รหัสวิชา || ''), 'th'));
+            const last = s.recs[s.recs.length - 1]; s.cls = _clsOf(last);
+        });
+        return map;
+    }
+    function psRefill() {
+        const g = id => document.getElementById(id); if (!g('psSel')) return;
+        const mode = (document.querySelector('input[name=psMode]:checked') || {}).value || 'person';
+        const q = _nm(g('psSearch').value).toLowerCase();
+        const stus = psStudents(g('psDone').checked), opts = [];
+        if (mode === 'person') {
+            [...stus.values()].sort((a, b) => a.name.localeCompare(b.name, 'th')).forEach(s => {
+                if (q && !_nm(s.name + s.cls).toLowerCase().includes(q)) return;
+                opts.push([s.key, `${s.name} · ${s.cls} · ${s.recs.length} วิชา`]);
+            });
+        } else if (mode === 'class') {
+            const m = new Map();
+            stus.forEach(s => s.recs.forEach(r => { const c = _clsOf(r); if (!m.has(c)) m.set(c, new Set()); m.get(c).add(s.key); }));
+            [...m.keys()].sort((a, b) => a.localeCompare(b, 'th', { numeric: true })).forEach(c => { if (q && !_nm(c).toLowerCase().includes(q)) return; opts.push([c, `${c} · ${m.get(c).size} คน`]); });
+        } else {
+            const m = new Map();
+            stus.forEach(s => s.recs.forEach(r => { const c = r.รหัสวิชา || ''; if (!m.has(c)) m.set(c, { l: _subjLabel(r), s: new Set() }); m.get(c).s.add(s.key); }));
+            [...m.keys()].sort((a, b) => a.localeCompare(b, 'th')).forEach(c => { const v = m.get(c); if (q && !_nm(v.l).toLowerCase().includes(q)) return; opts.push([c, `${v.l} · ${v.s.size} คน`]); });
+        }
+        g('psSel').innerHTML = opts.map(([v, t]) => `<option value="${_esc(v)}">${_esc(t)}</option>`).join('');
+        g('psCount').textContent = `${opts.length} รายการ${mode === 'person' ? ' (เลือกได้หลายคน: Ctrl/Shift หรือกด "เลือกทั้งหมด")' : ' (เลือกได้หลายรายการ)'} · นักเรียนที่ติดทั้งหมด ${stus.size} คน`;
+        g('psHint').textContent = mode === 'subject' ? 'รายวิชา: A4 แนวนอน เรียง 2 คน/แผ่น (ในใบของนักเรียนแต่ละคนจะแสดงทุกวิชาที่ติด)' : 'A4 แนวตั้ง 1 คน/แผ่น เต็มหน้า';
+    }
+    async function openParentSummary() {
+        if (!allData.length) { Swal.fire({ icon: 'info', title: 'ยังไม่มีข้อมูล', text: 'รอให้ระบบโหลดข้อมูลผลการเรียนก่อน', confirmButtonColor: '#4f46e5' }); return; }
+        if (!Object.keys(teacherAssignments).length) { try { await loadTeacherData(); } catch (e) { console.warn(e); } }
+        loadFormOfficialsRemote();
+        const r = await Swal.fire({
+            title: '👪 สรุปผลรายบุคคล (มอบผู้ปกครอง)', width: 640, showCancelButton: true, confirmButtonText: 'สร้างเอกสาร', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5',
+            html: `<div style="text-align:left;font-size:14px">
+                <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
+                  <label><input type="radio" name="psMode" value="person" checked onchange="psRefill()"> <b>รายบุคคล</b> — เลือกนักเรียน (A4 เต็มแผ่น 1 คน)</label>
+                  <label><input type="radio" name="psMode" value="class" onchange="psRefill()"> <b>รายห้องเรียน</b> — ทั้งห้องที่เลือก (A4 เต็มแผ่น 1 คน/แผ่น)</label>
+                  <label><input type="radio" name="psMode" value="subject" onchange="psRefill()"> <b>รายวิชา</b> — นักเรียนที่ติดวิชานั้น (A4 แนวนอน 2 คน/แผ่น)</label>
+                </div>
+                <input id="psSearch" type="search" class="swal2-input" style="margin:0 0 6px;width:100%;font-size:14px;height:38px" placeholder="ค้นหา..." oninput="psRefill()" autocomplete="off">
+                <select id="psSel" multiple size="8" style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:4px;font-size:14px"></select>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 8px"><span id="psCount" style="font-size:12px;color:#6b7280"></span><a href="#" onclick="Array.from(document.getElementById('psSel').options).forEach(o=>o.selected=true);return false" style="font-size:12px;color:#4f46e5">เลือกทั้งหมด</a></div>
+                <label style="display:block;margin-bottom:6px"><input type="checkbox" id="psDone" onchange="psRefill()"> รวมรายการที่แก้ไขแล้ว (แสดงสถานะ/ผลใหม่)</label>
+                <label style="display:block;font-size:13px;color:#374151">ข้อมูล ณ วันที่ <input id="psDate" class="swal2-input" style="margin:2px 0 0;width:100%;font-size:14px;height:36px" value="${_esc(_thaiDateLong(_todayIso()))}"></label>
+                <p id="psHint" style="font-size:12px;color:#6b7280;margin-top:6px"></p></div>`,
+            didOpen: psRefill,
+            preConfirm: () => {
+                const sel = document.getElementById('psSel'), keys = Array.from(sel.selectedOptions).map(o => o.value);
+                if (!keys.length) { Swal.showValidationMessage('กรุณาเลือกอย่างน้อย 1 รายการ'); return false; }
+                return { mode: document.querySelector('input[name=psMode]:checked').value, keys, done: document.getElementById('psDone').checked, date: document.getElementById('psDate').value.trim(), win: window.open('', '_blank') };
+            }
+        });
+        if (!r.isConfirmed) return;
+        const o = r.value;
+        if (!o.win) { Swal.fire({ icon: 'warning', title: 'เบราว์เซอร์บล็อกหน้าต่างใหม่', text: 'กรุณาอนุญาตป๊อปอัปแล้วลองใหม่', confirmButtonColor: '#4f46e5' }); return; }
+        psPrint(o);
+    }
+    function psPrint(o) {
+        const e = _esc, stus = psStudents(o.done), keySet = new Set(o.keys);
+        // เลือกนักเรียนตามโหมด
+        let list = [];
+        if (o.mode === 'person') list = o.keys.map(k => stus.get(k)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'th'));
+        else {
+            const pick = new Map();
+            stus.forEach(s => s.recs.forEach(r => {
+                const hit = o.mode === 'class' ? keySet.has(_clsOf(r)) : keySet.has(r.รหัสวิชา || '');
+                if (hit && !pick.has(s.key)) pick.set(s.key, { s, ord: o.mode === 'class' ? _clsOf(r) : _clsOf(s.recs[s.recs.length - 1]) });
+            }));
+            list = [...pick.values()].sort((a, b) => a.ord.localeCompare(b.ord, 'th', { numeric: true }) || a.s.name.localeCompare(b.s.name, 'th')).map(x => x.s);
+        }
+        const half = o.mode === 'subject', off = FORM_OFFICIALS.registrar || '';
+        const card = s => {
+            const pend = s.recs.filter(r => r.Correction_Status !== 'แก้ไขแล้ว'), doneN = s.recs.length - pend.length;
+            const c = k => pend.filter(r => String(r.ผลการเรียน).trim() === k).length, hasDone = doneN > 0;
+            const clsList = [...new Set(s.recs.map(_clsOf))].join(', ');
+            const rows = s.recs.map((r, i) => {
+                const d = r.Correction_Status === 'แก้ไขแล้ว';
+                return `<tr${d ? ' class="dn"' : ''}><td>${i + 1}</td><td class="l">${e(r.รหัสวิชา || '')}</td><td class="l">${e(r.ชื่อวิชา || '')}</td><td>${e(_semOf(r))}</td><td>${e(_clsOf(r))}</td><td><b>${e(r.ผลการเรียน || '')}</b></td><td class="l">${e(teacherNames(r.รหัสวิชา || '').join(', ') || '—')}</td>${hasDone ? `<td>${d ? 'แก้ไขแล้ว' + (r.New_Result ? ' → ' + e(r.New_Result) : '') : 'รอแก้ไข'}</td>` : ''}</tr>`;
+            }).join('');
+            return `<div class="card"><div class="hd"><img src="https://nonthaphathr.github.io/uploadimg/logoschool.png" alt=""><div><div class="sc">โรงเรียนกระดุมทองวิทยา</div><div class="tt">แจ้งผลการเรียนที่ยังไม่ผ่านเกณฑ์ (0 / ร / มส)</div></div></div>
+                <div class="to">เรียน ผู้ปกครองของ <b>${e(s.name)}</b></div>
+                <div class="info">เรียนชั้น ${e(clsList)} · ข้อมูล ณ วันที่ ${e(o.date)}</div>
+                <div class="sum"><div class="big"><span>ติดทั้งหมด</span><b>${pend.length}</b><span>วิชา</span></div><div class="mini z"><span>ผล 0</span><b>${c('0')}</b></div><div class="mini r"><span>ผล ร</span><b>${c('ร')}</b></div><div class="mini m"><span>ผล มส</span><b>${c('มส')}</b></div></div>
+                <table><thead><tr><th style="width:5%">ที่</th><th style="width:13%">รหัสวิชา</th><th>ชื่อวิชา</th><th style="width:11%">ภาคเรียน</th><th style="width:9%">ชั้น</th><th style="width:7%">ผล</th><th style="width:22%">ครูผู้สอน</th>${hasDone ? '<th style="width:13%">สถานะ</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>
+                <div class="note"><b>ความหมาย</b> 0 = ผลการเรียนไม่ผ่านเกณฑ์ · ร = ยังไม่สมบูรณ์ (รอการตัดสินผล) · มส = ไม่มีสิทธิ์รับการประเมินผล (เวลาเรียนไม่ครบตามเกณฑ์)<br>
+                โรงเรียนจึงขอความอนุเคราะห์ให้ผู้ปกครองแจ้งนักเรียนติดต่อครูผู้สอนตามรายวิชาข้างต้น เพื่อดำเนินการแก้ไขผลการเรียนให้เรียบร้อย หากมีข้อสงสัยสอบถามได้ที่งานทะเบียนและเทียบโอนผลการเรียน</div>
+                <div class="sign">ลงชื่อ ..............................................<br>(${e(off)})<br>เจ้าหน้าที่ทะเบียนวัดผล</div></div>`;
+        };
+        let sheets = '';
+        if (half) { for (let i = 0; i < list.length; i += 2) sheets += `<div class="sheet">${card(list[i])}${list[i + 1] ? card(list[i + 1]) : '<div class="card empty"></div>'}</div>`; }
+        else sheets = list.map(s => `<div class="sheet">${card(s)}</div>`).join('');
+        const w = half ? 297 : 210, h = half ? 210 : 297, cw = half ? 148.5 : 210, pad = half ? 8 : 15, fs = half ? 9.5 : 12.5;
+        o.win.document.open();
+        o.win.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>สรุปผลรายบุคคล - ผู้ปกครอง</title>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+        <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Sarabun',sans-serif;background:#e5e7eb;color:#111}
+        .bar{position:sticky;top:0;z-index:5;background:#312e81;color:#fff;padding:8px 12px;display:flex;gap:12px;align-items:center;font-size:14px}.bar button{padding:6px 14px;border:0;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit}
+        .sheet{width:${w}mm;height:${h}mm;margin:8mm auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25);display:flex;overflow:hidden;page-break-after:always;break-after:page}
+        .card{width:${cw}mm;height:${h}mm;padding:${pad}mm;font-size:${fs}pt;line-height:1.3;overflow:hidden;display:flex;flex-direction:column;gap:.45em}${half ? '.card:first-child{border-right:.4mm dashed #94a3b8}' : ''}
+        .hd{display:flex;align-items:center;gap:.7em;border-bottom:.35mm solid #312e81;padding-bottom:.5em}.hd img{width:3.4em;height:3.4em;object-fit:contain}.sc{font-size:1.05em;color:#475569}.tt{font-size:1.25em;font-weight:700;color:#312e81}
+        .to{font-size:1.1em}.info{color:#475569;font-size:.95em;margin-top:-.2em}
+        .sum{display:flex;gap:.5em}.big{flex:1.6;display:flex;align-items:baseline;justify-content:center;gap:.4em;border:.4mm solid #312e81;border-radius:.6em;padding:.3em;background:#eef2ff}.big b{font-size:2.2em;line-height:1;color:#312e81}
+        .mini{flex:1;text-align:center;border-radius:.6em;padding:.3em;border:.3mm solid}.mini span{display:block;font-size:.85em}.mini b{font-size:1.5em;line-height:1.1}.z{color:#b91c1c;border-color:#fca5a5;background:#fef2f2}.r{color:#b45309;border-color:#fcd34d;background:#fffbeb}.m{color:#6d28d9;border-color:#c4b5fd;background:#f5f3ff}
+        table{width:100%;border-collapse:collapse;font-size:.92em}th,td{border:.25mm solid #333;padding:.25em .4em;text-align:center;vertical-align:top}th{background:#e0e7ff}td.l{text-align:left}tr.dn td{color:#6b7280;background:#f0fdf4}
+        .note{font-size:.82em;color:#374151;border:.25mm dashed #94a3b8;border-radius:.5em;padding:.4em .6em;background:#f8fafc}
+        .sign{margin-top:auto;text-align:center;font-size:.95em;line-height:1.5;padding-left:45%}
+        @media print{@page{size:A4 ${half ? 'landscape' : 'portrait'};margin:0}body{background:#fff}.bar{display:none}.sheet{margin:0;box-shadow:none}}</style></head><body>
+        <div class="bar"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button><span>${list.length} คน · ${half ? 'A4 แนวนอน 2 คน/แผ่น (' + Math.ceil(list.length / 2) + ' แผ่น)' : 'A4 แนวตั้ง 1 คน/แผ่น (' + list.length + ' แผ่น)'} · ถ้าตัวหนังสือแน่น ระบบย่อขนาดให้พอดี 1 ใบ</span></div>
+        ${sheets}
+        <script>document.fonts.ready.then(function(){document.querySelectorAll('.card:not(.empty)').forEach(function(c){var f=parseFloat(getComputedStyle(c).fontSize),g=0;while(c.scrollHeight>c.clientHeight+1&&f>5&&g++<120){f-=.25;c.style.fontSize=f+'px';}});});<\/script></body></html>`);
+        o.win.document.close();
+    }
+
     function closeMenus() { document.querySelectorAll('.menu-wrap.open').forEach(m => m.classList.remove('open')); }
     function toggleMenu(id, ev) {
         if (ev) ev.stopPropagation();
