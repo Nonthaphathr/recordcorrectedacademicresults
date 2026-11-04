@@ -2781,7 +2781,7 @@
         for (let i = 0; i < n; i++) {
             const s = st[i];
             rows.push(row([cell(String(i + 1), W[0], { align: A.CENTER }), cell(s ? s.name : '', W[1]), cell(s ? String(s.level || '') : '', W[2], { align: A.CENTER }),
-                           cell(s ? String(s.grade || '') : '', W[3], { align: A.CENTER }), cell('', W[4]), cell('', W[5])], { h: 480 }));
+                           cell(s ? String(s.grade || '') : '', W[3], { align: A.CENTER }), cell(s ? String(s.newResult || '') : '', W[4], { align: A.CENTER }), cell('', W[5])], { h: 480 }));
         }
         out.push(table(rows, W));
 
@@ -3115,7 +3115,7 @@
                 if (!pf.sub) return warn('เลือกรายวิชาก่อน');
                 const v = id => (document.getElementById(id) || {}).value || '';
                 const students = (pf.subSorted || []).map((r, i) => ({ r, i })).filter(x => document.getElementById('pfSChk-' + x.i).checked)
-                    .map(({ r, i }) => ({ name: pfStuName(r), level: v('pfSLv-' + i).trim(), grade: String(r.ผลการเรียน || '').trim() }));
+                    .map(({ r, i }) => ({ name: pfStuName(r), level: v('pfSLv-' + i).trim(), grade: String(r.ผลการเรียน || '').trim(), newResult: String(r.New_Result || '').trim() }));
                 if (!students.length) return warn('เลือกนักเรียนอย่างน้อย 1 คน');
                 const ty = pfTermYear(pf.sub.recs[0]);
                 const pickedRecs = (pf.subSorted || []).map((r, i) => ({ r, i })).filter(x => document.getElementById('pfSChk-' + x.i).checked);
@@ -4238,7 +4238,7 @@
         try {
             await pfLoadLogs(); loadFormOfficialsRemote();
             const ty = pfTermYear(r), times = String(ask.value || '').trim(), fname = `แจ้งผลการสอบแก้ตัว วก.กทว.102 - ${r.รหัสวิชา || ''}`;
-            await formDownloadDocx('102', [{ subjectName: r.ชื่อวิชา || '', subjectCode: r.รหัสวิชา || '', term: ty.term, year: ty.year, times, teacher: teacherAssignments[r.รหัสวิชา || ''] || tName, students: [{ name: pfStuName(r), level: pfLevelOf(r), grade: String(r.ผลการเรียน || '').trim() }] }], fname);
+            await formDownloadDocx('102', [{ subjectName: r.ชื่อวิชา || '', subjectCode: r.รหัสวิชา || '', term: ty.term, year: ty.year, times, teacher: teacherAssignments[r.รหัสวิชา || ''] || tName, students: [{ name: pfStuName(r), level: pfLevelOf(r), grade: String(r.ผลการเรียน || '').trim(), newResult: String(r.New_Result || '').trim() }] }], fname);
             await pfSaveLogSafe('102', [{ r, level: pfLevelOf(r), times }], fname);
             ckRender(false);
         } catch (e) { Swal.fire({ icon: 'error', title: 'สร้างเอกสารไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
@@ -4252,7 +4252,8 @@
         if (!mine.length) { _toast('info', 'ไม่พบประวัติการดาวน์โหลด 102'); return; }
         const last = mine.reduce((a, b) => (b.ms > a.ms ? b : a));
         const batch = (pf.logDocs || []).filter(d => d.kind === '102' && d.batchId === last.batchId && d.code === last.code);
-        const students = batch.sort((a, b) => a.studentName.localeCompare(b.studentName, 'th')).map(d => ({ name: d.studentName, level: d.level, grade: d.grade }));
+        const nowRes = d => { const row = allData.find(x => pfStuKey(x) === d.studentKey && (x.รหัสวิชา || '') === d.code && _nm(x['ภาคเรียน/ปีการศึกษา'] || '') === d.termKey); return row ? String(row.New_Result || '').trim() : ''; };
+        const students = batch.sort((a, b) => a.studentName.localeCompare(b.studentName, 'th')).map(d => ({ name: d.studentName, level: d.level, grade: d.grade, newResult: nowRes(d) }));
         try {
             await loadFormOfficialsRemote();
             const ty = pfTermYear(r), tName = _ckTeacherName();
