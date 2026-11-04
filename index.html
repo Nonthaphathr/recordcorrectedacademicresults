@@ -794,6 +794,7 @@
                 </div>
             </div>
             <div class="glass p-6 mb-6">
+                <div class="mb-4"><label class="form-label">🔍 ค้นหา (ชื่อนักเรียน / รหัสวิชา / ชื่อวิชา)</label><input type="search" id="ckSearch" class="input-field" placeholder="พิมพ์เพื่อค้นหา..." oninput="ckRender(false)" autocomplete="off"></div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div><label class="form-label">ครูผู้สอน</label><select id="ckTeacher" class="input-field" onchange="ckTeacherChanged()"><option value="">กำลังโหลดข้อมูล...</option></select></div>
                     <div><label class="form-label">รายวิชา</label><select id="ckSubject" class="input-field" onchange="ckRender(false)"><option value="">ทุกวิชา</option></select></div>
@@ -815,7 +816,7 @@
             <div class="glass overflow-hidden mb-6">
                 <div class="table-wrapper">
                     <table class="data-table roomy">
-                        <thead><tr><th>ที่</th><th>นักเรียน</th><th>ชั้น</th><th>รายวิชา</th><th>ภาคเรียน</th><th style="text-align:center">ผลการเรียน</th><th>สถานะ</th><th style="text-align:center">จัดการ</th></tr></thead>
+                        <thead><tr><th>ที่</th><th>นักเรียน</th><th>ติดตอนเรียนชั้น</th><th>รายวิชา</th><th>ภาคเรียน</th><th style="text-align:center">ผลการเรียน</th><th>สถานะ</th><th style="text-align:center">จัดการ</th></tr></thead>
                         <tbody id="ckBody"><tr><td colspan="8" class="text-center text-gray-400" style="padding:48px 12px">กำลังโหลดข้อมูล...</td></tr></tbody>
                     </table>
                 </div>
@@ -3908,7 +3909,8 @@
             lvSel.innerHTML = '<option value="">ทุกชั้น</option>' + lvs.map(l => `<option value="${_esc(l)}">${_esc(l)}</option>`).join('');
         }
         const fs = subSel.value, fl = lvSel.value, fg = (document.getElementById('ckGrade') || {}).value || '';
-        _ckRows = all.filter(r => (!fs || r.รหัสวิชา === fs) && (!fl || _levelOf(r) === fl) && (!fg || String(r.ผลการเรียน || '').trim() === fg)).sort(_cmpRows);
+        const q = String((document.getElementById('ckSearch') || {}).value || '').replace(/\s+/g, '').toLowerCase();
+        _ckRows = all.filter(r => (!fs || r.รหัสวิชา === fs) && (!fl || _levelOf(r) === fl) && (!fg || String(r.ผลการเรียน || '').trim() === fg) && (!q || (_stuName(r) + (r.รหัสวิชา || '') + (r.ชื่อวิชา || '')).replace(/\s+/g, '').toLowerCase().includes(q))).sort(_cmpRows);
         actions.forEach(b => b.disabled = !_ckRows.length);
         const c = g => _ckRows.filter(r => r.ผลการเรียน === g).length;
         const pill = (lbl, n, col) => `<div class="stat-card" style="padding:14px;text-align:center"><p class="text-xs text-gray-500">${lbl}</p><p class="stat-number" style="color:${col};font-size:1.8rem">${n}</p></div>`;
@@ -3920,7 +3922,7 @@
         body.innerHTML = _ckRows.map((r, i) => {
             const g = r.ผลการเรียน, cls = g === 'ร' ? 'badge-warning' : g === 'มส' ? 'badge-purple' : 'badge-danger';
             const done = r.Correction_Status === 'แก้ไขแล้ว';
-            return `<tr class="${done ? 'edited-row' : ''}"><td>${i + 1}</td><td>${_esc(_stuName(r))}</td><td>${_esc(r.ชั้น || '')}</td><td>${_esc(_subjLabel(r))}</td><td>${_esc(_semOf(r))}</td>
+            return `<tr class="${done ? 'edited-row' : ''}"><td>${i + 1}</td><td><div class="stu-name">${_esc(_stuName(r))}</div><span class="chip-class" title="ชั้นปีปัจจุบัน">ชั้นปัจจุบัน ${_esc(r.ชั้นปี || '—')}</span></td><td>เรียนชั้น ${_esc(r.ชั้น || '—')}</td><td>${_esc(_subjLabel(r))}</td><td>${_esc(_semOf(r))}</td>
                 <td style="text-align:center"><span class="badge ${cls}">${_esc(g)}</span></td><td>${done ? `<span class="pill pill-done">แก้ไขแล้ว${r.New_Result ? ' → ' + _esc(r.New_Result) : ''}</span>` : '<span class="pill pill-pending">รอดำเนินการ</span>'}</td>
                 <td style="text-align:center"><button onclick="ckEdit(${i})" class="btn btn-sm btn-primary">✏️ ${done ? 'แก้ไขซ้ำ' : 'แก้ไข'}</button></td></tr>`;
         }).join('');
