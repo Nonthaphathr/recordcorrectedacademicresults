@@ -660,6 +660,33 @@
 
             </div>
             <div class="set-panel" id="spanel-manage">
+            <!-- Section 2.65: ส่งออก SQL นำเข้าระบบ Local School -->
+            <div class="settings-section mb-6">
+                <div class="settings-section-header">
+                    <h3 class="font-semibold text-gray-700">📤 ส่งออก SQL นำเข้าระบบ Local School</h3>
+                </div>
+                <div class="settings-section-body">
+                    <div class="info-box mb-4">
+                        <p class="text-sm text-blue-700">สร้างไฟล์ <code>.sql</code> ที่มีเฉพาะคำสั่ง <b>UPDATE</b> แก้คอลัมน์ผลการเรียน (Grade) ของรายการที่ "แก้ไขแล้ว" ในระบบนี้ <b>ไม่ลบ/ไม่เขียนทับข้อมูลอื่นใน LS</b>
+                        ระบบจะอ่านไฟล์สำรอง LS (ที่ export ล่าสุด) เพื่อหารหัสนักเรียนและตรวจว่าผลเดิมตรงกันก่อน จึงสร้างคำสั่ง — ไฟล์สำรองไม่ถูกอัปโหลดไปไหน อ่านในเบราว์เซอร์เท่านั้น</p>
+                        <p class="text-xs text-blue-500 mt-2">วิธีนำเข้า: เปิด phpMyAdmin → ฐานข้อมูล <code>localschool</code> → แท็บ "นำเข้า (Import)" → เลือกไฟล์ที่ดาวน์โหลด (charset utf-8) · ควรสำรองฐานข้อมูลก่อนทุกครั้ง · ถ้าต้องการยกเลิก ใช้ไฟล์ "ย้อนกลับ"</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ไฟล์สำรองฐานข้อมูล Local School (.sql)</label>
+                        <input type="file" id="lsSqlFile" accept=".sql,.txt" class="input-field" style="max-width:420px" onchange="document.getElementById('lsSqlPreviewArea').innerHTML='';document.getElementById('lsSqlDlApply').style.display=document.getElementById('lsSqlDlRollback').style.display='none'">
+                    </div>
+                    <label class="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                        <input type="checkbox" id="lsSqlSkipDone" checked> ข้ามรายการที่หมายเหตุเป็น "แก้ให้มีเกรดแล้วในระบบ LS"
+                    </label>
+                    <div class="flex gap-3 mb-4 flex-wrap">
+                        <button onclick="lsSqlPreview()" class="btn btn-info">ตรวจสอบและสร้างคำสั่ง SQL</button>
+                        <button onclick="lsSqlDownload('apply')" id="lsSqlDlApply" class="btn btn-success" style="display:none">⬇️ ดาวน์โหลด SQL (นำเข้า LS)</button>
+                        <button onclick="lsSqlDownload('rollback')" id="lsSqlDlRollback" class="btn btn-secondary" style="display:none">↩️ ดาวน์โหลด SQL ย้อนกลับ</button>
+                    </div>
+                    <div id="lsSqlPreviewArea"></div>
+                </div>
+            </div>
+
             <!-- Section 2.7: ลบคนที่แก้ไขผลการเรียนแล้ว -->
             <div class="settings-section mb-6">
                 <div class="settings-section-header">
@@ -5147,6 +5174,199 @@
     }
     document.addEventListener('click', e => { if (!e.target.closest('.menu-wrap')) closeMenus(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
+    // ═══════════════════════════════════════════════════════
+    //  ส่งออก SQL (UPDATE) นำเข้าระบบ Local School — แก้เฉพาะคอลัมน์ Grade ของ tb_register
+    //  ไม่ DROP/INSERT/DELETE ใด ๆ และทุกคำสั่งมีเงื่อนไขเกรดเดิมกำกับ (ถ้าใน LS ถูกแก้ไปแล้วจะไม่ถูกทับ)
+    // ═══════════════════════════════════════════════════════
+    let lsSqlPlan = null;       // ผลตรวจล่าสุด { ok:[], already:[], skip:[], skipLs:n }
+    let lsSqlFileName = '';
+
+    const _lsEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+    const _lsQ   = s => "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";   // escape สำหรับ string ใน MySQL
+    const _lsCmt = s => String(s == null ? '' : s).replace(/[\r\n]+/g, ' ');                 // ใช้ใน -- comment
+
+    // แยกแถวของ INSERT INTO `table` VALUES (...),(...); — คืนอาร์เรย์ของแถว (แต่ละแถวเป็นอาร์เรย์ string/null)
+    function lsSqlParseInsertLine(line, from) {
+        const rows = [];
+        const n = line.length;
+        let i = from;
+        while (i < n) {
+            if (line[i] !== '(') { i++; continue; }
+            i++;
+            const row = [];
+            for (;;) {
+                if (line[i] === "'") {
+                    i++;
+                    let s = '';
+                    for (;;) {
+                        const c = line[i];
+                        if (c === '\\') {
+                            const d = line[i + 1];
+                            s += d === 'n' ? '\n' : d === 'r' ? '\r' : d === 't' ? '\t' : d === '0' ? '\0' : d;
+                            i += 2;
+                        } else if (c === "'") {
+                            if (line[i + 1] === "'") { s += "'"; i += 2; } else { i++; break; }
+                        } else { s += c; i++; }
+                    }
+                    row.push(s);
+                } else {
+                    let j = i;
+                    while (line[j] !== ',' && line[j] !== ')') j++;
+                    const tok = line.slice(i, j);
+                    row.push(tok === 'NULL' ? null : tok);
+                    i = j;
+                }
+                if (line[i] === ',') { i++; continue; }
+                if (line[i] === ')') { i++; break; }
+                throw new Error('รูปแบบ INSERT ผิดปกติ');
+            }
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    // ชื่อคอลัมน์ตามลำดับใน CREATE TABLE
+    function lsSqlColumns(text, table) {
+        const head = 'CREATE TABLE `' + table + '` (';
+        const a = text.indexOf(head);
+        if (a < 0) return null;
+        const b = text.indexOf('\n)', a);
+        const cols = [];
+        text.slice(a + head.length, b < 0 ? undefined : b).split('\n').forEach(l => {
+            const m = l.match(/^\s*`([^`]+)`/);
+            if (m) cols.push(m[1]);
+        });
+        return cols;
+    }
+
+    // อ่านไฟล์สำรอง LS → { students:[{id,cls,first,last}], reg:Map("id|code|year" → Grade ดิบจาก LS) }
+    function lsSqlParseDump(text) {
+        const cs = lsSqlColumns(text, 'tb_students'), cr = lsSqlColumns(text, 'tb_register');
+        if (!cs || !cr) throw new Error('ไม่พบตาราง tb_students / tb_register — ไฟล์นี้ไม่ใช่ไฟล์สำรองของ Local School');
+        const need = (cols, names, t) => names.map(nm => { const k = cols.indexOf(nm); if (k < 0) throw new Error('ตาราง ' + t + ' ไม่มีคอลัมน์ ' + nm); return k; });
+        const [iId, iCls, iFirst, iLast] = need(cs, ['StudentID', 'StudentClass', 'StudentFirstName', 'StudentLastName'], 'tb_students');
+        const [rId, rCode, rGrade, rYear] = need(cr, ['StudentID', 'SubjectCode', 'Grade', 'RegisterYear'], 'tb_register');
+        const students = [], reg = new Map();
+        const pS = 'INSERT INTO `tb_students` VALUES ', pR = 'INSERT INTO `tb_register` VALUES ';
+        for (const line of text.split('\n')) {
+            if (line.startsWith(pS)) {
+                lsSqlParseInsertLine(line, pS.length).forEach(r => students.push({ id: r[iId], cls: r[iCls] || '', first: r[iFirst] || '', last: r[iLast] || '' }));
+            } else if (line.startsWith(pR)) {
+                lsSqlParseInsertLine(line, pR.length).forEach(r => reg.set(r[rId] + '|' + r[rCode] + '|' + r[rYear], r[rGrade] == null ? '' : r[rGrade]));
+            }
+        }
+        return { students, reg };
+    }
+
+    // จับคู่รายการในระบบนี้ → แถวใน tb_register   rows = รายการที่แก้ไขแล้ว (จาก allData)
+    function lsSqlBuildPlan(dump, rows, opts) {
+        opts = opts || {};
+        const byName = new Map();
+        dump.students.forEach(s => { const k = _nm(s.first + s.last); if (!byName.has(k)) byName.set(k, []); byName.get(k).push(s); });
+        const plan = { ok: [], already: [], skip: [], skipLs: 0 };
+        const seen = new Map();   // key → รายการใน plan.ok (กันซ้ำ)
+        rows.forEach(r => {
+            const full = `${r.คำนำหน้า || ''} ${r.ชื่อ || ''} ${r.สกุล || ''}`.trim();
+            const code = _nm(r.รหัสวิชา), year = _nm(r['ภาคเรียน/ปีการศึกษา']);
+            const oldG = String(r.ผลการเรียน || '').trim(), newG = String(r.New_Result || '').trim();
+            const item = { name: full, code, subject: r.ชื่อวิชา || '', year, oldG, newG };
+            if (opts.skipLsDone && r.LS_Status === LS_DONE) { plan.skipLs++; return; }
+            const stu = byName.get(_nm((r.ชื่อ || '') + (r.สกุล || ''))) || [];
+            if (!stu.length) { plan.skip.push({ ...item, why: 'ไม่พบนักเรียนคนนี้ในตาราง tb_students ของ LS (เช่น จบการศึกษานานแล้ว)' }); return; }
+            let cands = stu.filter(s => dump.reg.has(s.id + '|' + code + '|' + year));
+            if (cands.length > 1) {   // ชื่อซ้ำ → ใช้ชั้นปีปัจจุบันช่วยตัดสิน
+                const byCls = cands.filter(s => _nm(s.cls) === _nm(r.ชั้นปี || ''));
+                if (byCls.length) cands = byCls;
+            }
+            if (!cands.length) { plan.skip.push({ ...item, why: 'พบนักเรียน แต่ไม่มีวิชา ' + code + ' ภาคเรียน ' + year + ' ใน tb_register' }); return; }
+            if (cands.length > 1) { plan.skip.push({ ...item, why: 'ชื่อ-สกุลซ้ำกัน ' + cands.length + ' คน ระบุตัวตนไม่ได้ (รหัส ' + cands.map(s => s.id).join(', ') + ') — แก้ใน LS ด้วยมือ' }); return; }
+            const sid = cands[0].id, key = sid + '|' + code + '|' + year;
+            const cur = dump.reg.get(key);              // ค่าดิบใน LS (ใช้ใน WHERE ตรง ๆ)
+            const curT = String(cur).trim();
+            Object.assign(item, { sid, cur });
+            if (curT === newG) { plan.already.push(item); return; }
+            if (curT !== oldG) { plan.skip.push({ ...item, why: 'ใน LS ตอนนี้เป็น "' + curT + '" ไม่ตรงกับผลเดิม "' + oldG + '" (อาจมีคนแก้ไปแล้ว) — ไม่แตะ' }); return; }
+            if (seen.has(key)) { const k = plan.ok.indexOf(seen.get(key)); if (k >= 0) plan.ok.splice(k, 1); }
+            seen.set(key, item);
+            plan.ok.push(item);
+        });
+        return plan;
+    }
+
+    // สร้างข้อความ SQL   mode: 'apply' (นำเข้า) | 'rollback' (ย้อนกลับ)
+    function lsSqlMake(items, mode, meta) {
+        const apply = mode === 'apply';
+        const L = [];
+        L.push('-- ' + (apply ? 'คำสั่งแก้ผลการเรียน 0 ร มส สำหรับนำเข้าระบบ Local School' : 'คำสั่งย้อนกลับ (Rollback) ของไฟล์แก้ผลการเรียน'));
+        L.push('-- สร้างจากระบบจัดการผลการเรียน โรงเรียนกระดุมทองวิทยา เมื่อ ' + meta.at);
+        L.push('-- อ้างอิงไฟล์สำรอง LS: ' + _lsCmt(meta.file || '-'));
+        L.push('-- จำนวน ' + items.length + ' คำสั่ง · แก้เฉพาะคอลัมน์ Grade ของตาราง tb_register เท่านั้น (ไม่มี DROP/INSERT/DELETE)');
+        L.push(apply ? '-- แต่ละคำสั่งมีเงื่อนไขผลการเรียนเดิมกำกับ: ถ้าใน LS ไม่ตรง จะไม่แก้ (affected rows = 0)'
+                     : '-- ใช้เมื่อต้องการคืนค่าเดิม — แต่ละคำสั่งจะแก้เฉพาะแถวที่ยังเป็นค่าใหม่อยู่');
+        L.push('SET NAMES utf8;');
+        L.push('');
+        items.forEach(it => {
+            const from = apply ? it.cur : it.newG, to = apply ? it.newG : it.oldG;
+            L.push('UPDATE `tb_register` SET `Grade`=' + _lsQ(to) +
+                   ' WHERE `StudentID`=' + _lsQ(it.sid) + ' AND `SubjectCode`=' + _lsQ(it.code) +
+                   ' AND `RegisterYear`=' + _lsQ(it.year) + ' AND `Grade`=' + _lsQ(from) + ' LIMIT 1;' +
+                   ' -- ' + _lsCmt(it.name) + ' ' + it.code + ' ' + _lsCmt(from.trim()) + ' → ' + _lsCmt(to));
+        });
+        L.push('');
+        return L.join('\n');
+    }
+
+    // ── UI ──────────────────────────────────────────────────
+    async function lsSqlPreview() {
+        const f = document.getElementById('lsSqlFile').files[0];
+        const area = document.getElementById('lsSqlPreviewArea');
+        const dlA = document.getElementById('lsSqlDlApply'), dlR = document.getElementById('lsSqlDlRollback');
+        dlA.style.display = dlR.style.display = 'none';
+        lsSqlPlan = null;
+        const base = allData.filter(r => r.Correction_Status === 'แก้ไขแล้ว' && String(r.New_Result || '').trim() !== '');
+        if (!base.length) { Swal.fire({ icon:'info', title:'ยังไม่มีรายการที่แก้ไขแล้ว', confirmButtonColor:'#4f46e5' }); return; }
+        if (!f) { Swal.fire({ icon:'warning', title:'เลือกไฟล์สำรอง Local School (.sql) ก่อน', confirmButtonColor:'#f59e0b' }); return; }
+        area.innerHTML = '<p class="text-sm text-gray-400">กำลังอ่านไฟล์…</p>';
+        try {
+            const dump = lsSqlParseDump(await f.text());
+            lsSqlFileName = f.name;
+            lsSqlPlan = lsSqlBuildPlan(dump, base, { skipLsDone: document.getElementById('lsSqlSkipDone').checked });
+            const p = lsSqlPlan;
+            const tbl = (items, withWhy) => `<div class="table-wrapper rounded-xl border border-indigo-100 overflow-hidden" style="max-height:300px;overflow-y:auto">
+                <table class="data-table" style="font-size:.85rem"><thead><tr><th>ชื่อ-สกุล</th><th>วิชา</th><th>ภาคเรียน</th><th>ผล</th>${withWhy ? '<th>เหตุผลที่ข้าม</th>' : '<th>รหัส LS</th>'}</tr></thead><tbody>${
+                items.slice(0, 500).map(it => `<tr><td>${_lsEsc(it.name)}</td><td>${_lsEsc(it.code)} ${_lsEsc(it.subject)}</td><td>${_lsEsc(it.year)}</td>
+                    <td>${_lsEsc(it.oldG)} → ${_lsEsc(it.newG)}</td><td>${withWhy ? _lsEsc(it.why) : _lsEsc(it.sid)}</td></tr>`).join('')
+                }</tbody></table></div>${items.length > 500 ? `<p class="text-xs text-gray-400 mt-1">แสดง 500 รายการแรกจาก ${items.length}</p>` : ''}`;
+            area.innerHTML = `
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center mb-4">
+                    <div class="bg-emerald-50 rounded-xl p-4"><p class="text-2xl font-bold text-emerald-600">${p.ok.length}</p><p class="text-xs text-gray-500">คำสั่งที่จะส่งออก</p></div>
+                    <div class="bg-sky-50 rounded-xl p-4"><p class="text-2xl font-bold text-sky-600">${p.already.length}</p><p class="text-xs text-gray-500">ใน LS เป็นค่าใหม่อยู่แล้ว</p></div>
+                    <div class="bg-amber-50 rounded-xl p-4"><p class="text-2xl font-bold text-amber-600">${p.skip.length}</p><p class="text-xs text-gray-500">ข้าม (ดูเหตุผลด้านล่าง)</p></div>
+                    <div class="bg-gray-50 rounded-xl p-4"><p class="text-2xl font-bold text-gray-500">${p.skipLs}</p><p class="text-xs text-gray-500">ข้าม: หมายเหตุ "ลง LS แล้ว"</p></div>
+                </div>
+                ${p.ok.length ? `<p class="text-sm font-medium text-gray-700 mb-2">รายการที่จะแก้ใน LS</p>${tbl(p.ok, false)}` : '<p class="text-sm text-gray-400 mb-2">ไม่มีรายการที่ต้องแก้ใน LS</p>'}
+                ${p.skip.length ? `<details class="mt-4"><summary class="text-sm font-medium text-amber-700 cursor-pointer">รายการที่ข้าม ${p.skip.length} รายการ (ต้องตรวจ/แก้ใน LS ด้วยมือ)</summary><div class="mt-2">${tbl(p.skip, true)}</div></details>` : ''}`;
+            dlA.style.display = dlR.style.display = p.ok.length ? '' : 'none';
+        } catch (err) {
+            console.error(err);
+            area.innerHTML = '';
+            Swal.fire({ icon:'error', title:'อ่านไฟล์ไม่สำเร็จ', text: err.message, confirmButtonColor:'#ef4444' });
+        }
+    }
+
+    function lsSqlDownload(mode) {
+        if (!lsSqlPlan || !lsSqlPlan.ok.length) return;
+        const d = new Date(), z = n => String(n).padStart(2, '0');
+        const stamp = `${d.getFullYear() + 543}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`;
+        const at = `${z(d.getDate())}/${z(d.getMonth() + 1)}/${d.getFullYear() + 543} ${z(d.getHours())}:${z(d.getMinutes())}`;
+        const text = lsSqlMake(lsSqlPlan.ok, mode, { at, file: lsSqlFileName });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([text], { type: 'text/sql;charset=utf-8' }));
+        a.download = (mode === 'apply' ? 'LS_แก้ผลการเรียน_' : 'LS_ย้อนกลับ_') + stamp + '.sql';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }
+
     function settingsTab(name) {
         ['import','manage','people'].forEach(n => {
             const p = document.getElementById('spanel-' + n), t = document.getElementById('stab-' + n);
