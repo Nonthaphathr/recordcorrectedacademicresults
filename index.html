@@ -2432,11 +2432,47 @@
                     <input type="text" class="teacher-input" id="tinput-${_esc(s.code)}"
                         placeholder="ชื่อครูผู้สอน (หลายคนคั่นด้วย , )" value="${_esc(teacherAssignments[s.code] || '')}" list="teacherSuggest">
                     <button class="save-teacher-btn" data-code="${_esc(s.code)}" onclick="saveTeacher(this.dataset.code)">บันทึก</button>
+                    <button class="save-teacher-btn" style="background:#0ea5e9" data-code="${_esc(s.code)}" onclick="openTermTeacherEditor(this.dataset.code)" title="กำหนดครูผู้สอนแยกตามภาคเรียน/ปีการศึกษา">📅 รายภาคเรียน${Object.keys((teacherLibrary[s.code] || {}).byTerm || {}).length ? ' (' + Object.keys(teacherLibrary[s.code].byTerm).length + ')' : ''}</button>
                     <span class="teacher-saved" id="tsaved-${_esc(s.code)}" style="display:none">✓ บันทึกแล้ว</span>
                 </div>
             </div>`;
         }).join('') : `<p class="text-sm text-gray-400 text-center py-6">ไม่พบรายวิชาตามเงื่อนไข</p>`)
             + `<datalist id="teacherSuggest">${names.map(n => `<option value="${_esc(n)}">`).join('')}</datalist>`;
+    }
+
+    // แก้ครูผู้สอน "รายภาคเรียน/ปีการศึกษา" ของวิชาเดียว (เขียน byTerm ลง Firestore)
+    async function openTermTeacherEditor(code) {
+        const lib = teacherLibrary[code] || {}, bt = { ...(lib.byTerm || {}) };
+        (allData || []).forEach(x => { if (x.รหัสวิชา === code) { const t = _semOf(x); if (/^\d\/\d{4}$/.test(t) && !(t in bt)) bt[t] = ''; } });
+        const nm = (_groupSubjects[code] || _tSubjects.find(x => x.code === code) || {}).name || lib.subjectName || '';
+        const names = [...new Set(Object.values(teacherLibrary).flatMap(l => (Array.isArray(l.teachers) && l.teachers.length) ? l.teachers : _splitTeachers(l.teacherName)))].sort((x, y) => x.localeCompare(y, 'th'));
+        const row = (t, v) => `<div class="ttE-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><input class="swal2-input ttE-t" style="width:92px;margin:0;font-size:14px" value="${_esc(t)}" placeholder="1/2569"><input class="swal2-input ttE-n" list="ttESuggest" style="flex:1;margin:0;font-size:14px" value="${_esc(v)}" placeholder="ชื่อครู (หลายคนคั่นด้วย , )"><button type="button" onclick="this.parentNode.remove()" style="color:#ef4444;font-size:18px" title="ลบภาคเรียนนี้">✕</button></div>`;
+        const keys = Object.keys(bt).sort((x, y) => _termKey(y) - _termKey(x));
+        const r = await Swal.fire({
+            title: `ครูรายภาคเรียน ${_esc(code)}`, confirmButtonText: 'บันทึก', showCancelButton: true, cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5', width: 620,
+            html: `<p style="font-size:12px;color:#6b7280;margin-bottom:8px">${_esc(nm)}<br>ภาคเรียนที่เว้นชื่อว่างไว้ = ลบออก · ปี 2568–2569 ชื่อที่ระบุคือผู้รับผิดชอบแก้</p><div id="ttEBox" style="text-align:left">${keys.map(k => row(k, bt[k])).join('')}</div><button type="button" onclick="document.getElementById('ttEBox').insertAdjacentHTML('beforeend', window.__ttERow('',''))" style="font-size:13px;color:#4f46e5;margin-top:4px">＋ เพิ่มภาคเรียน</button><datalist id="ttESuggest">${names.map(n => `<option value="${_esc(n)}">`).join('')}</datalist>`,
+            didOpen: () => { window.__ttERow = row; },
+            preConfirm: () => {
+                const out = {};
+                for (const el of document.querySelectorAll('#ttEBox .ttE-row')) {
+                    const t = el.querySelector('.ttE-t').value.replace(/\s+/g, ''), n = _splitTeachers(el.querySelector('.ttE-n').value).join(', ');
+                    if (!t && !n) continue;
+                    if (!/^[12]\/\d{4}$/.test(t)) { Swal.showValidationMessage('รูปแบบภาคเรียนต้องเป็น เช่น 1/2569'); return false; }
+                    if (n) out[t] = n;
+                }
+                return out;
+            }
+        });
+        if (!r.isConfirmed) return;
+        try {
+            const ts = firebase.firestore.FieldValue.serverTimestamp(), byTerm = r.value;
+            const snap = await db.collection(COL_TEACHERS).where('subjectCode', '==', code).limit(1).get();
+            if (!snap.empty) await db.collection(COL_TEACHERS).doc(snap.docs[0].id).update({ byTerm, updatedAt: ts });
+            else await db.collection(COL_TEACHERS).add({ subjectCode: code, subjectName: nm || code, teacherName: '', byTerm, updatedAt: ts });
+            teacherLibrary[code] = { ...(teacherLibrary[code] || { subjectCode: code, subjectName: nm }), byTerm };
+            _needReload = true; renderGroupSubjects(); drawTeacherCards();
+            Swal.fire({ icon: 'success', title: 'บันทึกแล้ว', text: `${code}: ${Object.keys(byTerm).length} ภาคเรียน`, timer: 1600, showConfirmButton: false });
+        } catch (e) { Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
     }
 
     function closeGroupDetail() { document.getElementById('teacherGroupDetail').style.display = 'none'; }
