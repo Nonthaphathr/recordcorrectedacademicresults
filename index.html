@@ -8,6 +8,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+    // กันคลิกพื้นหลังแล้ว modal หายโดยไม่ตั้งใจ (ปิดด้วยปุ่ม/Esc เท่านั้น) — ยกเว้น toast และ alert ที่ปิดเองตามเวลา
+    (function () {
+        const f = Swal.fire.bind(Swal);
+        Swal.fire = function (...a) {
+            const o = a[0];
+            if (a.length === 1 && o && typeof o === 'object' && !o.toast && !o.timer && o.allowOutsideClick === undefined) a[0] = { ...o, allowOutsideClick: false };
+            return f(...a);
+        };
+    })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- Firebase v9 compat (CDN) -->
@@ -923,7 +934,7 @@
     </div>
 
     <!-- ══ QUICK EDIT MODAL (งานวัดผล แก้เกรดด่วน ไม่ต้องใช้รหัสผ่าน) ══ -->
-    <div id="quickModal" class="modal-overlay" onclick="if(event.target===this)closeQuickEdit()">
+    <div id="quickModal" class="modal-overlay">
         <div class="modal-box" style="max-width:520px">
             <div class="modal-header"><h3>⚡ แก้เกรดด่วน (งานวัดผล)</h3></div>
             <div class="modal-body">
@@ -953,7 +964,7 @@
 
     <!-- ══ LOG MODAL ══ -->
     <!-- ══ GUIDE MODAL — คู่มือพิมพ์แบบฟอร์มคำร้อง ══ -->
-    <div id="guideModal" class="modal-overlay" onclick="if(event.target===this)closeGuide()">
+    <div id="guideModal" class="modal-overlay">
         <div class="modal-box" style="max-width:640px;display:flex;flex-direction:column;max-height:94vh;overflow:hidden">
             <div class="modal-header" style="flex:none"><h3>📘 คู่มือการใช้งานระบบ (สำหรับครูวัดผล / ผู้ดูแล)</h3></div>
             <div class="modal-body" style="overflow-y:auto;flex:1;padding:18px 24px">
@@ -1111,7 +1122,7 @@
         </div>
     </div>
 
-    <div id="printFormModal" class="modal-overlay" onclick="if(event.target===this)closePrintForm()">
+    <div id="printFormModal" class="modal-overlay">
         <div class="modal-box" style="max-width:760px;display:flex;flex-direction:column;max-height:92vh;overflow:hidden">
             <div class="modal-header" style="flex:none"><h3>🖨️ พิมพ์แบบฟอร์มคำร้อง</h3></div>
             <div class="modal-body" style="overflow-y:auto;flex:1;min-height:0">
@@ -1160,7 +1171,7 @@
     </div>
 
     <!-- ══ QR MODAL ══ -->
-    <div id="qrModal" class="modal-overlay" onclick="if(event.target===this)closeQrModal()">
+    <div id="qrModal" class="modal-overlay">
         <div class="qr-modal-box">
             <button class="close-btn" onclick="closeQrModal()">×</button>
             <p class="font-semibold text-gray-700 mb-3" style="font-size:.95rem">📱 QR Code เข้าใช้งานระบบ</p>
@@ -2198,7 +2209,7 @@
         });
     }
 
-    function printData() {
+    async function printData() {
         if (!filteredData.length) { Swal.fire({icon:'info',title:'ไม่มีข้อมูล',confirmButtonColor:'#4f46e5'}); return; }
         const dateStr = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
         const rows = filteredData.map(r=>`<tr style="background:${r.Correction_Status==='แก้ไขแล้ว'?'#f0fdf4':'#fff'}">
@@ -2212,9 +2223,11 @@
             <td>${r.Editor||'—'}</td>
             <td>${r.LS_Status||'—'}</td></tr>`).join('');
         const win = window.open('','_blank');
+        try { await loadPsSignersRemote(); } catch (er) {}
+        const signHtml = `<div class="signs">${PS_SIGNERS.map(g => `<div class="sg2"><div class="sgi">${g.sig ? `<img src="${g.sig}" alt="">` : ''}</div><div>ลงชื่อ ..................................</div><div>(${_esc(g.name)})</div><div>${_esc(g.role)}</div></div>`).join('')}</div>`;
         win.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์</title>
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
-            <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Kanit',sans-serif;font-size:10pt;padding:20px}.header{text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #4f46e5}.header h1{font-size:15pt;font-weight:700;color:#4f46e5}.header p{font-size:10pt;color:#555}table{width:100%;border-collapse:collapse;font-size:8pt}thead tr{background:#4f46e5;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}th,td{padding:5px 7px;border-bottom:1px solid #e5e7eb;text-align:left}@media print{@page{size:A4 landscape;margin:1cm}}</style>
+            <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Kanit',sans-serif;font-size:10pt;padding:20px}.signs{margin-top:28px;display:flex;justify-content:flex-end;gap:60px;text-align:center;font-size:10pt;line-height:1.5;page-break-inside:avoid}.sg2{min-width:200px}.sgi{height:46px;margin-bottom:-14px;position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:center}.sgi img{max-height:46px;max-width:180px;object-fit:contain}.header{text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #4f46e5}.header h1{font-size:15pt;font-weight:700;color:#4f46e5}.header p{font-size:10pt;color:#555}table{width:100%;border-collapse:collapse;font-size:8pt}thead tr{background:#4f46e5;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}th,td{padding:5px 7px;border-bottom:1px solid #e5e7eb;text-align:left}@media print{@page{size:A4 landscape;margin:1cm}}</style>
         </head><body>
             <div class="header"><h1>รายการผลการเรียนที่ไม่ผ่าน</h1><p>โรงเรียนกระดุมทองวิทยา · พิมพ์วันที่ ${dateStr} · ${filteredData.length} รายการ</p></div>
             <table><thead><tr>
@@ -2223,6 +2236,7 @@
                 <th>ผลเดิม</th><th>ผลใหม่</th><th>ผู้แก้ไข</th><th>หมายเหตุ</th>
             </tr></thead>
             <tbody>${rows}</tbody></table>
+            ${signHtml}
             <script>window.onload=()=>window.print()<\/script></body></html>`);
         win.document.close();
     }
