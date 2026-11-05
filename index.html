@@ -572,6 +572,7 @@
                 <button onclick="document.getElementById('teacherFileInput').click()" class="btn btn-primary btn-sm">📥 นำเข้าครูผู้สอน (.xlsx)</button>
                 <input type="file" id="termTeacherFile" accept=".xlsx,.xls" style="display:none" onchange="handleTermTeacherFile(event)">
                 <button onclick="document.getElementById('termTeacherFile').click()" class="btn btn-info btn-sm" data-tooltip="ครูผู้สอนแต่ละวิชาตามภาคเรียน (กรณีครูเปลี่ยนตามปี) ใช้แสดงครูผู้สอนขณะนั้นในเอกสาร">📥 นำเข้าครูรายภาคเรียน (.xlsx)</button>
+                <button onclick="openTeacherRoster()" class="btn btn-warning btn-sm" data-tooltip="สถานะครู (สอนอยู่/ย้าย/เกษียณ/ลาออก) · ผู้รับช่วง · ชื่อเดิม · กติกาผู้รับผิดชอบ">👥 ทะเบียนครู</button>
                 <button onclick="exportTeacherLibrary()" class="btn btn-success btn-sm">📤 ส่งออกคลัง (.xlsx)</button>
             </div>
 
@@ -2251,33 +2252,63 @@
     let _groupSubjects = {};
 
     // ── ครูรายภาคเรียน: byTerm = { '1/2567': 'ครู ก, ครู ข', ... } เก็บในเอกสาร teacher_assignments ──
-    // ครูที่เกษียณ/ย้าย/ลาออกแล้ว (ไม่ใช่ผู้รับผิดชอบแก้) — เทียบจากชื่อต้น
-    const DEPARTED_KEYS = ['ธนะสิทธิ์', 'จิระประภา', 'พัทธนันท์', 'สุทธิชา'];
-    // ถ้ารหัสวิชานั้นไม่มีครูปัจจุบันในตารางสอนเลย → ผู้รับผิดชอบแก้ตามกลุ่มวิชา (แก้ได้ที่นี่)
-    const TEACHER_FALLBACK = {
-        social: 'นายวิทยา ใหม่คามิ',            // สังคมศึกษา (ก่อน 2/2568)
-        work: 'นายต้นกล้า เพชรเลื่อน',           // การงานอาชีพ
-        art: 'นายไกรสร จันทวี',                  // ศิลปะ
-        tech: 'นางสาวอัญชุลี คำศรีทา'            // คอมพิวเตอร์/เทคโนโลยี/วิทยาการคำนวณ
+    // ── ทะเบียนครู (teacher_roster): สถานะครู · ผู้รับช่วง · ชื่อเดิม · ค่าตั้งต้นรายกลุ่มสาระ · ปีที่เริ่มใช้ตารางสอนตัดสินผู้รับผิดชอบ ──
+    // เก็บที่ app_settings/teacher_roster (แก้ได้ที่หน้า "ระบุผู้สอน" → 👥 ทะเบียนครู) · ค่าด้านล่างเป็นค่าตั้งต้นก่อนมีข้อมูลใน Firebase
+    const TEACH_STATUS = { active: 'สอนอยู่', moved: 'ย้าย', retired: 'เกษียณอายุ', resigned: 'ลาออก' };
+    const TEACH_CFG_DEFAULT = {
+        fromYear: 2568,   // ภาคเรียนตั้งแต่ปีนี้เป็นต้นไป: ผู้รับผิดชอบแก้ = ครูที่สอนวิชานั้นตามตารางสอนของภาคนั้น
+        groups: {         // ผู้รับผิดชอบตามกลุ่มวิชา เมื่อรหัสวิชานั้นไม่มีครูปัจจุบันในตารางสอนเลย
+            social: 'นายวิทยา ใหม่คามิ', work: 'นายต้นกล้า เพชรเลื่อน', art: 'นายไกรสร จันทวี', tech: 'นางสาวอัญชุลี คำศรีทา'
+        },
+        codes: { 'อ22222': 'นางสาวปริมปภาพร บาอินทร์' },   // ผู้รับผิดชอบรายรหัสวิชา (สำคัญกว่ากลุ่ม)
+        roster: [
+            { name: 'ธนะสิทธิ์', status: 'retired', endTerm: '', successor: 'นายวิทยา ใหม่คามิ', aliases: [] },
+            { name: 'จิระประภา', status: 'moved', endTerm: '', successor: '', aliases: [] },
+            { name: 'พัทธนันท์', status: 'moved', endTerm: '', successor: '', aliases: [] },
+            { name: 'สุทธิชา', status: 'moved', endTerm: '', successor: '', aliases: [] },
+            { name: 'นางสาวอัญชุลี คำศรีทา', status: 'active', endTerm: '', successor: '', aliases: ['ณิชารีย์ คำศรีทา'] },
+            { name: 'นางสาววิไลจิตร จันทร์แจ้ง', status: 'active', endTerm: '', successor: '', aliases: ['วิไลจิตร จันแจ้ง'] }
+        ]
     };
-    // กำหนดผู้รับผิดชอบรายรหัสวิชา (ใช้เมื่อไม่มีครูปัจจุบันในตารางสอน)
-    const TEACHER_CODE_FALLBACK = { 'อ22222': 'นางสาวปริมปภาพร บาอินทร์' };
-    // ครูที่เปลี่ยนชื่อ: ชื่อเดิม(ไม่มีคำนำหน้า/ช่องว่าง) → ชื่อใหม่ · ใช้กับทุกที่ที่แสดง/จัดกลุ่มชื่อครู
-    const TEACHER_RENAME = { 'ณิชารีย์คำศรีทา': 'นางสาวอัญชุลี คำศรีทา', 'วิไลจิตรจันแจ้ง': 'นางสาววิไลจิตร จันทร์แจ้ง' };
-    const _renameT = n => TEACHER_RENAME[String(n || '').replace(/\s+/g, '').replace(/^(นางสาว|นาง|นาย|ครู)/, '')] || n;
+    let TEACH_CFG = JSON.parse(JSON.stringify(TEACH_CFG_DEFAULT));
     const _rKey = n => String(n || '').replace(/\s+/g, '').replace(/^(นางสาว|นาง|นาย|ครู)/, '');
+    const _firstKey = n => _rKey(String(n || '').trim().split(/\s+/).filter(x => !/^(นางสาว|นาง|นาย|ครู)$/.test(x))[0] || '');
+    // ครูที่มีในทะเบียนตรงกับชื่อนี้ (ชื่อเต็ม/ชื่อต้น/ชื่อเดิม)
+    function _rosterOf(n) {
+        const k = _rKey(n); if (!k) return null;
+        return TEACH_CFG.roster.find(e => _rKey(e.name) === k || (e.aliases || []).some(a => _rKey(a) === k))
+            || TEACH_CFG.roster.find(e => { const f = _firstKey(e.name); return f && k.startsWith(f) && e.status && e.status !== 'active'; }) || null;
+    }
+    const _renameT = n => { const e = _rosterOf(n); return (e && e.status === 'active' && (e.aliases || []).some(a => _rKey(a) === _rKey(n))) ? e.name : n; };
+    const _keyAliases = key => TEACH_CFG.roster.filter(e => _rKey(e.name) === key).flatMap(e => (e.aliases || []).map(_rKey));
+    async function loadTeachRoster() {
+        try {
+            const sn = await db.collection(COL_APP_SETTINGS).doc('teacher_roster').get();
+            if (sn.exists) {
+                const d = sn.data();
+                TEACH_CFG = {
+                    fromYear: +d.fromYear || TEACH_CFG_DEFAULT.fromYear,
+                    groups: { ...TEACH_CFG_DEFAULT.groups, ...(d.groups || {}) },
+                    codes: d.codes || {},
+                    roster: Array.isArray(d.roster) ? d.roster : TEACH_CFG_DEFAULT.roster
+                };
+            }
+        } catch (e) { console.warn('teacher_roster load skipped:', e.message); }
+    }
     const _termKey = t => { const m = String(t || '').match(/(\d)\s*\/\s*(\d{4})/); return m ? (+m[2]) * 10 + (+m[1]) : 0; };
     const _isFormer = n => /\(ครูเดิม\)/.test(n);
-    const _isDeparted = n => _isFormer(n) || DEPARTED_KEYS.some(k => _rKey(n).startsWith(k));
+    const _isDeparted = n => { if (_isFormer(n)) return true; const e = _rosterOf(n); return !!(e && e.status && e.status !== 'active'); };
     const _subjNameOf = code => (teacherLibrary[code] || {}).subjectName || ((allData || []).find(x => x.รหัสวิชา === code) || {}).ชื่อวิชา || '';
     function _fallbackBySubject(code) {
-        if (TEACHER_CODE_FALLBACK[code]) return TEACHER_CODE_FALLBACK[code];
+        if (TEACH_CFG.codes[code]) return TEACH_CFG.codes[code];
         const ch = String(code || '').charAt(0), nm = _subjNameOf(code);
-        if (/คอมพิวเตอร์|เทคโนโลยี|วิทยาการคำนวณ|ดิจิทัล|ออกแบบ/.test(nm)) return TEACHER_FALLBACK.tech;
-        return ({ 'ส': TEACHER_FALLBACK.social, 'ง': TEACHER_FALLBACK.work, 'ศ': TEACHER_FALLBACK.art })[ch] || '';
+        if (/คอมพิวเตอร์|เทคโนโลยี|วิทยาการคำนวณ|ดิจิทัล|ออกแบบ/.test(nm)) return TEACH_CFG.groups.tech || '';
+        return ({ 'ส': TEACH_CFG.groups.social, 'ง': TEACH_CFG.groups.work, 'ศ': TEACH_CFG.groups.art })[ch] || '';
     }
     // ผู้มาแทนครูที่ย้าย/เกษียณ: ครูปัจจุบันตามตารางสอน (ภาคล่าสุดก่อน) → ไม่มีก็ตามกลุ่มวิชา
-    function _successors(code) {
+    function _successors(code, departed) {
+        const own = (departed || []).map(n => { const e = _rosterOf(n); return e && e.successor ? e.successor : ''; }).filter(Boolean);   // ผู้รับช่วงที่ระบุในทะเบียนมาก่อน
+        if (own.length) return [...new Set(own)];
         const bt = (teacherLibrary[code] || {}).byTerm || {};
         for (const k of Object.keys(bt).sort((a, b) => _termKey(b) - _termKey(a))) {
             const l = _splitTeachers(bt[k]).filter(n => !_isDeparted(n)); if (l.length) return l;
@@ -2288,7 +2319,7 @@
     const teacherNames = code => {
         const raw = String(teacherAssignments[code] || '').split(/\s*[,;]\s*/).filter(Boolean);
         const out = raw.filter(n => !_isDeparted(n));
-        if (!raw.length || out.length < raw.length) out.push(..._successors(code));
+        if (!raw.length || out.length < raw.length) out.push(..._successors(code, raw.filter(n => _isDeparted(n))));
         return [...new Set(out.map(_renameT))];
     };
     const _respStr = code => teacherNames(code).join(', ');
@@ -2296,11 +2327,11 @@
     // ครูที่ย้าย/เกษียณ (เช่น ธนะสิทธิ์) → ผู้มาแทน · ปีก่อนหน้านั้น/ไม่มีตารางสอน → ใช้กฎผู้รับผิดชอบรายวิชา (teacherNames)
     function teacherNamesRow(r) {
         const code = (r && r.รหัสวิชา) || '', term = r ? _semOf(r) : '', y = Math.floor(_termKey(term) / 10);
-        if (y === 2568 || y === 2569) {
+        if (y >= TEACH_CFG.fromYear) {
             const th = teacherAtTerm(code, term);
             if (th.length) {
                 const good = th.filter(n => !_isDeparted(n));
-                return [...new Set((good.length ? good : _successors(code).map(_renameT)))];
+                return [...new Set((good.length ? good : _successors(code, th.filter(n => _isDeparted(n))).map(_renameT)))];
             }
         }
         return teacherNames(code);
@@ -2325,7 +2356,7 @@
     const _typeRank = t => ({ 'วิชาพื้นฐาน': 0, 'วิชาเพิ่มเติม': 1, 'กิจกรรม': 2 }[t] ?? 3);
 
     async function loadTeacherData() {
-        const snap = await db.collection(COL_TEACHERS).get();
+        const [snap] = await Promise.all([db.collection(COL_TEACHERS).get(), loadTeachRoster()]);
         teacherAssignments = {}; teacherLibrary = {};
         snap.docs.forEach(doc => {
             const d = doc.data(); if (!d.subjectCode) return;
@@ -2452,6 +2483,81 @@
             </div>`;
         }).join('') : `<p class="text-sm text-gray-400 text-center py-6">ไม่พบรายวิชาตามเงื่อนไข</p>`)
             + `<datalist id="teacherSuggest">${names.map(n => `<option value="${_esc(n)}">`).join('')}</datalist>`;
+    }
+
+    // ── ทะเบียนครู: สถานะ/ผู้รับช่วง/ชื่อเดิม + กติกาผู้รับผิดชอบ (เก็บที่ app_settings/teacher_roster) ──
+    async function openTeacherRoster() {
+        try { if (!Object.keys(teacherLibrary).length) await loadTeacherData(); else await loadTeachRoster(); } catch (e) {}
+        const inLib = new Set();
+        Object.values(teacherLibrary).forEach(l => { ((Array.isArray(l.teachers) && l.teachers.length) ? l.teachers : _splitTeachers(l.teacherName)).forEach(n => inLib.add(n)); Object.values(l.byTerm || {}).forEach(v => _splitTeachers(v).forEach(n => inLib.add(n))); });
+        const list = TEACH_CFG.roster.map(e => ({ ...e, aliases: [...(e.aliases || [])] }));
+        const seen = new Set(list.flatMap(e => [_rKey(e.name), ...(e.aliases || []).map(_rKey)]));
+        [...inLib].filter(n => !_isFormer(n)).sort((x, y) => x.localeCompare(y, 'th')).forEach(n => {
+            const k = _rKey(n); if (seen.has(k) || _rosterOf(n)) return; seen.add(k);
+            list.push({ name: n, status: 'active', endTerm: '', successor: '', aliases: [] });
+        });
+        const allNames = [...new Set([...list.map(e => e.name), ...[...inLib]])].filter(n => !_isFormer(n));
+        const opt = v => Object.entries(TEACH_STATUS).map(([k, t]) => `<option value="${k}"${k === v ? ' selected' : ''}>${t}</option>`).join('');
+        const inp = 'class="swal2-input" style="margin:0;height:34px;font-size:13px;width:100%;padding:0 8px"';
+        const row = e => `<tr class="trE" style="border-top:1px solid #e5e7eb">
+            <td style="padding:4px"><input ${inp} data-f="name" value="${_esc(e.name)}"></td>
+            <td style="padding:4px"><select class="swal2-select" style="margin:0;height:34px;font-size:13px;padding:0 6px;min-width:0;width:100%" data-f="status">${opt(e.status || 'active')}</select></td>
+            <td style="padding:4px"><input ${inp} data-f="endTerm" value="${_esc(e.endTerm || '')}" placeholder="2/2568"></td>
+            <td style="padding:4px"><input ${inp} data-f="successor" list="rsNames" value="${_esc(e.successor || '')}" placeholder="ผู้รับช่วง"></td>
+            <td style="padding:4px"><input ${inp} data-f="aliases" value="${_esc((e.aliases || []).join(', '))}" placeholder="ชื่อเดิม"></td>
+            <td style="padding:4px"><button type="button" onclick="this.closest('tr').remove()" style="color:#ef4444">✕</button></td></tr>`;
+        const g = TEACH_CFG.groups, th = 'style="padding:4px;font-size:12px;color:#6b7280;text-align:left"';
+        const codesTxt = Object.entries(TEACH_CFG.codes).map(([c, n]) => c + '=' + n).join('\n');
+        window.__rsRow = row;
+        const r = await Swal.fire({
+            title: '👥 ทะเบียนครู', width: 900, confirmButtonText: 'บันทึก', showCancelButton: true, cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5',
+            html: `<div style="text-align:left;font-size:13px">
+                <p style="color:#6b7280;margin-bottom:6px">สถานะที่ไม่ใช่ "สอนอยู่" = ไม่เป็นผู้รับผิดชอบแก้ผล ระบบจะส่งต่อให้ผู้รับช่วง (ถ้าเว้นว่าง จะใช้ครูที่สอนวิชานั้นล่าสุดตามตารางสอน แล้วตามกลุ่มสาระ) · ชื่อเดิมใช้รวมครูที่เปลี่ยนชื่อ/สะกดต่างกัน</p>
+                <div style="max-height:42vh;overflow:auto;border:1px solid #e5e7eb;border-radius:8px"><table style="width:100%;border-collapse:collapse;table-layout:fixed">
+                    <colgroup><col style="width:25%"><col style="width:12%"><col style="width:10%"><col style="width:25%"><col style="width:24%"><col style="width:4%"></colgroup>
+                    <thead style="position:sticky;top:0;background:#f9fafb"><tr><th ${th}>ชื่อครู</th><th ${th}>สถานะ</th><th ${th}>สิ้นสุดภาค</th><th ${th}>ผู้รับช่วงแก้ผล</th><th ${th}>ชื่อเดิม (คั่นด้วย , )</th><th></th></tr></thead>
+                    <tbody id="rsBody">${list.map(row).join('')}</tbody></table></div>
+                <button type="button" onclick="document.getElementById('rsBody').insertAdjacentHTML('beforeend', window.__rsRow({name:'',status:'active'}))" style="color:#4f46e5;margin:6px 0">＋ เพิ่มครู</button>
+                <datalist id="rsNames">${allNames.map(n => `<option value="${_esc(n)}">`).join('')}</datalist>
+                <hr style="margin:8px 0">
+                <b>กติกาผู้รับผิดชอบแก้ผล</b>
+                <div style="display:flex;gap:8px;align-items:center;margin:6px 0">ภาคเรียนตั้งแต่ปีการศึกษา <input id="rsFrom" ${inp.replace('width:100%', 'width:80px')} value="${TEACH_CFG.fromYear}"> เป็นต้นไป → ใช้ "ครูที่สอนตามตารางสอน" เป็นผู้รับผิดชอบ (ก่อนหน้านั้นใช้ครูปัจจุบันของวิชา)</div>
+                <div style="color:#6b7280;margin:6px 0 2px">ผู้รับผิดชอบสำรองตามกลุ่มวิชา (ใช้เมื่อวิชานั้นไม่มีครูปัจจุบันในตารางสอน)</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                    <label>สังคมศึกษา (ส) <input id="rsG-social" list="rsNames" ${inp} value="${_esc(g.social || '')}"></label>
+                    <label>การงานอาชีพ (ง) <input id="rsG-work" list="rsNames" ${inp} value="${_esc(g.work || '')}"></label>
+                    <label>ศิลปะ (ศ) <input id="rsG-art" list="rsNames" ${inp} value="${_esc(g.art || '')}"></label>
+                    <label>คอมพิวเตอร์/เทคโนโลยี <input id="rsG-tech" list="rsNames" ${inp} value="${_esc(g.tech || '')}"></label>
+                </div>
+                <div style="color:#6b7280;margin:8px 0 2px">กำหนดรายรหัสวิชา (บรรทัดละ 1 วิชา รูปแบบ <code>รหัส=ชื่อครู</code>)</div>
+                <textarea id="rsCodes" class="swal2-textarea" style="margin:0;width:100%;height:60px;font-size:13px">${_esc(codesTxt)}</textarea></div>`,
+            preConfirm: () => {
+                const roster = [], names = new Set();
+                for (const tr of document.querySelectorAll('#rsBody .trE')) {
+                    const v = f => tr.querySelector(`[data-f="${f}"]`).value.trim();
+                    const name = v('name'); if (!name) continue;
+                    if (names.has(_rKey(name))) { Swal.showValidationMessage('ชื่อซ้ำ: ' + name); return false; }
+                    names.add(_rKey(name));
+                    const et = v('endTerm').replace(/\s+/g, ''); if (et && !/^[12]\/\d{4}$/.test(et)) { Swal.showValidationMessage('สิ้นสุดภาคต้องเป็นรูปแบบ 2/2568: ' + name); return false; }
+                    const status = v('status'), succ = v('successor'), aliases = _splitTeachers(v('aliases'));
+                    if (status === 'active' && !aliases.length) continue;   // สอนอยู่และไม่มีชื่อเดิม = ค่าเริ่มต้น ไม่ต้องเก็บ
+                    roster.push({ name, status, endTerm: et, successor: succ, aliases });
+                }
+                const fromYear = +document.getElementById('rsFrom').value;
+                if (!(fromYear >= 2560 && fromYear <= 2700)) { Swal.showValidationMessage('ปีการศึกษาไม่ถูกต้อง'); return false; }
+                const codes = {};
+                document.getElementById('rsCodes').value.split('\n').forEach(l => { const m = l.split('='); if (m.length >= 2 && m[0].trim() && m.slice(1).join('=').trim()) codes[m[0].trim()] = m.slice(1).join('=').trim(); });
+                const gv = k => document.getElementById('rsG-' + k).value.trim();
+                return { fromYear, roster, codes, groups: { social: gv('social'), work: gv('work'), art: gv('art'), tech: gv('tech') } };
+            }
+        });
+        if (!r.isConfirmed) return;
+        try {
+            await db.collection(COL_APP_SETTINGS).doc('teacher_roster').set({ ...r.value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            TEACH_CFG = r.value; _needReload = true;
+            try { await renderTeacherPage(); } catch (e) {}
+            Swal.fire({ icon: 'success', title: 'บันทึกทะเบียนครูแล้ว', timer: 1500, showConfirmButton: false });
+        } catch (e) { Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: e.message, confirmButtonColor: '#ef4444' }); }
     }
 
     // แก้ครูผู้สอน "รายภาคเรียน/ปีการศึกษา" ของวิชาเดียว (เขียน byTerm ลง Firestore)
@@ -4414,9 +4520,8 @@
         }, { merge: true });
     }
     // ครูที่เปลี่ยนชื่อ: ถ้ายังไม่มีรหัสใต้ชื่อใหม่ ให้ใช้รหัสที่เคยตั้งไว้ใต้ชื่อเดิมได้ (hash ผูกกับ key เดิม)
-    const _KEY_ALIAS = { 'อัญชุลีคำศรีทา': 'ณิชารีย์คำศรีทา', 'วิไลจิตรจันทร์แจ้ง': 'วิไลจิตรจันแจ้ง' };
     async function _verifyTeacherPw(key, pw) {
-        for (const k of [key, _KEY_ALIAS[key]].filter(Boolean)) {
+        for (const k of [key, ..._keyAliases(key)].filter(Boolean)) {
             const s = await db.collection(COL_TAUTH).doc(k).get();
             if (!s.exists || !s.data().hash) continue;
             const d = s.data();
