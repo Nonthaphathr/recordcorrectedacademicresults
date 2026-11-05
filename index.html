@@ -673,7 +673,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">ไฟล์สำรองฐานข้อมูล Local School (.sql)</label>
-                        <input type="file" id="lsSqlFile" accept=".sql,.txt" class="input-field" style="max-width:420px" onchange="document.getElementById('lsSqlPreviewArea').innerHTML='';document.getElementById('lsSqlDlApply').style.display=document.getElementById('lsSqlDlRollback').style.display='none'">
+                        <input type="file" id="lsSqlFile" accept=".sql,.txt" class="input-field" style="max-width:420px" onchange="document.getElementById('lsSqlPreviewArea').innerHTML='';document.getElementById('lsSqlDlApply').style.display=document.getElementById('lsSqlDlRollback').style.display=document.getElementById('lsSqlMarkBox').style.display='none'">
                     </div>
                     <label class="flex items-center gap-2 text-sm text-gray-600 mb-4">
                         <input type="checkbox" id="lsSqlSkipDone" checked> ข้ามรายการที่หมายเหตุเป็น "แก้ให้มีเกรดแล้วในระบบ LS"
@@ -682,6 +682,10 @@
                         <button onclick="lsSqlPreview()" class="btn btn-info">ตรวจสอบและสร้างคำสั่ง SQL</button>
                         <button onclick="lsSqlDownload('apply')" id="lsSqlDlApply" class="btn btn-success" style="display:none">⬇️ ดาวน์โหลด SQL (นำเข้า LS)</button>
                         <button onclick="lsSqlDownload('rollback')" id="lsSqlDlRollback" class="btn btn-secondary" style="display:none">↩️ ดาวน์โหลด SQL ย้อนกลับ</button>
+                    </div>
+                    <div id="lsSqlMarkBox" class="mb-4" style="display:none">
+                        <div class="info-box mb-3"><p class="text-sm text-blue-700">✅ <b>หลังนำเข้า SQL ใน LS สำเร็จแล้ว</b> กดปุ่มนี้เพื่อติดหมายเหตุ "แก้ให้มีเกรดแล้วในระบบ LS" ให้รายการที่ส่งออก (รวมรายการที่ LS เป็นค่าใหม่อยู่แล้ว) จากนั้นใช้ "🗑️ ลบคนที่แก้ไขผลการเรียนแล้ว" ต่อได้เลย</p></div>
+                        <button onclick="lsSqlMarkDone()" id="lsSqlMarkBtn" class="btn btn-warning">✅ ติดหมายเหตุ "ลง LS แล้ว" (<span id="lsSqlMarkCount">0</span> รายการ)</button>
                     </div>
                     <div id="lsSqlPreviewArea"></div>
                 </div>
@@ -5269,7 +5273,7 @@
             const full = `${r.คำนำหน้า || ''} ${r.ชื่อ || ''} ${r.สกุล || ''}`.trim();
             const code = _nm(r.รหัสวิชา), year = _nm(r['ภาคเรียน/ปีการศึกษา']);
             const oldG = String(r.ผลการเรียน || '').trim(), newG = String(r.New_Result || '').trim();
-            const item = { name: full, code, subject: r.ชื่อวิชา || '', year, oldG, newG };
+            const item = { name: full, code, subject: r.ชื่อวิชา || '', year, oldG, newG, doc: r._docId || '' };
             if (opts.skipLsDone && r.LS_Status === LS_DONE) { plan.skipLs++; return; }
             const stu = byName.get(_nm((r.ชื่อ || '') + (r.สกุล || ''))) || [];
             if (!stu.length) { plan.skip.push({ ...item, why: 'ไม่พบนักเรียนคนนี้ในตาราง tb_students ของ LS (เช่น จบการศึกษานานแล้ว)' }); return; }
@@ -5322,6 +5326,7 @@
         const area = document.getElementById('lsSqlPreviewArea');
         const dlA = document.getElementById('lsSqlDlApply'), dlR = document.getElementById('lsSqlDlRollback');
         dlA.style.display = dlR.style.display = 'none';
+        document.getElementById('lsSqlMarkBox').style.display = 'none';
         lsSqlPlan = null;
         const base = allData.filter(r => r.Correction_Status === 'แก้ไขแล้ว' && String(r.New_Result || '').trim() !== '');
         if (!base.length) { Swal.fire({ icon:'info', title:'ยังไม่มีรายการที่แก้ไขแล้ว', confirmButtonColor:'#4f46e5' }); return; }
@@ -5347,11 +5352,53 @@
                 ${p.ok.length ? `<p class="text-sm font-medium text-gray-700 mb-2">รายการที่จะแก้ใน LS</p>${tbl(p.ok, false)}` : '<p class="text-sm text-gray-400 mb-2">ไม่มีรายการที่ต้องแก้ใน LS</p>'}
                 ${p.skip.length ? `<details class="mt-4"><summary class="text-sm font-medium text-amber-700 cursor-pointer">รายการที่ข้าม ${p.skip.length} รายการ (ต้องตรวจ/แก้ใน LS ด้วยมือ)</summary><div class="mt-2">${tbl(p.skip, true)}</div></details>` : ''}`;
             dlA.style.display = dlR.style.display = p.ok.length ? '' : 'none';
+            const mk = lsSqlMarkable();
+            document.getElementById('lsSqlMarkCount').textContent = mk.length;
+            document.getElementById('lsSqlMarkBox').style.display = mk.length ? '' : 'none';
         } catch (err) {
             console.error(err);
             area.innerHTML = '';
             Swal.fire({ icon:'error', title:'อ่านไฟล์ไม่สำเร็จ', text: err.message, confirmButtonColor:'#ef4444' });
         }
+    }
+
+    // รายการที่ถือว่า "ลง LS แล้ว" หลังนำเข้า = ที่ส่งออก + ที่ LS เป็นค่าใหม่อยู่แล้ว (ต้องมี _docId ใน Firestore)
+    function lsSqlMarkable() {
+        if (!lsSqlPlan) return [];
+        return lsSqlPlan.ok.concat(lsSqlPlan.already).filter(it => it.doc);
+    }
+
+    async function lsSqlMarkDone() {
+        const items = lsSqlMarkable();
+        if (!items.length) return;
+        const ask = await Swal.fire({
+            icon: 'question', title: `ติดหมายเหตุ ${items.length} รายการ?`,
+            html: 'กดยืนยันเมื่อ <b>นำเข้าไฟล์ SQL ใน Local School สำเร็จแล้ว</b> เท่านั้น<br>ระบบจะเปลี่ยนหมายเหตุเป็น "' + LS_DONE + '" (แก้กลับได้จากช่องหมายเหตุของแต่ละรายการ)',
+            showCancelButton: true, confirmButtonText: 'ยืนยัน นำเข้า LS แล้ว', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#f59e0b'
+        });
+        if (!ask.isConfirmed) return;
+        const btn = document.getElementById('lsSqlMarkBtn');
+        btn.disabled = true;
+        let ok = 0, fail = 0, err = '';
+        const okDocs = new Set();
+        for (let i = 0; i < items.length; i += 400) {
+            const part = items.slice(i, i + 400);
+            try {
+                const bt = db.batch();
+                part.forEach(it => bt.update(db.collection(COL_GRADES).doc(it.doc), { LS_Status: LS_DONE, LS_StatusAt: firebase.firestore.FieldValue.serverTimestamp() }));
+                await bt.commit();
+                ok += part.length; part.forEach(it => okDocs.add(it.doc));
+            } catch (e) { fail += part.length; err = err || e.message; console.error(e); }
+        }
+        allData.forEach(r => { if (okDocs.has(r._docId)) r.LS_Status = LS_DONE; });
+        try { updateStats(); searchData(true); } catch (e) { console.warn(e); }
+        btn.disabled = false;
+        if (!fail) document.getElementById('lsSqlMarkBox').style.display = 'none';
+        Swal.fire({
+            icon: fail ? 'warning' : 'success', title: fail ? 'ติดหมายเหตุได้บางส่วน' : 'ติดหมายเหตุสำเร็จ',
+            html: `สำเร็จ <b>${ok}</b> · ไม่สำเร็จ <b>${fail}</b>${err ? `<br><small style="color:#b91c1c">${_lsEsc(err)}</small>` : ''}`,
+            confirmButtonColor: '#4f46e5'
+        });
     }
 
     function lsSqlDownload(mode) {
