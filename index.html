@@ -572,6 +572,7 @@
                 <button onclick="document.getElementById('teacherFileInput').click()" class="btn btn-primary btn-sm">📥 นำเข้าครูผู้สอน (.xlsx)</button>
                 <input type="file" id="termTeacherFile" accept=".xlsx,.xls" style="display:none" onchange="handleTermTeacherFile(event)">
                 <button onclick="document.getElementById('termTeacherFile').click()" class="btn btn-info btn-sm" data-tooltip="ครูผู้สอนแต่ละวิชาตามภาคเรียน (กรณีครูเปลี่ยนตามปี) ใช้แสดงครูผู้สอนขณะนั้นในเอกสาร">📥 นำเข้าครูรายภาคเรียน (.xlsx)</button>
+                <button onclick="downloadTermTeacherTemplate()" class="btn btn-secondary btn-sm" data-tooltip="ดาวน์โหลดไฟล์แม่แบบสำหรับนำเข้าครูรายภาคเรียน (ตารางสอน)">📄 แม่แบบตารางสอน (.xlsx)</button>
                 <button onclick="openTeacherRoster()" class="btn btn-warning btn-sm" data-tooltip="สถานะครู (สอนอยู่/ย้าย/เกษียณ/ลาออก) · ผู้รับช่วง · ชื่อเดิม · กติกาผู้รับผิดชอบ">👥 ทะเบียนครู</button>
                 <button onclick="exportTeacherLibrary()" class="btn btn-success btn-sm">📤 ส่งออกคลัง (.xlsx)</button>
             </div>
@@ -2483,6 +2484,42 @@
             </div>`;
         }).join('') : `<p class="text-sm text-gray-400 text-center py-6">ไม่พบรายวิชาตามเงื่อนไข</p>`)
             + `<datalist id="teacherSuggest">${names.map(n => `<option value="${_esc(n)}">`).join('')}</datalist>`;
+    }
+
+    // แม่แบบไฟล์นำเข้า "ครูรายภาคเรียน" (ตารางสอน) — คอลัมน์ตรงกับที่ handleTermTeacherFile อ่าน
+    function downloadTermTeacherTemplate() {
+        const ex = [
+            ['1/2569', 'ท21101', 'ภาษาไทย 1', 'นางสาวตัวอย่าง ใจดี', 'ตัวอย่าง (ลบแถวนี้ได้)'],
+            ['1/2569', 'ส21101', 'พระพุทธศาสนา 1', 'นายตัวอย่าง สอนดี, นางสาวตัวอย่าง ใจดี', 'มีครูหลายคน คั่นด้วยจุลภาค (,)']
+        ];
+        const seen = new Set(), data = [];
+        Object.values(teacherLibrary).forEach(l => {   // เติมรหัส/ชื่อวิชาที่มีในระบบให้ ผู้ใช้เหลือกรอกแค่ชื่อครู
+            if (!l.subjectCode || seen.has(l.subjectCode)) return; seen.add(l.subjectCode);
+            data.push(['', l.subjectCode, l.subjectName || '', '', '']);
+        });
+        data.sort((x, y) => x[1].localeCompare(y[1], 'th'));
+        const H = ['ภาคเรียน/ปีการศึกษา', 'รหัสวิชา', 'ชื่อวิชา (ไม่บังคับ)', 'ครูผู้สอน (ณ ภาคเรียนนั้น)', 'ที่มา / หมายเหตุ'];
+        const ws = XLSX.utils.aoa_to_sheet([H, ...ex, ...data]);
+        ws['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 26 }, { wch: 42 }, { wch: 34 }];
+        const guide = [
+            ['วิธีกรอกไฟล์นำเข้าครูรายภาคเรียน (ตารางสอน)'],
+            [''],
+            ['1. กรอกที่ชีต "ข้อมูล" · 1 แถว = 1 วิชา ใน 1 ภาคเรียน (วิชาเดียวกันต่างภาคเรียนให้แยกเป็นคนละแถว)'],
+            ['2. ภาคเรียน/ปีการศึกษา: รูปแบบ ภาค/ปี เช่น 1/2569 หรือ 2/2568'],
+            ['3. รหัสวิชา: ต้องตรงกับรหัสวิชาในระบบ เช่น ท21101'],
+            ['4. ครูผู้สอน: ชื่อครู ถ้ามีหลายคนให้คั่นด้วยจุลภาค (,) · แนะนำให้พิมพ์ชื่อตรงกับที่ใช้ในระบบ'],
+            ['5. ชื่อวิชา และ ที่มา/หมายเหตุ ไม่บังคับ (ระบบไม่ใช้คำนวณ)'],
+            ['6. แถวที่ไม่ได้กรอกภาคเรียนหรือชื่อครู ระบบจะข้ามให้ (ลบแถวตัวอย่างสีเทาออกหรือปล่อยไว้ได้)'],
+            [''],
+            ['นำเข้าที่: หน้า "ระบุผู้สอน" → 📥 นำเข้าครูรายภาคเรียน (.xlsx)'],
+            ['ข้อมูลรายภาคที่นำเข้าจะเขียนทับเฉพาะภาคเรียนนั้นของวิชานั้น ภาคเรียนอื่นไม่ถูกแตะ'],
+            ['ปีการศึกษาตั้งแต่ปีที่ตั้งใน 👥 ทะเบียนครู เป็นต้นไป ครูในตารางนี้คือผู้รับผิดชอบแก้ผลของนักเรียนที่ติดในภาคนั้น']
+        ];
+        const wg = XLSX.utils.aoa_to_sheet(guide); wg['!cols'] = [{ wch: 110 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'ข้อมูล'); XLSX.utils.book_append_sheet(wb, wg, 'วิธีกรอก');
+        XLSX.writeFile(wb, 'แม่แบบนำเข้าครูรายภาคเรียน.xlsx');
+        Swal.fire({ icon: 'success', title: 'ดาวน์โหลดแม่แบบแล้ว', text: 'กรอกภาคเรียนและชื่อครู แล้วนำเข้าด้วยปุ่ม "📥 นำเข้าครูรายภาคเรียน"', timer: 2600, showConfirmButton: false });
     }
 
     // ── ทะเบียนครู: สถานะ/ผู้รับช่วง/ชื่อเดิม + กติกาผู้รับผิดชอบ (เก็บที่ app_settings/teacher_roster) ──
