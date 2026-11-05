@@ -2225,10 +2225,10 @@
             <td>${r.LS_Status||'—'}</td></tr>`).join('');
         const win = window.open('','_blank');
         try { await loadPsSignersRemote(); } catch (er) {}
-        const signHtml = `<div class="signs">${PS_SIGNERS.map(g => `<div class="sg2"><div class="sgi">${g.sig ? `<img src="${g.sig}" alt="">` : ''}</div><div>ลงชื่อ ..................................</div><div>(${_esc(g.name)})</div><div>${_esc(g.role)}</div></div>`).join('')}</div>`;
+        const signHtml = `<div class="signs">${PS_SIGNERS.map(g => `<div class="sg2"><div class="sgi">${g.sig ? `<img src="${g.sig}" alt="">` : ''}</div>${g.sig ? '' : '<div>ลงชื่อ ..................................</div>'}<div>(${_esc(g.name)})</div><div>${_esc(g.role)}</div></div>`).join('')}</div>`;
         win.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>พิมพ์</title>
             <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
-            <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Kanit',sans-serif;font-size:10pt;padding:20px}.signs{margin-top:28px;display:flex;justify-content:flex-end;gap:60px;text-align:center;font-size:10pt;line-height:1.5;page-break-inside:avoid}.sg2{min-width:200px}.sgi{height:46px;margin-bottom:-14px;position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:center}.sgi img{max-height:46px;max-width:180px;object-fit:contain}.header{text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #4f46e5}.header h1{font-size:15pt;font-weight:700;color:#4f46e5}.header p{font-size:10pt;color:#555}table{width:100%;border-collapse:collapse;font-size:8pt}thead tr{background:#4f46e5;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}th,td{padding:5px 7px;border-bottom:1px solid #e5e7eb;text-align:left}@media print{@page{size:A4 landscape;margin:1cm}}</style>
+            <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Kanit',sans-serif;font-size:10pt;padding:20px}.signs{margin-top:28px;display:flex;justify-content:flex-end;gap:60px;text-align:center;font-size:10pt;line-height:1.5;page-break-inside:avoid}.sg2{min-width:200px}.sgi{height:46px;margin-bottom:2px;position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:center}.sgi img{max-height:46px;max-width:180px;object-fit:contain}.header{text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #4f46e5}.header h1{font-size:15pt;font-weight:700;color:#4f46e5}.header p{font-size:10pt;color:#555}table{width:100%;border-collapse:collapse;font-size:8pt}thead tr{background:#4f46e5;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}th,td{padding:5px 7px;border-bottom:1px solid #e5e7eb;text-align:left}@media print{@page{size:A4 landscape;margin:1cm}}</style>
         </head><body>
             <div class="header"><h1>รายการผลการเรียนที่ไม่ผ่าน</h1><p>โรงเรียนกระดุมทองวิทยา · พิมพ์วันที่ ${dateStr} · ${filteredData.length} รายการ</p></div>
             <table><thead><tr>
@@ -2512,7 +2512,33 @@
         const r = await Swal.fire({
             title: '👥 ทะเบียนครู', width: 900, confirmButtonText: 'บันทึก', showCancelButton: true, cancelButtonText: 'ยกเลิก', confirmButtonColor: '#4f46e5',
             html: `<div style="text-align:left;font-size:13px">
-                <p style="color:#6b7280;margin-bottom:6px">สถานะที่ไม่ใช่ "สอนอยู่" = ไม่เป็นผู้รับผิดชอบแก้ผล ระบบจะส่งต่อให้ผู้รับช่วง (ถ้าเว้นว่าง จะใช้ครูที่สอนวิชานั้นล่าสุดตามตารางสอน แล้วตามกลุ่มสาระ) · ชื่อเดิมใช้รวมครูที่เปลี่ยนชื่อ/สะกดต่างกัน</p>
+                <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:10px 12px;margin-bottom:8px;line-height:1.55">
+                    <b>หน้านี้ใช้ทำอะไร?</b> บอกระบบว่าครูแต่ละคน "ยังสอนอยู่หรือไม่" เพื่อให้ระบบเลือก <b>ผู้รับผิดชอบแก้ผล</b> ของนักเรียนที่ติด 0 ร มส ได้ถูกคน โดยไม่ต้องแก้โค้ดทุกปี
+                    <div style="margin-top:6px"><b>วิธีที่ระบบเลือกผู้รับผิดชอบ</b> (ไล่จากข้อ 1 ลงไป)</div>
+                    <ol style="margin:2px 0 6px 18px;padding:0;list-style:decimal">
+                        <li>ภาคเรียนตั้งแต่ปีที่กำหนดด้านล่าง → ครู <b>ที่สอนวิชานั้นตามตารางสอนของภาคนั้น</b></li>
+                        <li>ถ้าครูคนนั้นสถานะไม่ใช่ "สอนอยู่" → <b>ผู้รับช่วง</b> ที่ระบุในตารางนี้</li>
+                        <li>ถ้าไม่ได้ระบุผู้รับช่วง → ครูที่สอนวิชานั้น <b>ภาคล่าสุด</b> ตามตารางสอน</li>
+                        <li>ถ้ายังไม่มี → ผู้รับผิดชอบ <b>ตามกลุ่มวิชา/รหัสวิชา</b> ที่ตั้งไว้ด้านล่าง</li>
+                    </ol>
+                    <b>ช่องในตาราง</b>
+                    <ul style="margin:2px 0 6px 18px;padding:0;list-style:disc">
+                        <li><b>สถานะ</b> – สอนอยู่ / ย้าย / เกษียณอายุ / ลาออก (ไม่ใช่ "สอนอยู่" = ไม่รับผิดชอบแก้ผลและไม่ขึ้นในรายชื่อครู)</li>
+                        <li><b>สิ้นสุดภาค</b> – ภาคที่ครูสอนภาคสุดท้าย เช่น <code>2/2568</code> (บันทึกไว้เป็นข้อมูล)</li>
+                        <li><b>ผู้รับช่วงแก้ผล</b> – ครูที่จะรับแก้แทน เว้นว่างได้ (ระบบเลือกให้เอง)</li>
+                        <li><b>ชื่อเดิม</b> – ชื่อ/นามสกุลเก่าหรือสะกดต่างกัน เพื่อรวมเป็นคนเดียวกัน</li>
+                    </ul>
+                    <b>ตัวอย่าง</b>
+                    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:2px;background:#fff">
+                        <tr style="background:#e0e7ff"><th style="padding:3px 6px;text-align:left">สถานการณ์</th><th style="padding:3px 6px;text-align:left">กรอกอย่างไร</th></tr>
+                        <tr><td style="padding:3px 6px;border-top:1px solid #e5e7eb">ครูธนะสิทธิ์เกษียณ ให้ครูวิทยารับแก้แทน</td><td style="padding:3px 6px;border-top:1px solid #e5e7eb">สถานะ = เกษียณอายุ · สิ้นสุดภาค = 2/2567 · ผู้รับช่วง = นายวิทยา ใหม่คามิ</td></tr>
+                        <tr><td style="padding:3px 6px;border-top:1px solid #e5e7eb">ครูจิระประภาย้ายโรงเรียน (ไม่ระบุผู้รับช่วง)</td><td style="padding:3px 6px;border-top:1px solid #e5e7eb">สถานะ = ย้าย · เว้นผู้รับช่วงว่าง → ระบบใช้ครูที่สอนวิชานั้นล่าสุดตามตารางสอน</td></tr>
+                        <tr><td style="padding:3px 6px;border-top:1px solid #e5e7eb">ครูณิชารีย์เปลี่ยนชื่อเป็นอัญชุลี</td><td style="padding:3px 6px;border-top:1px solid #e5e7eb">ชื่อครู = นางสาวอัญชุลี คำศรีทา · สถานะ = สอนอยู่ · ชื่อเดิม = ณิชารีย์ คำศรีทา</td></tr>
+                        <tr><td style="padding:3px 6px;border-top:1px solid #e5e7eb">เปิดปีการศึกษา 2570 มีครูย้ายออก 1 คน</td><td style="padding:3px 6px;border-top:1px solid #e5e7eb">นำเข้าตารางสอน 2570 → มาตั้งสถานะครูคนนั้นเป็น "ย้าย" แล้วบันทึก (ไม่ต้องแก้โค้ด)</td></tr>
+                    </table>
+                    <div style="margin-top:6px;color:#4b5563">ครูที่ <b>สอนอยู่และไม่มีชื่อเดิม</b> ไม่ต้องกรอกอะไร ปล่อยเป็นค่าเดิมได้</div>
+                </div>
+
                 <div style="max-height:42vh;overflow:auto;border:1px solid #e5e7eb;border-radius:8px"><table style="width:100%;border-collapse:collapse;table-layout:fixed">
                     <colgroup><col style="width:25%"><col style="width:12%"><col style="width:10%"><col style="width:25%"><col style="width:24%"><col style="width:4%"></colgroup>
                     <thead style="position:sticky;top:0;background:#f9fafb"><tr><th ${th}>ชื่อครู</th><th ${th}>สถานะ</th><th ${th}>สิ้นสุดภาค</th><th ${th}>ผู้รับช่วงแก้ผล</th><th ${th}>ชื่อเดิม (คั่นด้วย , )</th><th></th></tr></thead>
@@ -2521,7 +2547,7 @@
                 <datalist id="rsNames">${allNames.map(n => `<option value="${_esc(n)}">`).join('')}</datalist>
                 <hr style="margin:8px 0">
                 <b>กติกาผู้รับผิดชอบแก้ผล</b>
-                <div style="display:flex;gap:8px;align-items:center;margin:6px 0">ภาคเรียนตั้งแต่ปีการศึกษา <input id="rsFrom" ${inp.replace('width:100%', 'width:80px')} value="${TEACH_CFG.fromYear}"> เป็นต้นไป → ใช้ "ครูที่สอนตามตารางสอน" เป็นผู้รับผิดชอบ (ก่อนหน้านั้นใช้ครูปัจจุบันของวิชา)</div>
+                <div style="display:flex;gap:8px;align-items:center;margin:6px 0">ภาคเรียนตั้งแต่ปีการศึกษา <input id="rsFrom" ${inp.replace('width:100%', 'width:80px')} value="${TEACH_CFG.fromYear}"> เป็นต้นไป → ใช้ "ครูที่สอนตามตารางสอน" เป็นผู้รับผิดชอบ (ก่อนหน้านั้นใช้ครูปัจจุบันของวิชา)<br><span style="color:#6b7280;font-size:12px">เช่น ตั้ง 2568 → ภาค 1/2568 เป็นต้นไป ดูตามตารางสอน ส่วนภาค 2/2567 และก่อนหน้านั้นให้ครูปัจจุบันของวิชานั้นแก้</span></div>
                 <div style="color:#6b7280;margin:6px 0 2px">ผู้รับผิดชอบสำรองตามกลุ่มวิชา (ใช้เมื่อวิชานั้นไม่มีครูปัจจุบันในตารางสอน)</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
                     <label>สังคมศึกษา (ส) <input id="rsG-social" list="rsNames" ${inp} value="${_esc(g.social || '')}"></label>
@@ -2529,7 +2555,7 @@
                     <label>ศิลปะ (ศ) <input id="rsG-art" list="rsNames" ${inp} value="${_esc(g.art || '')}"></label>
                     <label>คอมพิวเตอร์/เทคโนโลยี <input id="rsG-tech" list="rsNames" ${inp} value="${_esc(g.tech || '')}"></label>
                 </div>
-                <div style="color:#6b7280;margin:8px 0 2px">กำหนดรายรหัสวิชา (บรรทัดละ 1 วิชา รูปแบบ <code>รหัส=ชื่อครู</code>)</div>
+                <div style="color:#6b7280;margin:8px 0 2px">กำหนดรายรหัสวิชา (บรรทัดละ 1 วิชา รูปแบบ <code>รหัส=ชื่อครู</code> เช่น <code>อ22222=นางสาวปริมปภาพร บาอินทร์</code> · ใช้เมื่อวิชานั้นไม่มีครูในตารางสอนเลย)</div>
                 <textarea id="rsCodes" class="swal2-textarea" style="margin:0;width:100%;height:60px;font-size:13px">${_esc(codesTxt)}</textarea></div>`,
             preConfirm: () => {
                 const roster = [], names = new Set();
@@ -5044,7 +5070,7 @@
                 <table><thead><tr><th style="width:5%">ที่</th><th style="width:13%">รหัสวิชา</th><th style="width:28%">ชื่อวิชา</th><th style="width:11%">ภาคเรียน</th><th style="width:9%">ชั้น</th><th style="width:7%">ผล</th><th>ครูผู้สอน</th>${hasDone ? '<th style="width:13%">สถานะ</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>
                 ${ci < cn - 1 ? '<div class="note" style="text-align:right">ต่อแผ่นถัดไป ►</div>' : `<div class="note"><b>ความหมาย</b> 0 = ผลการเรียนไม่ผ่านเกณฑ์ · ร = ยังไม่สมบูรณ์ (รอการตัดสินผล) · มส = ไม่มีสิทธิ์รับการประเมินผล (เวลาเรียนไม่ครบตามเกณฑ์)<br>
                 โรงเรียนจึงขอความอนุเคราะห์ให้ผู้ปกครองแจ้งนักเรียนติดต่อครูผู้สอนตามรายวิชาข้างต้น เพื่อดำเนินการแก้ไขผลการเรียนให้เรียบร้อย หากมีข้อสงสัยสอบถามได้ที่งานทะเบียนและเทียบโอนผลการเรียน</div>
-                <div class="signs">${PS_SIGNERS.map(g => `<div class="sg2"><div class="sgi">${g.sig ? `<img src="${g.sig}" alt="">` : ''}</div><div>ลงชื่อ ..................................</div><div>(${e(g.name)})</div><div>${e(g.role)}</div></div>`).join('')}</div>`}</div>`;
+                <div class="signs">${PS_SIGNERS.map(g => `<div class="sg2"><div class="sgi">${g.sig ? `<img src="${g.sig}" alt="">` : ''}</div>${g.sig ? '' : '<div>ลงชื่อ ..................................</div>'}<div>(${e(g.name)})</div><div>${e(g.role)}</div></div>`).join('')}</div>`}</div>`;
         };
         const cardsOf = it => { const n = Math.max(1, Math.ceil(it.recs.length / MAXR)), per = Math.ceil(it.recs.length / n); return Array.from({ length: n }, (_, i) => ({ g: it.g, h: card(it, it.recs.slice(i * per, (i + 1) * per), i, n, i * per) })); };
         const cards = list.flatMap(cardsOf);
@@ -5068,7 +5094,7 @@
         .mini{flex:1;text-align:center;border-radius:.6em;padding:.3em;border:.3mm solid}.mini span{display:block;font-size:.85em}.mini b{font-size:1.5em;line-height:1.1}.z{color:#b91c1c;border-color:#fca5a5;background:#fef2f2}.r{color:#b45309;border-color:#fcd34d;background:#fffbeb}.m{color:#6d28d9;border-color:#c4b5fd;background:#f5f3ff}
         table{width:100%;border-collapse:collapse;font-size:.92em}th,td{border:.25mm solid #333;padding:.25em .4em;text-align:center;vertical-align:top}th{background:#e0e7ff}td.l{text-align:left}td.tc{white-space:nowrap}.ch{font-size:.85em;color:#4338ca}tr.dn td{color:#6b7280;background:#f0fdf4}
         .note{font-size:.82em;color:#374151;border:.25mm dashed #94a3b8;border-radius:.5em;padding:.4em .6em;background:#f8fafc}
-        .signs{margin-top:auto;display:flex;gap:3%;text-align:center;font-size:.88em;line-height:1.4}.sg2{flex:1}.sgi{height:2.8em;margin-bottom:-1em;position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:center}.sgi img{max-height:2.8em;max-width:92%;object-fit:contain}
+        .signs{margin-top:auto;display:flex;gap:3%;text-align:center;font-size:.88em;line-height:1.4}.sg2{flex:1}.sgi{height:2.8em;margin-bottom:.1em;position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:center}.sgi img{max-height:2.8em;max-width:92%;object-fit:contain}
         @media print{@page{size:A4 ${half ? 'landscape' : 'portrait'};margin:0}body{background:#fff}.bar{display:none}.sheet{margin:0;box-shadow:none}}</style></head><body>
         <div class="bar"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button><span>${list.length} คน · ${half ? 'A4 แนวนอน 2 ใบ/แผ่น (' + nSheets + ' แผ่น · เริ่มแผ่นใหม่เมื่อเปลี่ยนวิชา/กลุ่มสาระฯ)' : 'A4 แนวตั้ง (' + cards.length + ' แผ่น)'} · ติดเกิน ${MAXR} วิชา แบ่งเป็นหลายใบ · ถ้าตัวหนังสือแน่น ระบบย่อขนาดให้พอดี 1 ใบ</span></div>
         ${sheets}
