@@ -1761,7 +1761,7 @@
                 });
             }
             record.LS_Status = val;
-            const oi = allData.findIndex(r=>r._docId===record._docId || r.rowIndex===record.rowIndex);
+            const oi = allData.findIndex(r=>record._docId ? r._docId===record._docId : (r.rowIndex!=null && r.rowIndex!=='' && r.rowIndex===record.rowIndex));
             if (oi!==-1) allData[oi].LS_Status = val;
             displayData();
             Swal.fire({ toast:true, position:'top-end', icon:'success', showConfirmButton:false, timer:1500, title: val || 'ล้างหมายเหตุแล้ว' });
@@ -2048,7 +2048,7 @@
             notifyLineRec(record, newResult, editor, 'หน้าหลัก (แก้ไขด่วน)');
 
             const upd = o => { o.New_Result=newResult; o.Correction_Status='แก้ไขแล้ว'; o.Editor=editor; o.EditDate=editDate; o.EditTime=editTime; };
-            const oi = allData.findIndex(r=>r._docId===record._docId || r.rowIndex===record.rowIndex);
+            const oi = allData.findIndex(r=>record._docId ? r._docId===record._docId : (r.rowIndex!=null && r.rowIndex!=='' && r.rowIndex===record.rowIndex));
             if (oi!==-1) upd(allData[oi]);
             upd(record);
 
@@ -2139,7 +2139,10 @@
 
             // Update local state
             const upd = obj => { obj.New_Result=newResult; obj.Correction_Status='แก้ไขแล้ว'; obj.Editor=editor; obj.EditDate=editDate; obj.EditTime=editTime; };
-            const origIdx = allData.findIndex(r=>r._docId===record._docId || r.rowIndex===record.rowIndex);
+            // จับคู่ด้วย _docId เป็นหลัก — ห้ามใช้ rowIndex ถ้าไม่มีค่า (undefined===undefined จะไปตรงกับรายการแรกเสมอ)
+            const origIdx = record._docId
+                ? allData.findIndex(r=>r._docId===record._docId)
+                : allData.findIndex(r=>r.rowIndex!=null && r.rowIndex!=='' && r.rowIndex===record.rowIndex);
             if (origIdx!==-1) upd(allData[origIdx]);
             upd(filteredData[currentEditRow]);
 
@@ -5328,9 +5331,11 @@
         dlA.style.display = dlR.style.display = 'none';
         document.getElementById('lsSqlMarkBox').style.display = 'none';
         lsSqlPlan = null;
-        const base = allData.filter(r => r.Correction_Status === 'แก้ไขแล้ว' && String(r.New_Result || '').trim() !== '');
-        if (!base.length) { Swal.fire({ icon:'info', title:'ยังไม่มีรายการที่แก้ไขแล้ว', confirmButtonColor:'#4f46e5' }); return; }
         if (!f) { Swal.fire({ icon:'warning', title:'เลือกไฟล์สำรอง Local School (.sql) ก่อน', confirmButtonColor:'#f59e0b' }); return; }
+        area.innerHTML = '<p class="text-sm text-gray-400">กำลังโหลดข้อมูลล่าสุดจาก Firestore…</p>';
+        try { await loadData(true); } catch (e) { console.warn('โหลดข้อมูลล่าสุดไม่สำเร็จ ใช้ข้อมูลในหน้าจอแทน', e); }
+        const base = allData.filter(r => r.Correction_Status === 'แก้ไขแล้ว' && String(r.New_Result || '').trim() !== '');
+        if (!base.length) { area.innerHTML = ''; Swal.fire({ icon:'info', title:'ยังไม่มีรายการที่แก้ไขแล้ว', confirmButtonColor:'#4f46e5' }); return; }
         area.innerHTML = '<p class="text-sm text-gray-400">กำลังอ่านไฟล์…</p>';
         try {
             const dump = lsSqlParseDump(await f.text());
